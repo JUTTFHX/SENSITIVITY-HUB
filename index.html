@@ -8784,10 +8784,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
             <label for="ovFireBtn">Fire Button Size (px)</label>
             <input type="number" id="ovFireBtn" min="0" max="200" value="56" class="field-input">
           </div>
-          <div class="admin-slider-field">
-            <label for="ovDpiOverride">DPI (override)</label>
-            <input type="number" id="ovDpiOverride" min="50" max="800" step="10" value="400" class="field-input">
-          </div>
         </div>
       </div>
 
@@ -14475,8 +14471,8 @@ window.getBackend = (function(){
   const overrideEnabledCheckbox = document.getElementById("deviceFormOverrideEnabled");
   const sensFieldsGrid = document.getElementById("deviceFormSensFields");
 
-  const SLIDER_IDS = ["ovGeneral","ovRed","ovScope2","ovScope4","ovSniper","ovFree","ovFireBtn","ovDpiOverride"];
-  const SLIDER_TO_KEY = { ovGeneral:"general", ovRed:"red", ovScope2:"scope2", ovScope4:"scope4", ovSniper:"sniper", ovFree:"free", ovFireBtn:"fireBtnSize", ovDpiOverride:"dpi" };
+  const SLIDER_IDS = ["ovGeneral","ovRed","ovScope2","ovScope4","ovSniper","ovFree","ovFireBtn"];
+  const SLIDER_TO_KEY = { ovGeneral:"general", ovRed:"red", ovScope2:"scope2", ovScope4:"scope4", ovSniper:"sniper", ovFree:"free", ovFireBtn:"fireBtnSize" };
 
   function defaultSliderValuesForStyle(style){
     const p = STYLE_PROFILES[style] || STYLE_PROFILES.Headshot;
@@ -14484,8 +14480,7 @@ window.getBackend = (function(){
     return {
       ovGeneral: mid(p.general), ovRed: mid(p.red), ovScope2: mid(p.scope2),
       ovScope4: mid(p.scope4), ovSniper: mid(p.sniper), ovFree: mid(p.free),
-      ovFireBtn: (window.JX_Settings && window.JX_Settings.defaultFireBtnSize) || 56,
-      ovDpiOverride: 400
+      ovFireBtn: (window.JX_Settings && window.JX_Settings.defaultFireBtnSize) || 56
     };
   }
 
