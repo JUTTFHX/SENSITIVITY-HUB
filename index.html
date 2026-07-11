@@ -1405,6 +1405,9 @@ html.admin-active{ overflow:hidden; }
 .admin-table tr:hover td{ background: rgba(244,196,48,.025); }
 .admin-table .cell-name{ color: var(--ink); font-weight:600; }
 .admin-table .cell-actions{ display:flex; gap:8px; white-space:nowrap; }
+.admin-clickable-row{ cursor:pointer; }
+.admin-clickable-row:hover td{ background: rgba(244,196,48,.06); }
+.admin-clickable-row .cell-actions{ cursor:default; }
 
 .admin-icon-btn{
   width:32px; height:32px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center;
@@ -7948,7 +7951,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       <!-- REQUESTS -->
       <section class="admin-panel-section" data-section="requests" style="display:none;">
         <div class="admin-topbar">
-          <div><div class="admin-page-title">Device Requests</div><div class="admin-page-sub">Devices the community has asked to add.</div></div>
+          <div><div class="admin-page-title">Device Requests</div><div class="admin-page-sub">Devices the community has asked to add. Tap a row to view full details.</div></div>
         </div>
         <div class="glass admin-panel">
           <div class="admin-panel-head"><h3>Requests Queue</h3></div>
@@ -8707,6 +8710,51 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       </label>
       <button type="submit" class="btn btn-gold" style="width:100%;" id="playerFormSubmitBtn">Add Player</button>
     </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="requestDetailsModal">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-head">
+      <h3>Request Details</h3>
+      <button class="btn-icon" id="closeRequestDetailsModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+        <div>
+          <div style="font-family:var(--f-display); font-size:20px; color:var(--ink);" id="reqDetailName">—</div>
+          <div style="font-family:var(--f-mono); font-size:12px; color:var(--gold);" id="reqDetailBrand">—</div>
+        </div>
+        <span class="status-pill" id="reqDetailStatusPill">—</span>
+      </div>
+      <div class="admin-form-grid" style="padding:0; margin-bottom:18px;">
+        <div class="field" style="margin-bottom:0;">
+          <label>RAM</label>
+          <div class="field-input" style="pointer-events:none;" id="reqDetailRam">—</div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Processor</label>
+          <div class="field-input" style="pointer-events:none;" id="reqDetailProcessor">—</div>
+        </div>
+        <div class="field" style="grid-column:1/-1; margin-bottom:0;">
+          <label>Contact</label>
+          <div class="field-input" style="pointer-events:none; word-break:break-word;" id="reqDetailContact">—</div>
+        </div>
+        <div class="field" style="grid-column:1/-1; margin-bottom:0;">
+          <label>Submitted</label>
+          <div class="field-input" style="pointer-events:none;" id="reqDetailDate">—</div>
+        </div>
+        <div class="field" style="grid-column:1/-1; margin-bottom:0;">
+          <label>Request ID</label>
+          <div class="field-input" style="pointer-events:none; font-family:var(--f-mono); font-size:12px;" id="reqDetailId">—</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-gold btn-sm" id="reqDetailApproveBtn" style="flex:1;">Mark Approved</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="reqDetailAddedBtn" style="flex:1;">Mark Added to DB</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="reqDetailDeleteBtn" style="border-color: rgba(255,92,92,.4); color: var(--red);">Delete</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -15776,7 +15824,7 @@ window.JX_logAudit = function(field, oldVal, newVal){
     adminRequestTable.innerHTML = requestCache.map(r => {
       const statusClass = r.status === "approved" ? "status-approved" : r.status === "added" ? "status-added" : "status-pending";
       const statusLabel = r.status === "approved" ? "Approved" : r.status === "added" ? "Added to DB" : "Pending";
-      return `<tr data-id="${r.id}">
+      return `<tr data-id="${r.id}" data-req-row="${r.id}" class="admin-clickable-row">
         <td class="cell-name">${escapeHtml(r.brand || "—")}</td>
         <td>${escapeHtml(r.name || r.model || "—")}</td>
         <td>${escapeHtml(r.ram || "—")}</td>
@@ -15796,41 +15844,103 @@ window.JX_logAudit = function(field, oldVal, newVal){
     }).join("");
   }
 
+  async function approveRequest(id){
+    try{
+      await backend.updateRequestStatus(id, "approved");
+      showToastSafe("success", "Request marked approved");
+      await loadRequests();
+      renderOverview();
+    }catch(err){
+      showToastSafe("info", "Could not update request: " + err.message);
+    }
+  }
+  async function markRequestAdded(id){
+    try{
+      await backend.updateRequestStatus(id, "added");
+      showToastSafe("success", "Request marked as Added to Database");
+      await loadRequests();
+      renderOverview();
+    }catch(err){
+      showToastSafe("info", "Could not update request: " + err.message);
+    }
+  }
+  async function deleteRequestById(id){
+    if(!confirm("Delete this request?")) return;
+    try{
+      await backend.deleteRequest(id);
+      showToastSafe("success", "Request deleted");
+      await loadRequests();
+      renderOverview();
+    }catch(err){
+      showToastSafe("info", "Could not delete request: " + err.message);
+    }
+  }
+
   adminRequestTable.addEventListener("click", async (e)=>{
     const approveBtn = e.target.closest("[data-approve-req]");
     const addedBtn = e.target.closest("[data-added-req]");
     const delBtn = e.target.closest("[data-delete-req]");
-    if(approveBtn){
-      try{
-        await backend.updateRequestStatus(approveBtn.dataset.approveReq, "approved");
-        showToastSafe("success", "Request marked approved");
-        await loadRequests();
-        renderOverview();
-      }catch(err){
-        showToastSafe("info", "Could not update request: " + err.message);
-      }
-    }
-    if(addedBtn){
-      try{
-        await backend.updateRequestStatus(addedBtn.dataset.addedReq, "added");
-        showToastSafe("success", "Request marked as Added to Database");
-        await loadRequests();
-        renderOverview();
-      }catch(err){
-        showToastSafe("info", "Could not update request: " + err.message);
-      }
-    }
-    if(delBtn){
-      if(!confirm("Delete this request?")) return;
-      try{
-        await backend.deleteRequest(delBtn.dataset.deleteReq);
-        showToastSafe("success", "Request deleted");
-        await loadRequests();
-        renderOverview();
-      }catch(err){
-        showToastSafe("info", "Could not delete request: " + err.message);
-      }
-    }
+    if(approveBtn){ await approveRequest(approveBtn.dataset.approveReq); return; }
+    if(addedBtn){ await markRequestAdded(addedBtn.dataset.addedReq); return; }
+    if(delBtn){ await deleteRequestById(delBtn.dataset.deleteReq); return; }
+
+    // Tap anywhere else on the row → open the full request details modal
+    const row = e.target.closest("[data-req-row]");
+    if(row) openRequestDetailsModal(row.dataset.reqRow);
+  });
+
+  /* ---------------- Request Details Modal (tap a row to view) ---------------- */
+  const requestDetailsModal = document.getElementById("requestDetailsModal");
+  let activeReqDetailId = null;
+
+  function fmtReqDate(iso){
+    if(!iso) return "—";
+    const d = new Date(iso);
+    if(isNaN(d.getTime())) return "—";
+    return d.toLocaleString(undefined, { dateStyle:"medium", timeStyle:"short" });
+  }
+
+  function openRequestDetailsModal(id){
+    const r = requestCache.find(req => String(req.id) === String(id));
+    if(!r) return;
+    activeReqDetailId = r.id;
+    const statusClass = r.status === "approved" ? "status-approved" : r.status === "added" ? "status-added" : "status-pending";
+    const statusLabel = r.status === "approved" ? "Approved" : r.status === "added" ? "Added to DB" : "Pending";
+    document.getElementById("reqDetailName").textContent = r.name || r.model || "—";
+    document.getElementById("reqDetailBrand").textContent = r.brand || "—";
+    document.getElementById("reqDetailStatusPill").textContent = statusLabel;
+    document.getElementById("reqDetailStatusPill").className = "status-pill " + statusClass;
+    document.getElementById("reqDetailRam").textContent = r.ram || "—";
+    document.getElementById("reqDetailProcessor").textContent = r.processor || "—";
+    document.getElementById("reqDetailContact").textContent = r.contact || "Not provided";
+    document.getElementById("reqDetailDate").textContent = fmtReqDate(r.date || r.createdAt);
+    document.getElementById("reqDetailId").textContent = r.id;
+    requestDetailsModal.classList.add("open");
+    document.documentElement.classList.add("no-scroll");
+  }
+  function closeRequestDetailsModal(){
+    requestDetailsModal.classList.remove("open");
+    document.documentElement.classList.remove("no-scroll");
+    activeReqDetailId = null;
+  }
+  document.getElementById("closeRequestDetailsModal").addEventListener("click", closeRequestDetailsModal);
+  requestDetailsModal.addEventListener("click", (e)=>{ if(e.target === requestDetailsModal) closeRequestDetailsModal(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && requestDetailsModal.classList.contains("open")) closeRequestDetailsModal(); });
+
+  document.getElementById("reqDetailApproveBtn").addEventListener("click", async ()=>{
+    if(!activeReqDetailId) return;
+    await approveRequest(activeReqDetailId);
+    closeRequestDetailsModal();
+  });
+  document.getElementById("reqDetailAddedBtn").addEventListener("click", async ()=>{
+    if(!activeReqDetailId) return;
+    await markRequestAdded(activeReqDetailId);
+    closeRequestDetailsModal();
+  });
+  document.getElementById("reqDetailDeleteBtn").addEventListener("click", async ()=>{
+    if(!activeReqDetailId) return;
+    await deleteRequestById(activeReqDetailId);
+    closeRequestDetailsModal();
   });
 
   /* ---------------- Toast helper (reuses public site's toast if present) ---------------- */
