@@ -1078,22 +1078,6 @@ select.field-input{ appearance:none; -webkit-appearance:none; cursor:pointer; }
 .lb-score{ font-family: var(--f-mono); color: var(--gold); font-weight:700; font-size:15px; min-width:54px; text-align:right; }
 @media (max-width: 620px){ .lb-row{ grid-template-columns: 40px 1fr auto; } .lb-bar-wrap{ display:none; } }
 
-/* ============ Calculator ============ */
-.calc-shell{ display:grid; grid-template-columns: .9fr 1.1fr; gap:0; }
-@media (max-width:980px){ .calc-shell{ grid-template-columns:1fr; } }
-.calc-form{ padding: clamp(28px,4vw,44px); border-right:1px solid var(--hairline); }
-@media (max-width:980px){ .calc-form{ border-right:none; border-bottom:1px solid var(--hairline); } }
-.calc-result{ padding: clamp(28px,4vw,44px); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:18px; }
-
-.dial-wrap{ position:relative; width:200px; height:200px; }
-.dial-wrap svg{ width:100%; height:100%; transform: rotate(-90deg); }
-.dial-bg{ fill:none; stroke: var(--hairline); stroke-width:10; }
-.dial-fg{ fill:none; stroke-width:10; stroke-linecap:round; transition: stroke-dashoffset 1s var(--ease-out), stroke .4s; filter: drop-shadow(0 0 10px currentColor); }
-.dial-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-.dial-num{ font-family: var(--f-display); font-size:42px; color: var(--ink); font-weight:700; }
-.dial-num span{ font-size:20px; color: var(--ink-faint); }
-.dial-label{ font-size:11.5px; color: var(--ink-faint); text-transform:uppercase; letter-spacing:.08em; margin-top:4px; }
-
 .rating-pill{ font-family: var(--f-mono); font-size:13px; padding:7px 18px; border-radius:30px; font-weight:700; letter-spacing:.04em; }
 .rec-text{ font-size:14px; color: var(--ink-dim); max-width:340px; line-height:1.6; }
 
@@ -2624,8 +2608,7 @@ html.admin-active{ overflow:hidden; }
 .review-card.glass-card,
 .stat-card.glass-card,
 .social-card.glass-card,
-.guild-card,
-.tip-card {
+.guild-card {
   position: relative;
   /* Layer 3 — surface gradient (dark → slightly lighter at top) */
   background: linear-gradient(
@@ -2658,8 +2641,7 @@ html.admin-active{ overflow:hidden; }
 
 /* Layer 3 — Reflection bar: a pseudo-element shimmer line across the top */
 .glass-card::before,
-.guild-card::before,
-.tip-card::before {
+.guild-card::before {
   content: '' !important;
   position: absolute !important;
   top: 0 !important; left: 0 !important; right: 0 !important;
@@ -2694,8 +2676,7 @@ html.admin-active{ overflow:hidden; }
 
 /* ---- Hover: all 3 layers deepen + card lifts ---- */
 .glass-card:hover,
-.guild-card:hover,
-.tip-card:hover {
+.guild-card:hover {
   transform: translateY(-5px) !important;
   border-color: rgba(212,175,90,.40) !important;
   box-shadow:
@@ -2713,8 +2694,7 @@ html.admin-active{ overflow:hidden; }
 
 /* ---- Active / press: card presses down ---- */
 .glass-card:active,
-.guild-card:active,
-.tip-card:active {
+.guild-card:active {
   transform: translateY(-1px) scale(.99) !important;
   box-shadow:
     0 1px  4px rgba(0,0,0,.60),
@@ -2768,8 +2748,7 @@ html.admin-active{ overflow:hidden; }
 
 /* ---- Light mode: softer depth, warm shadows ---- */
 body.light .glass-card,
-body.light .guild-card,
-body.light .tip-card {
+body.light .guild-card {
   background: linear-gradient(
     170deg,
     rgba(255,252,244,.97) 0%,
@@ -2785,8 +2764,7 @@ body.light .tip-card {
     inset 0 1px 0 rgba(255,255,255,.80) !important;
 }
 body.light .glass-card:hover,
-body.light .guild-card:hover,
-body.light .tip-card:hover {
+body.light .guild-card:hover {
   border-color: rgba(120,90,20,.38) !important;
   box-shadow:
     0 4px  10px rgba(0,0,0,.12),
@@ -2798,10 +2776,10 @@ body.light .tip-card:hover {
 
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
-  .glass-card, .guild-card, .tip-card {
+  .glass-card, .guild-card {
     transition: border-color .15s !important;
   }
-  .glass-card:hover, .guild-card:hover, .tip-card:hover {
+  .glass-card:hover, .guild-card:hover {
     transform: none !important;
   }
 }
@@ -2832,8 +2810,7 @@ body.light .tip-card:hover {
 
 /* --- The gloss pseudo-element --- */
 .glass-card::after,
-.guild-card::after,
-.tip-card::after {
+.guild-card::after {
   content: '' !important;
   position: absolute !important;
   inset: 0 !important;
@@ -2874,8 +2851,7 @@ body.light .tip-card:hover {
 
 /* Hover: immediate bright sweep, faster */
 .glass-card:hover::after,
-.guild-card:hover::after,
-.tip-card:hover::after {
+.guild-card:hover::after {
   animation: jx-gloss-hover .75s cubic-bezier(.22,1,.36,1) forwards !important;
 }
 
@@ -2925,8 +2901,7 @@ body.light .tip-card:hover {
 
 /* Light mode: subtler — glass is already bright */
 body.light .glass-card::after,
-body.light .guild-card::after,
-body.light .tip-card::after {
+body.light .guild-card::after {
   background: linear-gradient(
     105deg,
     transparent        0%,
@@ -2942,8 +2917,7 @@ body.light .tip-card::after {
 /* Respect reduced motion — remove sweep entirely */
 @media (prefers-reduced-motion: reduce) {
   .glass-card::after,
-  .guild-card::after,
-  .tip-card::after {
+  .guild-card::after {
     animation: none !important;
     opacity: 0 !important;
   }
@@ -3482,10 +3456,10 @@ body.light .glass {
 }
 
 /* ── HUD CARDS & COMPARISON ── */
-.hud-card, .compare-col {
+.hud-card {
   transition: transform .3s var(--ease-spring), box-shadow .3s;
 }
-.hud-card:hover, .compare-col:hover {
+.hud-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 24px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(244,196,48,.15);
 }
@@ -3622,7 +3596,6 @@ svg:not(.brand-svg):not(.social-svg):not(.google-svg) {
 .request-form svg,
 .guild-card svg,
 .leaderboard-row svg,
-.calc-section svg,
 .acct-avatar-edit svg,
 .admin-role-pill svg {
   stroke-width: 1.8 !important;
@@ -5122,17 +5095,6 @@ body.nav-open-lock { overflow: hidden; }
   }
 }
 
-/* --- Calculator: single column --- */
-@media (max-width: 768px) {
-  .calc-shell {
-    grid-template-columns: 1fr !important;
-  }
-  .calc-form {
-    border-right: none !important;
-    border-bottom: 1px solid var(--hairline);
-  }
-}
-
 /* --- Compare: single column --- */
 @media (max-width: 768px) {
   .compare-shell {
@@ -5358,7 +5320,7 @@ body.jx-reduce-motion *{
 
 /* Per-group effect toggles */
 body.jx-fx-off-gloss .glass::after, body.jx-fx-off-gloss .glass-card::after,
-body.jx-fx-off-gloss .guild-card::after, body.jx-fx-off-gloss .tip-card::after,
+body.jx-fx-off-gloss .guild-card::after,
 body.jx-fx-off-gloss [class*="gloss"]{ animation:none !important; opacity:0 !important; }
 body.jx-fx-off-reveal .reveal{ opacity:1 !important; transform:none !important; transition:none !important; }
 body.jx-fx-off-ticker .footer-quote-ticker, body.jx-fx-off-ticker [class*="ticker"], body.jx-fx-off-ticker [class*="marquee"]{
@@ -5783,13 +5745,15 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <div class="field">
             <label for="genBrand">Device Brand</label>
             <div class="select-wrap">
-              <select class="field-input" id="genBrand" required>
+              <div class="select-wrap">
+                <select class="field-input" id="genBrand" required>
                 <option value="">Select brand</option>
                 <option>Samsung</option><option>Redmi</option><option>Poco</option>
                 <option>Vivo</option><option>Oppo</option><option>Realme</option>
                 <option>Infinix</option><option>Tecno</option><option>iPhone</option>
                 <option>Google Pixel</option><option>Itel</option><option>VGO TEL</option>
               </select>
+              </div>
             </div>
           </div>
           <div class="field">
@@ -5802,7 +5766,8 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <div class="field">
             <label for="genAge">Device Age</label>
             <div class="select-wrap">
-              <select class="field-input" id="genAge" required>
+              <div class="select-wrap">
+                <select class="field-input" id="genAge" required>
                 <option value="">Select device age</option>
                 <option>Brand new (0–6 months)</option>
                 <option>6 months – 1 year</option>
@@ -5813,6 +5778,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
                 <option>5+ years</option>
                 <option>Other</option>
               </select>
+              </div>
             </div>
           </div>
         </div>
@@ -5927,6 +5893,15 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       <p class="section-sub" data-jx="leaderboard-subtitle">Ranked by community-reported headshot rate across thousands of matches.</p>
     </div>
     <div class="glass" id="leaderboardList"></div>
+
+    <!-- ---- Trending Devices (search-activity leaderboard) ---- -->
+    <div class="section-head" style="margin-top:36px;">
+      <div class="eyebrow">Search Activity</div>
+      <h2 class="section-title" style="font-size:22px;">Trending This Week</h2>
+    </div>
+    <div class="glass" style="padding:20px;">
+      <div id="trendingGrid"></div>
+    </div>
   </div>
 </section>
 
@@ -6251,7 +6226,8 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <div class="field">
             <label for="reqBrand">Device Brand</label>
             <div class="select-wrap">
-              <select class="field-input" id="reqBrand" required>
+              <div class="select-wrap">
+                <select class="field-input" id="reqBrand" required>
                 <option value="">Select brand</option>
                 <option>Samsung</option><option>Redmi</option><option>Poco</option>
                 <option>Vivo</option><option>Oppo</option><option>Realme</option>
@@ -6260,6 +6236,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
                 <option>Nokia</option><option>Motorola</option><option>OnePlus</option>
                 <option>Other</option>
               </select>
+              </div>
             </div>
           </div>
           <div class="field">
@@ -6271,17 +6248,20 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <div class="field">
             <label for="reqRam">RAM</label>
             <div class="select-wrap">
-              <select class="field-input" id="reqRam" required>
+              <div class="select-wrap">
+                <select class="field-input" id="reqRam" required>
                 <option value="">Select RAM</option>
                 <option>2 GB</option><option>3 GB</option><option>4 GB</option><option>6 GB</option>
                 <option>8 GB</option><option>12 GB</option><option>16 GB</option>
               </select>
+              </div>
             </div>
           </div>
           <div class="field">
             <label for="reqProcessor">Processor</label>
             <div class="select-wrap">
-              <select class="field-input" id="reqProcessor" required>
+              <div class="select-wrap">
+                <select class="field-input" id="reqProcessor" required>
                 <option value="">Select processor</option>
                 <optgroup label="Qualcomm Snapdragon">
                   <option value="Snapdragon 8 Gen 3">Snapdragon 8 Gen 3</option>
@@ -6318,6 +6298,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
                   <option value="Other">Other</option>
                 </optgroup>
               </select>
+              </div>
             </div>
           </div>
         </div>
@@ -7022,7 +7003,8 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
             </div>
             <div class="guild-field">
               <label for="guildFormRank">Minimum Rank</label>
-              <select id="guildFormRank">
+              <div class="select-wrap">
+                <select id="guildFormRank">
                 <option value="Bronze">Bronze</option>
                 <option value="Silver">Silver</option>
                 <option value="Gold" selected>Gold</option>
@@ -7034,10 +7016,12 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
                 <option value="Elite Master">Elite Master</option>
                 <option value="Grandmaster">Grandmaster</option>
               </select>
+              </div>
             </div>
             <div class="guild-field">
               <label for="guildFormRegion">Server</label>
-              <select id="guildFormRegion">
+              <div class="select-wrap">
+                <select id="guildFormRegion">
                 <option value="IND">India (IND)</option>
                 <option value="PK">Pakistan (PK)</option>
                 <option value="BD">Bangladesh (BD)</option>
@@ -7054,14 +7038,17 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
                 <option value="SAC">South America (SAC)</option>
                 <option value="AF">Africa (AF)</option>
               </select>
+              </div>
             </div>
             <div class="guild-field">
               <label for="guildFormStatus">Recruitment Status</label>
-              <select id="guildFormStatus">
+              <div class="select-wrap">
+                <select id="guildFormStatus">
                 <option value="Open">Open</option>
                 <option value="Invite Only">Invite Only</option>
                 <option value="Closed">Closed</option>
               </select>
+              </div>
             </div>
             <div class="guild-field">
               <label for="guildFormMembers">Max Members</label>
@@ -7230,17 +7217,20 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
             </div>
             <div class="guild-field">
               <label for="tfFormRole">Your Role</label>
-              <select id="tfFormRole" required>
+              <div class="select-wrap">
+                <select id="tfFormRole" required>
                 <option value="">Select role</option>
                 <option value="Support">Support</option>
                 <option value="IGL">IGL</option>
                 <option value="Survivor">Survivor</option>
                 <option value="Player">Player</option>
               </select>
+              </div>
             </div>
             <div class="guild-field">
               <label for="tfFormRank">Current Rank</label>
-              <select id="tfFormRank">
+              <div class="select-wrap">
+                <select id="tfFormRank">
                 <option value="Bronze">Bronze</option>
                 <option value="Silver">Silver</option>
                 <option value="Gold" selected>Gold</option>
@@ -7252,10 +7242,12 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
                 <option value="Elite Master">Elite Master</option>
                 <option value="Grandmaster">Grandmaster</option>
               </select>
+              </div>
             </div>
             <div class="guild-field">
               <label for="tfFormRegion">Server / Region</label>
-              <select id="tfFormRegion">
+              <div class="select-wrap">
+                <select id="tfFormRegion">
                 <option value="IND">India (IND)</option>
                 <option value="PK">Pakistan (PK)</option>
                 <option value="BD">Bangladesh (BD)</option>
@@ -7272,6 +7264,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
                 <option value="SAC">South America (SAC)</option>
                 <option value="AF">Africa (AF)</option>
               </select>
+              </div>
             </div>
             <div class="guild-field">
               <label for="tfFormContact">Contact (Discord / Free Fire UID)</label>
@@ -8484,7 +8477,8 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         <div class="field" style="margin-bottom:0;">
           <label for="adminGuildFormRank">Minimum Rank</label>
           <div class="select-wrap">
-            <select class="field-input" id="adminGuildFormRank">
+            <div class="select-wrap">
+              <select class="field-input" id="adminGuildFormRank">
               <option value="Bronze">Bronze</option>
               <option value="Silver">Silver</option>
               <option value="Gold">Gold</option>
@@ -8496,12 +8490,14 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
               <option value="Elite Master">Elite Master</option>
               <option value="Grandmaster">Grandmaster</option>
             </select>
+            </div>
           </div>
         </div>
         <div class="field" style="margin-bottom:0;">
           <label for="adminGuildFormRegion">Server</label>
           <div class="select-wrap">
-            <select class="field-input" id="adminGuildFormRegion">
+            <div class="select-wrap">
+              <select class="field-input" id="adminGuildFormRegion">
               <option value="IND">India (IND)</option>
               <option value="PK">Pakistan (PK)</option>
               <option value="BD">Bangladesh (BD)</option>
@@ -8518,6 +8514,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
               <option value="SAC">South America (SAC)</option>
               <option value="AF">Africa (AF)</option>
             </select>
+            </div>
           </div>
         </div>
       </div>
@@ -8525,11 +8522,13 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         <div class="field" style="margin-bottom:0;">
           <label for="adminGuildFormStatus">Recruitment Status</label>
           <div class="select-wrap">
-            <select class="field-input" id="adminGuildFormStatus">
+            <div class="select-wrap">
+              <select class="field-input" id="adminGuildFormStatus">
               <option value="Open">Open</option>
               <option value="Invite Only">Invite Only</option>
               <option value="Closed">Closed</option>
             </select>
+            </div>
           </div>
         </div>
         <div class="field" style="margin-bottom:0;">
@@ -8563,12 +8562,14 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         <div class="field" style="margin-bottom:0;">
           <label for="adminTfFormRole">Role</label>
           <div class="select-wrap">
-            <select class="field-input" id="adminTfFormRole">
+            <div class="select-wrap">
+              <select class="field-input" id="adminTfFormRole">
               <option value="Support">Support</option>
               <option value="IGL">IGL</option>
               <option value="Survivor">Survivor</option>
               <option value="Player">Player</option>
             </select>
+            </div>
           </div>
         </div>
       </div>
@@ -8576,7 +8577,8 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         <div class="field" style="margin-bottom:0;">
           <label for="adminTfFormRank">Rank</label>
           <div class="select-wrap">
-            <select class="field-input" id="adminTfFormRank">
+            <div class="select-wrap">
+              <select class="field-input" id="adminTfFormRank">
               <option value="Bronze">Bronze</option>
               <option value="Silver">Silver</option>
               <option value="Gold">Gold</option>
@@ -8588,12 +8590,14 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
               <option value="Elite Master">Elite Master</option>
               <option value="Grandmaster">Grandmaster</option>
             </select>
+            </div>
           </div>
         </div>
         <div class="field" style="margin-bottom:0;">
           <label for="adminTfFormRegion">Server / Region</label>
           <div class="select-wrap">
-            <select class="field-input" id="adminTfFormRegion">
+            <div class="select-wrap">
+              <select class="field-input" id="adminTfFormRegion">
               <option value="IND">India (IND)</option>
               <option value="PK">Pakistan (PK)</option>
               <option value="BD">Bangladesh (BD)</option>
@@ -8610,6 +8614,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
               <option value="SAC">South America (SAC)</option>
               <option value="AF">Africa (AF)</option>
             </select>
+            </div>
           </div>
         </div>
       </div>
@@ -8647,13 +8652,15 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <div class="field" style="margin-bottom:0;">
             <label for="deviceFormBrand">Brand</label>
             <div class="select-wrap">
-              <select class="field-input" id="deviceFormBrand" required>
+              <div class="select-wrap">
+                <select class="field-input" id="deviceFormBrand" required>
                 <option value="">Select brand</option>
                 <option>Samsung</option><option>Redmi</option><option>Poco</option>
                 <option>Vivo</option><option>Oppo</option><option>Realme</option>
                 <option>Infinix</option><option>Tecno</option><option>iPhone</option>
                 <option>Google Pixel</option><option>Itel</option><option>VGO TEL</option>
               </select>
+              </div>
             </div>
           </div>
         </div>
@@ -8737,9 +8744,11 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         <div class="field" style="margin-bottom:0;">
           <label for="playerFormRole">Role</label>
           <div class="select-wrap">
-            <select class="field-input" id="playerFormRole">
+            <div class="select-wrap">
+              <select class="field-input" id="playerFormRole">
               <option>Support</option><option>IGL</option><option>Player</option>
             </select>
+            </div>
           </div>
         </div>
         <div class="field" style="margin-bottom:0;">
@@ -8750,7 +8759,9 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       <div class="field" style="margin-bottom:14px;">
         <label for="playerFormHud">HUD Layout</label>
         <div class="select-wrap">
-          <select class="field-input" id="playerFormHud"></select>
+          <div class="select-wrap">
+            <select class="field-input" id="playerFormHud"></select>
+          </div>
         </div>
       </div>
       <div class="field-row" style="margin-bottom:14px;">
@@ -9029,8 +9040,58 @@ function loadJXSettings(){
 }
 function saveJXSettings(s){
   try{ localStorage.setItem(JX_SETTINGS_KEY, JSON.stringify(s)); }catch(e){ /* storage unavailable */ }
+  // Push to the shared backend so every visitor sees this change, not
+  // just this browser — localStorage above is only a local instant
+  // cache. Centralized here (rather than in each admin panel's save
+  // handler) so every settings entry point — Site Settings, Section
+  // Manager, Theme Editor, SEO panel, etc. — gets this for free.
+  if(typeof window.getBackend === "function"){
+    window.getBackend().then(backend=>{
+      if(backend && typeof backend.saveSiteSettings === "function"){
+        return backend.saveSiteSettings(s);
+      }
+    }).catch(err=>{
+      console.error("[JUTTFHX] Failed to sync site settings to the server:", err);
+      if(typeof showToastSafe === "function"){
+        showToastSafe("error", "Saved on this device, but failed to sync to the server — other visitors won't see this change yet.");
+      }
+    });
+  }
 }
 window.JX_Settings = loadJXSettings();
+
+// ------------------------------------------------------------------
+// Remote settings sync — the localStorage copy above renders instantly
+// (no flash of default state) but only ever reflected THIS browser's
+// own admin edits. Site Settings (Maintenance Mode, section visibility,
+// theme, SEO, etc.) are meant to apply for every visitor, so once the
+// real backend resolves we pull the shared settings doc, reconcile it
+// into window.JX_Settings, and re-apply. watchSiteSettings (where
+// supported) also keeps a visitor already on the page in sync if an
+// admin flips something mid-session, instead of requiring a refresh.
+// Called from the DOMContentLoaded handler further down, once
+// backend-selector.js (loaded later in the document) has defined
+// window.getBackend.
+function reconcileRemoteJXSettings(remote){
+  if(!remote) return;
+  const merged = deepMergeDefaults(DEFAULT_JX_SETTINGS, remote);
+  window.JX_Settings = merged;
+  try{ localStorage.setItem(JX_SETTINGS_KEY, JSON.stringify(merged)); }catch(e){ /* storage unavailable */ }
+  applyJXSettingsToPage();
+}
+function initRemoteJXSettingsSync(){
+  if(typeof window.getBackend !== "function") return;
+  window.getBackend().then(async backend=>{
+    if(!backend || typeof backend.getSiteSettings !== "function") return;
+    try{
+      const remote = await backend.getSiteSettings();
+      reconcileRemoteJXSettings(remote);
+    }catch(e){ console.error("[JUTTFHX] Failed to load shared site settings, using local copy:", e); }
+    if(typeof backend.watchSiteSettings === "function"){
+      backend.watchSiteSettings(reconcileRemoteJXSettings);
+    }
+  }).catch(()=>{ /* best-effort */ });
+}
 
 // ---- Audit log ----------------------------------------------------------
 // Small, dependency-free history of admin edits: last 50 entries, newest
@@ -9445,9 +9506,10 @@ function applyMaintenanceOverlay(){
   }
 }
 if(document.readyState === "loading"){
-  document.addEventListener("DOMContentLoaded", applyJXSettingsToPage);
+  document.addEventListener("DOMContentLoaded", ()=>{ applyJXSettingsToPage(); initRemoteJXSettingsSync(); });
 }else{
   applyJXSettingsToPage();
+  initRemoteJXSettingsSync();
 }
 window.addEventListener("hashchange", applyMaintenanceOverlay);
 // ------------------------------------------------------------------
@@ -12634,16 +12696,27 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
          allow read: if true;
          allow write: if request.auth != null;
        }
+       // Single shared doc (settings/site) holding every admin-configurable
+       // setting — Maintenance Mode, section visibility, theme, SEO, etc.
+       // Public read is required: this is exactly what makes Maintenance
+       // Mode (and everything else in Site Settings) actually apply to
+       // real visitors instead of only the browser that saved it.
+       match /settings/{docId} {
+         allow read: if true;
+         allow write: if request.auth != null;
+       }
      }
    }
 
    NOTE: if you've already deployed rules that only cover devices/
    reviews/requests, Firestore's default-deny behavior means the
-   users/players/visits/searches/huds collections above have NO access
-   at all until you add these — that will silently break account
-   signup/login, the pro player database, the live stats counters, and
-   the HUD image gallery (uploads would still work, but the gallery
-   would only show the ones uploaded in the current browser session).
+   users/players/visits/searches/huds/settings collections above have NO
+   access at all until you add these — that will silently break account
+   signup/login, the pro player database, the live stats counters, the
+   HUD image gallery (uploads would still work, but the gallery would
+   only show the ones uploaded in the current browser session), and
+   Site Settings (Maintenance Mode and every other admin toggle would
+   silently fail to sync to real visitors).
 
    STORAGE SECURITY RULES (paste into Storage > Rules):
 
@@ -12940,6 +13013,27 @@ async function getStats(){
   };
 }
 
+/* ---------------- SITE SETTINGS ----------------
+   Single shared doc at settings/site. This is the piece that was
+   missing: Site Settings (maintenance mode, section visibility,
+   theme, SEO, etc.) previously only lived in localStorage, so an
+   admin's changes never left their own browser. Storing/reading
+   this doc here is what makes those toggles apply for every real
+   visitor, not just the browser that saved them. */
+async function getSiteSettings(){
+  const snap = await getDoc(doc(db, "settings", "site"));
+  return snap.exists() ? snap.data() : null;
+}
+async function saveSiteSettings(settings){
+  await setDoc(doc(db, "settings", "site"), settings);
+}
+function watchSiteSettings(callback){
+  if(!firebaseReady) return ()=>{};
+  return onSnapshot(doc(db, "settings", "site"), snap=>{
+    if(snap.exists()) callback(snap.data());
+  }, err=>{ console.error("[JUTTFHX] settings listener error:", err); });
+}
+
 window.FirebaseService = {
   name: "firebase",
   init: initFirebase,
@@ -12952,7 +13046,8 @@ window.FirebaseService = {
   uploadHudImage, deleteHudImage, getHuds,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, submitRequest, updateRequestStatus, deleteRequest,
-  trackVisit, trackSearch, getStats
+  trackVisit, trackSearch, getStats,
+  getSiteSettings, saveSiteSettings, watchSiteSettings
 };
 
 </script>
@@ -13174,6 +13269,34 @@ async function getStats(){
   };
 }
 
+/* ---------------- SITE SETTINGS ----------------
+   Single shared row in a "settings" table (id text primary key,
+   data jsonb). Create it alongside the other tables:
+     create table settings (
+       id text primary key,
+       data jsonb not null default '{}'::jsonb
+     );
+   This is what makes admin toggles like Maintenance Mode apply
+   for every visitor instead of only the browser that saved them. */
+async function getSiteSettings(){
+  const { data, error } = await supabase.from("settings").select("data").eq("id", "site").maybeSingle();
+  if(error) throw error;
+  return data ? data.data : null;
+}
+async function saveSiteSettings(settings){
+  const { error } = await supabase.from("settings").upsert({ id: "site", data: settings });
+  if(error) throw error;
+}
+function watchSiteSettings(callback){
+  if(!supabase) return ()=>{};
+  const channel = supabase.channel("settings-site")
+    .on("postgres_changes", { event: "*", schema: "public", table: "settings", filter: "id=eq.site" }, payload=>{
+      if(payload.new && payload.new.data) callback(payload.new.data);
+    })
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}
+
 function userAccountsUnsupported(){
   throw new Error("User accounts (sign up, Google sign-in, profiles) are only implemented for the Firebase adapter right now. Switch ACTIVE_BACKEND to \"firebase\" in backend-selector.js to use this feature.");
 }
@@ -13197,7 +13320,8 @@ window.SupabaseService = {
   uploadHudImage, deleteHudImage,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, submitRequest, updateRequestStatus, deleteRequest,
-  trackVisit, trackSearch, getStats
+  trackVisit, trackSearch, getStats,
+  getSiteSettings, saveSiteSettings, watchSiteSettings
 };
 
 </script>
@@ -13321,6 +13445,20 @@ async function trackVisit(visitorId){ return callSheets("trackVisit", { visitorI
 async function trackSearch(searchQuery, visitorId){ return callSheets("trackSearch", { query: (searchQuery || "").slice(0, 120), visitorId }); }
 async function getStats(){ return callSheets("getStats", {}); }
 
+/* ---------------- SITE SETTINGS ----------------
+   Add a "settings" tab with a single row (columns: id, data —
+   `data` holds the whole settings object as a JSON string) and
+   matching getSiteSettings/saveSiteSettings cases in the Apps
+   Script doPost handler. No push/real-time support here — Apps
+   Script web apps can't notify the client, so visitors will pick
+   up a change on their next page load rather than live mid-session. */
+async function getSiteSettings(){
+  const result = await callSheets("getSiteSettings", {});
+  return result || null;
+}
+async function saveSiteSettings(settings){ return callSheets("saveSiteSettings", { settings }); }
+function watchSiteSettings(){ return ()=>{}; }
+
 function userAccountsUnsupported(){
   throw new Error("User accounts (sign up, Google sign-in, profiles) are only implemented for the Firebase adapter right now. Switch ACTIVE_BACKEND to \"firebase\" in backend-selector.js to use this feature.");
 }
@@ -13346,7 +13484,8 @@ window.SheetsService = {
   uploadHudImage, deleteHudImage,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, submitRequest, updateRequestStatus, deleteRequest,
-  trackVisit, trackSearch, getStats
+  trackVisit, trackSearch, getStats,
+  getSiteSettings, saveSiteSettings, watchSiteSettings
 };
 
 /* ============================================================
@@ -13753,7 +13892,23 @@ window.DemoService = {
       totalDevices: d.devices.length,
       totalRequests: d.requests.length
     };
-  }
+  },
+
+  /* ---------------- SITE SETTINGS ----------------
+     Demo mode has no real shared backend, so this genuinely can
+     only live in this browser's localStorage — that limitation is
+     expected and already called out in the console warning below
+     ("Admin changes will only persist in this browser..."). Reuses
+     the same key the page's own local cache uses so demo mode
+     behaves consistently instead of keeping two separate copies. */
+  async getSiteSettings(){
+    try{ const raw = localStorage.getItem("juttfhx_site_settings_v1"); return raw ? JSON.parse(raw) : null; }
+    catch(e){ return null; }
+  },
+  async saveSiteSettings(settings){
+    try{ localStorage.setItem("juttfhx_site_settings_v1", JSON.stringify(settings)); }catch(e){}
+  },
+  watchSiteSettings(){ return ()=>{}; }
 };
 
 /* ---------------- RESOLVE ACTIVE BACKEND ---------------- */
@@ -17223,6 +17378,12 @@ window.JX_logAudit = function(field, oldVal, newVal){
         const delay = el.dataset.jxDelay || 0;
         setTimeout(function(){
           el.classList.add('jx-visible');
+          // Also add 'visible' so the later .jx-reveal base rule's
+          // filter:blur(4px) (added by the Premium Upgrade reveal system)
+          // always gets cleared, even for elements only this observer
+          // ever tags (e.g. .eyebrow, marketplace rows) — otherwise they
+          // finish this animation fully opaque but permanently blurred.
+          el.classList.add('visible');
         }, +delay);
         revealObserver.unobserve(el);
       }
@@ -17236,13 +17397,7 @@ window.JX_logAudit = function(field, oldVal, newVal){
       '.section-head',
       '.hero-stats .hero-stat',
       '.eyebrow',
-      '.hud-card',
-      '.faq-item',
-      '.stat-block',
-      '.feature-row',
-      '.compare-col',
-      '.changelog-item',
-      '.tip-card'
+      '.hud-card'
     ];
 
     document.querySelectorAll(selectors.join(',')).forEach(function(el, i){
