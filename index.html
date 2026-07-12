@@ -10378,6 +10378,23 @@ let nextTeamFinderId = Math.max(...TEAMFINDER.map(c=>c.id), 0) + 1;
 
   let lastGenerated = null;
 
+  // Look for a device already in the (admin-curated) database that matches
+  // what the user typed, so the generator can return real, saved numbers
+  // instead of always inventing new ones. Matches on brand + model text
+  // rather than requiring an exact device.id, since the user is typing
+  // free text into the generator form, not picking from a dropdown.
+  function findMatchingDevice(brand, model){
+    const b = (brand || "").trim().toLowerCase();
+    const m = (model || "").trim().toLowerCase();
+    if(!b || !m) return null;
+    return DEVICES.find(d=>{
+      const dBrand = (d.brand || "").trim().toLowerCase();
+      const dName = (d.name || d.model || "").trim().toLowerCase();
+      if(dBrand !== b) return false;
+      return dName === `${b} ${m}` || dName.includes(m) || m.includes(dName);
+    }) || null;
+  }
+
   genForm.addEventListener("submit", (e)=>{
     e.preventDefault();
     const brand = document.getElementById("genBrand").value;
@@ -10394,8 +10411,23 @@ let nextTeamFinderId = Math.max(...TEAMFINDER.map(c=>c.id), 0) + 1;
     genResultContent.innerHTML = `<div class="skel skel-card" style="height:300px;"></div>`;
 
     setTimeout(()=>{
-      const sens = generateSensitivity({brand, model, age, style: selectedStyle});
-      lastGenerated = { deviceName: `${brand} ${model}`, style: selectedStyle, sens, age };
+      const matchedDevice = findMatchingDevice(brand, model);
+      // A device that exists in the database and has an admin-entered
+      // override for this style wins — that's real, curated data.
+      // Everything else (unknown devices, or known devices with no
+      // override set for this particular style) falls back to the
+      // seeded-random estimate, same as before.
+      const hasCuratedSens = matchedDevice && matchedDevice.sensOverride && matchedDevice.sensOverride[selectedStyle];
+      const sens = hasCuratedSens
+        ? getDeviceSensitivity(matchedDevice, selectedStyle)
+        : generateSensitivity({brand, model, age, style: selectedStyle});
+      lastGenerated = {
+        deviceName: `${brand} ${model}`,
+        style: selectedStyle,
+        sens,
+        age,
+        source: hasCuratedSens ? "verified" : "estimated"
+      };
       renderGenResult(lastGenerated);
       addHistory(`${brand} ${model}`);
       showToast("success", "Sensitivity profile generated");
@@ -10410,10 +10442,14 @@ let nextTeamFinderId = Math.max(...TEAMFINDER.map(c=>c.id), 0) + 1;
   });
 
   function renderGenResult(data){
-    const { deviceName, sens } = data;
+    const { deviceName, sens, source } = data;
+    const sourceBadge = source === "verified"
+      ? `<span class="result-tag" style="background:rgba(244,196,48,.12); color:var(--gold);">✓ Verified device data</span>`
+      : `<span class="result-tag" style="background:rgba(184,175,155,.12); color:var(--ink-dim);">⚡ AI-estimated</span>`;
     genResultContent.innerHTML = `
       <div class="result-meta">
         <span class="result-tag" style="background:rgba(95,215,138,.1); color:var(--green);">${deviceName}</span>
+        ${sourceBadge}
       </div>
       <div class="sens-dpi">
         <span class="sens-label">DPI</span>
@@ -11460,7 +11496,15 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
         headshot: parseInt(cd.headshot, 10) || 70,
         popularity: parseInt(cd.popularity, 10) || 50,
         searchCount: parseInt(cd.searchCount, 10) || 0,
-        rnd: hashStr(String(cd.name || cd.id))
+        rnd: hashStr(String(cd.name || cd.id)),
+        // Carry the admin-entered manual sensitivity values and verified
+        // flag through to the live device object. Without these, every
+        // number entered in the Admin Dashboard's Add/Edit Device form
+        // silently never reaches the public site (search results, the
+        // comparison tool, the AI generator match-up, etc.) — the form
+        // fields would save fine but have no visible effect anywhere.
+        sensOverride: cd.sensOverride || null,
+        verified: !!cd.verified
       });
       changed = true;
     });
