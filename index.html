@@ -9022,7 +9022,19 @@ const DEFAULT_JX_SETTINGS = {
 // always reflects exactly what the admin last saved, not a merge).
 function deepMergeDefaults(defaults, saved){
   if(Array.isArray(defaults)){
-    return Array.isArray(saved) ? saved : JSON.parse(JSON.stringify(defaults));
+    if(!Array.isArray(saved)) return JSON.parse(JSON.stringify(defaults));
+    // Keep the saved array (preserves any custom order/edits the admin
+    // made), but backfill any items that exist in the current defaults
+    // and are missing from the saved copy — e.g. a new section (like
+    // "teamFinder"/Find a Team) added to SECTION_KEYS after this admin's
+    // sectionOrder was already saved to localStorage/backend. Without
+    // this, newly added sections never appear in the Sections manager
+    // for anyone who saved settings before that section existed.
+    const merged = saved.slice();
+    defaults.forEach(item=>{
+      if(!merged.includes(item)) merged.push(item);
+    });
+    return merged;
   }
   if(defaults && typeof defaults === "object"){
     const out = {};
