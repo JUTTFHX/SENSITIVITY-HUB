@@ -478,57 +478,129 @@ body.light .admin-access-btn{ color:#1a1404; }
 /* ---- Account drawer: email-verification banner ---- */
 .acct-verify-banner{
   display:none; align-items:center; justify-content:space-between; gap:10px;
-  margin:14px 20px 0; padding:10px 13px; border-radius: var(--radius-s);
-  background: rgba(244,196,48,.08); border:1px solid rgba(244,196,48,.28);
+  margin:16px 20px 0; padding:11px 14px; border-radius: var(--radius-s);
+  background: linear-gradient(135deg, rgba(255,107,53,.12), rgba(244,196,48,.08));
+  border:1px solid rgba(255,107,53,.32);
   color: var(--ink-dim); font-size:12px; line-height:1.4;
+  position:relative; overflow:hidden;
 }
+.acct-verify-banner::before{
+  content:''; position:absolute; inset:0; left:0; width:3px;
+  background: linear-gradient(180deg, var(--ember), var(--gold));
+}
+.acct-verify-banner span{ display:flex; align-items:center; gap:8px; padding-left:4px; }
 .acct-verify-banner button{
   flex-shrink:0; background:none; border:none; cursor:pointer;
-  color: var(--gold); font-weight:600; font-size:12px; padding:0;
+  color: var(--gold-bright); font-weight:700; font-size:12px; padding:4px 8px;
+  border-radius:5px; transition: background .2s, color .2s;
 }
-.acct-verify-banner button:hover{ text-decoration:underline; }
-.acct-verify-banner button:disabled{ opacity:.5; cursor:not-allowed; text-decoration:none; }
+.acct-verify-banner button:hover{ background: rgba(244,196,48,.14); text-decoration:none; }
+.acct-verify-banner button:disabled{ opacity:.5; cursor:not-allowed; text-decoration:none; background:none; }
 
 /* ---- Account drawer ---- */
 .acct-drawer-head{
   display:flex; flex-direction:column; align-items:center; text-align:center;
-  padding:26px 22px 20px; border-bottom:1px solid var(--hairline);
+  padding:34px 22px 22px; position:relative; overflow:hidden;
+  background:
+    radial-gradient(120% 90px at 50% -10%, rgba(244,196,48,.16), transparent 70%),
+    linear-gradient(180deg, rgba(244,196,48,.05) 0%, rgba(21,19,15,0) 60%);
+  border-bottom:1px solid var(--hairline);
 }
+.acct-drawer-head::before{
+  content:''; position:absolute; top:-40px; left:50%; width:220px; height:220px;
+  transform:translateX(-50%);
+  background:
+    repeating-radial-gradient(circle at center, rgba(244,196,48,.05) 0px, rgba(244,196,48,.05) 1px, transparent 1px, transparent 26px);
+  border-radius:50%; pointer-events:none;
+}
+.acct-avatar-ring{
+  width:92px; height:92px; border-radius:50%; margin-bottom:14px; position:relative;
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  padding:4px;
+  background: conic-gradient(from 180deg, var(--gold-bright), var(--ember), var(--gold-deep), var(--gold-bright));
+  box-shadow: 0 0 0 1px rgba(244,196,48,.15), 0 8px 24px -6px rgba(244,196,48,.35);
+  animation: acctRingSpin 7s linear infinite;
+}
+@keyframes acctRingSpin{ to{ transform: rotate(360deg); } }
 .acct-avatar-big{
-  width:76px; height:76px; border-radius:50%; overflow:hidden; margin-bottom:12px; position:relative;
+  width:100%; height:100%; border-radius:50%; overflow:hidden; position:relative;
   display:inline-flex; align-items:center; justify-content:center;
   background: radial-gradient(circle at 35% 30%, rgba(244,196,48,.95), rgba(184,134,11,.85) 60%, rgba(120,84,5,.9) 100%);
-  color: var(--void); font-family: var(--f-display); font-size:28px; flex-shrink:0;
+  color: var(--void); font-family: var(--f-display); font-size:30px; flex-shrink:0;
+  animation: acctRingSpin 7s linear infinite reverse;
+  border:2px solid var(--panel);
 }
 .acct-avatar-big img{ width:100%; height:100%; object-fit:cover; display:block; }
 .acct-avatar-edit{
-  position:absolute; bottom:-2px; right:-2px; width:26px; height:26px; border-radius:50%;
+  position:absolute; bottom:0px; right:0px; width:28px; height:28px; border-radius:50%;
   background: var(--gold); color: var(--void); display:flex; align-items:center; justify-content:center;
-  border:2px solid var(--panel); cursor:pointer;
+  border:2px solid var(--panel); cursor:pointer; z-index:2;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  transition: transform .2s, background .2s;
+  animation: acctRingSpin 7s linear infinite reverse;
 }
+.acct-avatar-edit:hover{ background: var(--gold-bright); transform: scale(1.08); }
 .acct-avatar-edit svg{ width:13px; height:13px; }
-.acct-drawer-name{ font-family: var(--f-display); font-size:16px; color: var(--ink); }
-.acct-drawer-email{ font-size:11.5px; color: var(--ink-faint); margin-top:2px; }
-.acct-tabs{ display:flex; gap:6px; padding:14px 14px 0; border-bottom:1px solid var(--hairline); }
+.acct-drawer-name{
+  font-family: var(--f-display); font-size:18px; letter-spacing:.02em; color: var(--ink);
+  display:flex; align-items:center; gap:6px;
+}
+.acct-drawer-email{ font-size:11.5px; color: var(--ink-faint); margin-top:3px; }
+.acct-drawer-badge{
+  margin-top:10px; display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.06em;
+  background: linear-gradient(135deg, rgba(244,196,48,.16), rgba(184,134,11,.1));
+  border:1px solid var(--hairline-strong); color: var(--gold-bright);
+}
+.acct-drawer-badge svg{ width:11px; height:11px; }
+
+.acct-tabs{
+  display:flex; gap:2px; padding:10px 14px 0; border-bottom:1px solid var(--hairline);
+  position:relative;
+}
 .acct-tab{
-  flex:1; padding:10px 6px; text-align:center; font-size:11.5px; font-weight:600;
+  flex:1; padding:11px 6px; text-align:center; font-size:11.5px; font-weight:600;
   color: var(--ink-faint); border-bottom:2px solid transparent; cursor:pointer;
   text-transform:uppercase; letter-spacing:.03em; background:none; border-top:none; border-left:none; border-right:none;
+  border-radius:8px 8px 0 0; transition: color .2s, background .2s;
 }
-.acct-tab.active{ color: var(--gold); border-bottom-color: var(--gold); }
-.acct-tab-panel{ display:none; padding:16px 18px; }
-.acct-tab-panel.active{ display:block; }
-.acct-field-row{ margin-bottom:16px; }
-.acct-field-row label{ display:block; font-size:11px; color: var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+.acct-tab:hover{ color: var(--ink-dim); background: rgba(244,196,48,.04); }
+.acct-tab.active{ color: var(--gold-bright); border-bottom-color: var(--gold); background: rgba(244,196,48,.06); }
+.acct-tab-panel{ display:none; padding:20px 18px; }
+.acct-tab-panel.active{ display:block; animation: acctFadeIn .25s ease; }
+@keyframes acctFadeIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
+
+.acct-field-row{ margin-bottom:18px; }
+.acct-field-row label{
+  display:flex; align-items:center; gap:6px; font-size:10.5px; color: var(--ink-faint);
+  text-transform:uppercase; letter-spacing:.06em; margin-bottom:7px; font-weight:700;
+}
+.acct-field-row .field-input{
+  background: var(--panel-2); border:1px solid var(--hairline-strong);
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.acct-field-row .field-input:focus{
+  border-color: var(--gold); background: var(--panel);
+  box-shadow: 0 0 0 3px rgba(244,196,48,.12);
+}
+
 .acct-hist-item{
   display:flex; align-items:center; gap:10px; padding:12px 10px; border-radius: var(--radius-s);
   border:1px solid var(--hairline); margin-bottom:8px; font-size:12.5px;
+  transition: border-color .2s, background .2s, transform .15s;
 }
+.acct-hist-item:hover{ border-color: var(--hairline-strong); background: rgba(244,196,48,.04); transform: translateX(2px); }
 .acct-hist-item .ahi-main{ flex:1; min-width:0; }
 .acct-hist-item .ahi-device{ color: var(--ink); font-weight:600; }
 .acct-hist-item .ahi-meta{ color: var(--ink-faint); font-size:11px; margin-top:2px; }
 .acct-hist-item .ahi-dpi{ color: var(--gold); font-family: var(--f-display); font-size:13px; flex-shrink:0; }
-.acct-signout-btn{ width:100%; margin-top:6px; }
+
+.acct-signout-btn{
+  width:100%; margin-top:8px; color: var(--red) !important;
+  border-color: rgba(255,92,92,.25) !important;
+}
+.acct-signout-btn:hover{ background: rgba(255,92,92,.08) !important; border-color: rgba(255,92,92,.4) !important; }
 
 /* ============ Glass panel ============ */
 .glass{
@@ -8579,17 +8651,26 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         <path d="M18 6 6 18M6 6l12 12"/>
       </svg>
     </button>
-    <div class="acct-avatar-big" id="acctAvatarBig">
-      <span id="acctAvatarInitial">U</span>
+    <div class="acct-avatar-ring">
+      <div class="acct-avatar-big" id="acctAvatarBig">
+        <span id="acctAvatarInitial">U</span>
+      </div>
       <button type="button" class="acct-avatar-edit" id="acctAvatarEditBtn" title="Change avatar" aria-label="Change avatar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       </button>
     </div>
     <div class="acct-drawer-name" id="acctDrawerName">—</div>
     <div class="acct-drawer-email" id="acctDrawerEmail">—</div>
+    <div class="acct-drawer-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 6.8L21 11l-6.6 2.2L12 20l-2.4-6.8L3 11l6.6-2.2z"/></svg>
+      JUTTFHX Member
+    </div>
   </div>
   <div class="acct-verify-banner" id="acctVerifyBanner">
-    <span>Verify your email to secure your account.</span>
+    <span>
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-3l-8.18-14.14a2 2 0 0 0-3.42 0z"/></svg>
+      Verify your email to secure your account.
+    </span>
     <button type="button" id="acctResendVerifyBtn">Resend</button>
   </div>
   <div class="acct-tabs">
@@ -8600,11 +8681,20 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   <div class="drawer-body" style="padding:0;">
     <div class="acct-tab-panel active" data-acct-panel="profile">
       <div class="acct-field-row">
-        <label for="acctUsernameInput">Username</label>
+        <label for="acctUsernameInput">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Username
+        </label>
         <input class="field-input" id="acctUsernameInput" type="text" maxlength="24" placeholder="Your display name">
       </div>
-      <button class="btn btn-gold btn-sm" id="acctSaveProfileBtn" style="width:100%;">Save Changes</button>
-      <button class="btn btn-ghost btn-sm acct-signout-btn" id="acctSignOutBtn">Sign Out</button>
+      <button class="btn btn-gold btn-sm" id="acctSaveProfileBtn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:7px;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+        Save Changes
+      </button>
+      <button class="btn btn-ghost btn-sm acct-signout-btn" id="acctSignOutBtn" style="display:flex; align-items:center; justify-content:center; gap:7px;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Sign Out
+      </button>
     </div>
     <div class="acct-tab-panel" data-acct-panel="favorites" id="acctFavoritesPanel">
       <div class="drawer-empty">No favorites yet.</div>
