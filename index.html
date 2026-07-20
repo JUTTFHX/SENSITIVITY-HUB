@@ -429,6 +429,66 @@ body.light .admin-access-btn{ color:#1a1404; }
 .auth-setup-warning.show{ display:block; }
 .auth-setup-warning b{ color: var(--gold); }
 
+/* ---- Auth modal: segmented Sign In / Sign Up tabs ---- */
+.auth-tabs{
+  position:relative; display:flex; background: var(--panel-2);
+  border:1px solid var(--hairline-strong); border-radius: var(--radius-s);
+  padding:4px; gap:4px;
+}
+.auth-tab{
+  position:relative; z-index:1; flex:1; background:none; border:none; cursor:pointer;
+  padding:10px 0; font-family: var(--f-display); font-size:12.5px; letter-spacing:.04em;
+  text-transform:uppercase; color: var(--ink-dim); transition: color .25s;
+}
+.auth-tab.active{ color:#1A1305; }
+.auth-tab-indicator{
+  position:absolute; top:4px; left:4px; bottom:4px; z-index:0;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
+  border-radius: calc(var(--radius-s) - 3px);
+  transition: transform .28s cubic-bezier(.4,0,.2,1), width .28s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 2px 10px rgba(244,196,48,.35);
+}
+
+/* ---- Auth modal: password field label row + show/hide toggle ---- */
+.field-label-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.field-label-row label{ margin-bottom:0; }
+.auth-forgot-link{
+  background:none; border:none; cursor:pointer; padding:0;
+  font-size:11.5px; color: var(--ink-faint); transition: color .2s;
+}
+.auth-forgot-link:hover{ color: var(--gold); text-decoration:underline; }
+.password-input-wrap{ position:relative; }
+.password-input-wrap .field-input{ padding-right:44px; }
+.password-toggle-btn{
+  position:absolute; right:4px; top:50%; transform:translateY(-50%);
+  width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+  background:none; border:none; cursor:pointer; color: var(--ink-faint); transition: color .2s;
+}
+.password-toggle-btn:hover{ color: var(--gold); }
+.password-toggle-btn svg{ width:17px; height:17px; }
+
+/* ---- Auth modal: info note (e.g. reset-link sent confirmation) ---- */
+.auth-info-note{
+  margin-bottom:14px; padding:11px 13px; border-radius: var(--radius-s);
+  background: rgba(95,215,138,.1); border:1px solid rgba(95,215,138,.3);
+  color: var(--green); font-size:12.5px; line-height:1.5; display:none;
+}
+.auth-info-note.show{ display:block; }
+
+/* ---- Account drawer: email-verification banner ---- */
+.acct-verify-banner{
+  display:none; align-items:center; justify-content:space-between; gap:10px;
+  margin:14px 20px 0; padding:10px 13px; border-radius: var(--radius-s);
+  background: rgba(244,196,48,.08); border:1px solid rgba(244,196,48,.28);
+  color: var(--ink-dim); font-size:12px; line-height:1.4;
+}
+.acct-verify-banner button{
+  flex-shrink:0; background:none; border:none; cursor:pointer;
+  color: var(--gold); font-weight:600; font-size:12px; padding:0;
+}
+.acct-verify-banner button:hover{ text-decoration:underline; }
+.acct-verify-banner button:disabled{ opacity:.5; cursor:not-allowed; text-decoration:none; }
+
 /* ---- Account drawer ---- */
 .acct-drawer-head{
   display:flex; flex-direction:column; align-items:center; text-align:center;
@@ -8448,16 +8508,24 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         <div class="brand-mark">JX</div>
         <div><span class="brand-name">JUTT<span>FHX</span></span><span class="brand-tag">Sensitivity Hub</span></div>
       </div>
-      <p class="admin-login-sub" style="margin:-8px 0 18px; text-align:center;" id="userAuthSub">Save favorites, sensitivity history, and your profile.</p>
+
+      <div class="auth-tabs" id="authTabs">
+        <button type="button" class="auth-tab active" id="authTabLogin" data-auth-tab="login">Sign In</button>
+        <button type="button" class="auth-tab" id="authTabSignup" data-auth-tab="signup">Sign Up</button>
+        <span class="auth-tab-indicator" id="authTabIndicator"></span>
+      </div>
+
+      <p class="admin-login-sub" style="margin:16px 0 18px; text-align:center;" id="userAuthSub">Save favorites, sensitivity history, and your profile.</p>
 
       <div class="admin-error" id="userAuthError"></div>
+      <div class="auth-info-note" id="authInfoNote"></div>
 
       <button type="button" class="auth-provider-btn" id="googleSignInBtn">
         <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.3 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.7l6-6C33.5 6.5 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.3-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 18.9 13 24 13c2.8 0 5.3 1 7.3 2.7l6-6C33.5 6.5 29 4.5 24 4.5c-7.7 0-14.3 4.4-17.7 10.2z"/><path fill="#4CAF50" d="M24 43.5c5 0 9.5-1.9 12.9-5.1l-6.3-5.3c-2 1.3-4.4 2-6.6 2-5.3 0-9.7-3.6-11.3-8.5l-6.6 5.1C8.7 38.3 15.7 43.5 24 43.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.7l6.3 5.3c3.7-3.4 6.1-8.5 6.1-14.5 0-1.2-.1-2.4-.3-3.5z"/></svg>
         Continue with Google
       </button>
 
-      <div class="auth-divider">or</div>
+      <div class="auth-divider" id="authDivider">or</div>
 
       <form id="userAuthForm">
         <div class="field" id="signupUsernameField" style="display:none;">
@@ -8468,16 +8536,23 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <label for="userAuthEmail">Email</label>
           <input class="field-input" id="userAuthEmail" type="email" placeholder="you@example.com" required autocomplete="username">
         </div>
-        <div class="field">
-          <label for="userAuthPassword">Password</label>
-          <input class="field-input" id="userAuthPassword" type="password" placeholder="••••••••" required autocomplete="current-password" minlength="6">
+        <div class="field" id="userAuthPasswordField">
+          <div class="field-label-row">
+            <label for="userAuthPassword">Password</label>
+            <button type="button" class="auth-forgot-link" id="forgotPasswordLink">Forgot password?</button>
+          </div>
+          <div class="password-input-wrap">
+            <input class="field-input" id="userAuthPassword" type="password" placeholder="••••••••" required autocomplete="current-password" minlength="6">
+            <button type="button" class="password-toggle-btn" id="passwordToggleBtn" aria-label="Show password" aria-pressed="false">
+              <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-6.06M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-3.22 4.36M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn btn-gold" style="width:100%;" id="userAuthSubmitBtn">Sign In</button>
       </form>
 
-      <div class="auth-switch" id="userAuthSwitch">
-        Don't have an account? <button type="button" id="userAuthSwitchBtn">Sign Up</button>
-      </div>
+      <div class="auth-switch" id="userAuthSwitch" style="display:none;"></div>
 
       <div class="auth-setup-warning" id="authSetupWarning">
         <b>Setup needed:</b> Sign-in isn't enabled yet in the Firebase Console. Go to <b>Authentication → Sign-in method</b> in your Firebase project and enable <b>Email/Password</b> and <b>Google</b> providers, then try again.
@@ -8512,6 +8587,10 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
     <div class="acct-drawer-name" id="acctDrawerName">—</div>
     <div class="acct-drawer-email" id="acctDrawerEmail">—</div>
+  </div>
+  <div class="acct-verify-banner" id="acctVerifyBanner">
+    <span>Verify your email to secure your account.</span>
+    <button type="button" id="acctResendVerifyBtn">Resend</button>
   </div>
   <div class="acct-tabs">
     <button class="acct-tab active" data-acct-tab="profile">Profile</button>
@@ -9749,39 +9828,6 @@ function getDeviceSensitivity(device, style){
   return generated;
 }
 
-function generateSensitivity({brand, model, age, style}){
-  const seed = hashStr(brand + model + age + style);
-  const rnd = seededRand(seed);
-  const profile = STYLE_PROFILES[style] || STYLE_PROFILES.Headshot;
-
-  // Device age nudge: newer devices (better sensors/chipsets) allow
-  // slightly higher sens ranges than older, more worn-in hardware.
-  const ageBoost = {
-    "Brand new (0–6 months)": 8,
-    "6 months – 1 year": 6,
-    "1–2 years": 4,
-    "2–3 years": 2,
-    "3–4 years": 1,
-    "4–5 years": 0,
-    "5+ years": 0,
-    "Other": 2
-  }[age] ?? 2;
-
-  const bump = ageBoost;
-  const adj = ([min,max]) => [min, Math.min(max+bump, 130)];
-
-  return {
-    dpi: [300,400,400,500,600][Math.floor(rnd()*5)],
-    general: rangePick(rnd, adj(profile.general)),
-    red: rangePick(rnd, adj(profile.red)),
-    scope2: rangePick(rnd, adj(profile.scope2)),
-    scope4: rangePick(rnd, adj(profile.scope4)),
-    sniper: rangePick(rnd, adj(profile.sniper)),
-    free: rangePick(rnd, adj(profile.free)),
-    fireBtnSize: (window.JX_Settings && window.JX_Settings.defaultFireBtnSize) || 56
-  };
-}
-
 // ---- HUD layouts ----
 // Admin-editable (Admin → HUD Layouts panel): add/edit/delete, thumbnail
 // (stored as a data-URL in imageUrl), category, and finger-count tags.
@@ -10459,21 +10505,27 @@ let nextTeamFinderId = 1;
 
     setTimeout(()=>{
       const matchedDevice = findMatchingDevice(brand, model);
-      // A device that exists in the database and has an admin-entered
-      // override for this style wins — that's real, curated data.
-      // Everything else (unknown devices, or known devices with no
-      // override set for this particular style) falls back to the
-      // seeded-random estimate, same as before.
+      // Only a device that exists in the database AND has an admin-entered
+      // override for this style counts as real, curated data. Anything
+      // else is an unrecognized device — we no longer fabricate an
+      // estimate for it; we tell the user honestly that it's not in the
+      // database yet and point them at the Request Center.
       const hasCuratedSens = matchedDevice && matchedDevice.sensOverride && matchedDevice.sensOverride[selectedStyle];
-      const sens = hasCuratedSens
-        ? getDeviceSensitivity(matchedDevice, selectedStyle)
-        : generateSensitivity({brand, model, age, style: selectedStyle});
+
+      if(!hasCuratedSens){
+        lastGenerated = null;
+        renderGenNotAvailable(brand, model);
+        showToast("info", "That device isn't in our database yet.");
+        return;
+      }
+
+      const sens = getDeviceSensitivity(matchedDevice, selectedStyle);
       lastGenerated = {
         deviceName: `${brand} ${model}`,
         style: selectedStyle,
         sens,
         age,
-        source: hasCuratedSens ? "verified" : "estimated"
+        source: "verified"
       };
       renderGenResult(lastGenerated);
       addHistory(`${brand} ${model}`);
@@ -10487,6 +10539,31 @@ let nextTeamFinderId = 1;
       }
     }, 700);
   });
+
+  // Shown when the typed brand+model has no verified database entry.
+  // No numbers are generated — real data or nothing.
+  function renderGenNotAvailable(brand, model){
+    genResultContent.innerHTML = `
+      <div class="result-meta">
+        <span class="result-tag" style="background:rgba(184,175,155,.12); color:var(--ink-dim);">${brand} ${model}</span>
+        <span class="result-tag" style="background:rgba(255,107,107,.12); color:#ff6b6b;">Not in database</span>
+      </div>
+      <p class="rec-text" style="margin:14px 0 18px;">
+        We don't have community-tested sensitivity values for this device yet.
+        Submit it to the Device Request Center and our team will add tested values.
+      </p>
+      <div class="result-actions">
+        <button class="btn btn-gold btn-sm" id="genRequestDeviceBtn">Request This Device</button>
+      </div>
+    `;
+    document.getElementById("genRequestDeviceBtn").addEventListener("click", ()=>{
+      const reqBrand = document.getElementById("reqBrand");
+      const reqDeviceName = document.getElementById("reqDeviceName");
+      if(reqBrand) reqBrand.value = brand;
+      if(reqDeviceName) reqDeviceName.value = model;
+      document.getElementById("request")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   function renderGenResult(data){
     const { deviceName, sens, source } = data;
@@ -13225,7 +13302,7 @@ import {
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   GoogleAuthProvider, signInWithPopup, updateProfile, signOut, onAuthStateChanged,
-  getIdTokenResult
+  getIdTokenResult, sendPasswordResetEmail, sendEmailVerification
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 let app, db, storage, auth;
@@ -13307,7 +13384,15 @@ async function signup(email, password, username){
     try{ await updateProfile(cred.user, { displayName: username }); }catch(e){ /* non-fatal */ }
   }
   await ensureUserProfileDoc(cred.user, username);
+  try{ await sendEmailVerification(cred.user); }catch(e){ /* non-fatal — user can resend later */ }
   return cred;
+}
+function resetPassword(email){
+  return sendPasswordResetEmail(auth, email);
+}
+function resendVerificationEmail(){
+  if(!auth.currentUser) return Promise.reject(new Error("Not signed in."));
+  return sendEmailVerification(auth.currentUser);
 }
 async function loginWithGoogle(){
   const provider = new GoogleAuthProvider();
@@ -13639,7 +13724,7 @@ window.FirebaseService = {
   init: initFirebase,
   isReady,
   login, logout, watchAuth, watchSiteAuth: watchAuth, isAdmin, getAdminRole,
-  signup, loginWithGoogle,
+  signup, loginWithGoogle, resetPassword, resendVerificationEmail,
   getUserProfile, updateUserProfile, uploadUserAvatar, setUserFavorites, addUserSensitivity,
   getDevices, addDevice, updateDevice, deleteDevice,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
@@ -13992,13 +14077,15 @@ async function updateUserProfile(){ return userAccountsUnsupported(); }
 async function uploadUserAvatar(){ return userAccountsUnsupported(); }
 async function setUserFavorites(){ return userAccountsUnsupported(); }
 async function addUserSensitivity(){ return userAccountsUnsupported(); }
+async function resetPassword(){ return userAccountsUnsupported(); }
+async function resendVerificationEmail(){ return userAccountsUnsupported(); }
 
 window.SupabaseService = {
   name: "supabase",
   init: initSupabase,
   isReady,
   login, logout, watchAuth, watchSiteAuth: watchAuth, isAdmin,
-  signup, loginWithGoogle,
+  signup, loginWithGoogle, resetPassword, resendVerificationEmail,
   getUserProfile, updateUserProfile, uploadUserAvatar, setUserFavorites, addUserSensitivity,
   getDevices, addDevice, updateDevice, deleteDevice,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
@@ -14186,6 +14273,8 @@ async function updateUserProfile(){ return userAccountsUnsupported(); }
 async function uploadUserAvatar(){ return userAccountsUnsupported(); }
 async function setUserFavorites(){ return userAccountsUnsupported(); }
 async function addUserSensitivity(){ return userAccountsUnsupported(); }
+async function resetPassword(){ return userAccountsUnsupported(); }
+async function resendVerificationEmail(){ return userAccountsUnsupported(); }
 
 function watchSiteAuth(callback){ callback(null); return ()=>{}; }
 /* This adapter has no built-in auth (see login() above), so isAdmin
@@ -14198,7 +14287,7 @@ window.SheetsService = {
   init: initSheets,
   isReady,
   login, logout, watchAuth, watchSiteAuth, isAdmin,
-  signup, loginWithGoogle,
+  signup, loginWithGoogle, resetPassword, resendVerificationEmail,
   getUserProfile, updateUserProfile, uploadUserAvatar, setUserFavorites, addUserSensitivity,
   getDevices, addDevice, updateDevice, deleteDevice,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
@@ -17915,18 +18004,28 @@ window.JX_logAudit = function(field, oldVal, newVal){
   let backend = null;
   let currentUser = null;   // raw auth user object (uid, email, ...)
   let currentProfile = null; // Firestore users/{uid} doc (username, avatarUrl, favorites, sensitivityHistory)
-  let authMode = "login"; // "login" | "signup"
+  let authMode = "login"; // "login" | "signup" | "reset"
 
   const accountBtn = document.getElementById("accountBtn");
   const userAuthModal = document.getElementById("userAuthModal");
   const accountDrawer = document.getElementById("accountDrawer");
   const userAuthForm = document.getElementById("userAuthForm");
   const userAuthError = document.getElementById("userAuthError");
+  const authInfoNote = document.getElementById("authInfoNote");
   const userAuthTitle = document.getElementById("userAuthTitle");
   const userAuthSub = document.getElementById("userAuthSub");
   const userAuthSubmitBtn = document.getElementById("userAuthSubmitBtn");
   const userAuthSwitch = document.getElementById("userAuthSwitch");
   const signupUsernameField = document.getElementById("signupUsernameField");
+  const userAuthPasswordField = document.getElementById("userAuthPasswordField");
+  const userAuthPasswordInput = document.getElementById("userAuthPassword");
+  const passwordToggleBtn = document.getElementById("passwordToggleBtn");
+  const forgotPasswordLink = document.getElementById("forgotPasswordLink");
+  const authTabs = document.getElementById("authTabs");
+  const authTabLogin = document.getElementById("authTabLogin");
+  const authTabSignup = document.getElementById("authTabSignup");
+  const authTabIndicator = document.getElementById("authTabIndicator");
+  const authDivider = document.getElementById("authDivider");
   const authSetupWarning = document.getElementById("authSetupWarning");
   const googleSignInBtn = document.getElementById("googleSignInBtn");
 
@@ -18030,36 +18129,82 @@ window.JX_logAudit = function(field, oldVal, newVal){
     authSetupWarning.classList.remove("show");
     userAuthModal.classList.add("open");
     document.documentElement.classList.add("no-scroll");
+    positionAuthTabIndicator();
     setTimeout(()=> document.getElementById("userAuthEmail")?.focus(), 50);
   }
   function closeUserAuthModal(){
     userAuthModal.classList.remove("open");
     document.documentElement.classList.remove("no-scroll");
     userAuthForm.reset();
+    resetPasswordVisibility();
   }
   document.getElementById("closeUserAuthModal").addEventListener("click", closeUserAuthModal);
   userAuthModal.addEventListener("click", (e)=>{ if(e.target === userAuthModal) closeUserAuthModal(); });
   document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && userAuthModal.classList.contains("open")) closeUserAuthModal(); });
 
+  function positionAuthTabIndicator(){
+    const activeTab = authMode === "signup" ? authTabSignup : authTabLogin;
+    if(!authTabIndicator || !activeTab) return;
+    authTabIndicator.style.width = activeTab.offsetWidth + "px";
+    authTabIndicator.style.transform = `translateX(${activeTab.offsetLeft}px)`;
+  }
+
+  function resetPasswordVisibility(){
+    userAuthPasswordInput.type = "password";
+    passwordToggleBtn.querySelector(".eye-open").style.display = "block";
+    passwordToggleBtn.querySelector(".eye-closed").style.display = "none";
+    passwordToggleBtn.setAttribute("aria-pressed", "false");
+    passwordToggleBtn.setAttribute("aria-label", "Show password");
+  }
+  passwordToggleBtn.addEventListener("click", ()=>{
+    const showing = userAuthPasswordInput.type === "text";
+    userAuthPasswordInput.type = showing ? "password" : "text";
+    passwordToggleBtn.querySelector(".eye-open").style.display = showing ? "block" : "none";
+    passwordToggleBtn.querySelector(".eye-closed").style.display = showing ? "none" : "block";
+    passwordToggleBtn.setAttribute("aria-pressed", String(!showing));
+    passwordToggleBtn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+  });
+
   function setAuthMode(mode){
-    authMode = mode;
+    authMode = mode; // "login" | "signup" | "reset"
+
+    authTabs.style.display = mode === "reset" ? "none" : "flex";
+    googleSignInBtn.style.display = mode === "reset" ? "none" : "flex";
+    authDivider.style.display = mode === "reset" ? "none" : "flex";
+    userAuthPasswordField.style.display = mode === "reset" ? "none" : "block";
+    userAuthPasswordInput.required = mode !== "reset";
+    signupUsernameField.style.display = mode === "signup" ? "block" : "none";
+
+    authTabLogin.classList.toggle("active", mode === "login");
+    authTabSignup.classList.toggle("active", mode === "signup");
+    if(mode !== "reset") positionAuthTabIndicator();
+
     if(mode === "signup"){
       userAuthTitle.textContent = "Create Account";
       userAuthSub.textContent = "Save favorites, sensitivity history, and your profile.";
       userAuthSubmitBtn.textContent = "Sign Up";
-      signupUsernameField.style.display = "block";
-      userAuthSwitch.innerHTML = `Already have an account? <button type="button" id="userAuthSwitchBtn">Sign In</button>`;
+      userAuthSwitch.style.display = "none";
+    } else if(mode === "reset"){
+      userAuthTitle.textContent = "Reset Password";
+      userAuthSub.textContent = "Enter your email and we'll send you a link to reset your password.";
+      userAuthSubmitBtn.textContent = "Send Reset Link";
+      userAuthSwitch.innerHTML = `<button type="button" id="backToSignInBtn">Back to Sign In</button>`;
+      userAuthSwitch.style.display = "block";
+      document.getElementById("backToSignInBtn").addEventListener("click", ()=> setAuthMode("login"));
     } else {
       userAuthTitle.textContent = "Sign In";
       userAuthSub.textContent = "Welcome back — sign in to access your account.";
       userAuthSubmitBtn.textContent = "Sign In";
-      signupUsernameField.style.display = "none";
-      userAuthSwitch.innerHTML = `Don't have an account? <button type="button" id="userAuthSwitchBtn">Sign Up</button>`;
+      userAuthSwitch.style.display = "none";
     }
-    document.getElementById("userAuthSwitchBtn").addEventListener("click", ()=> setAuthMode(mode === "signup" ? "login" : "signup"));
     userAuthError.classList.remove("show");
+    authInfoNote.classList.remove("show");
     authSetupWarning.classList.remove("show");
   }
+  authTabLogin.addEventListener("click", ()=> setAuthMode("login"));
+  authTabSignup.addEventListener("click", ()=> setAuthMode("signup"));
+  forgotPasswordLink.addEventListener("click", ()=> setAuthMode("reset"));
+
   accountBtn.addEventListener("click", ()=>{
     if(currentUser && currentProfile){
       openAccountDrawer();
@@ -18072,9 +18217,36 @@ window.JX_logAudit = function(field, oldVal, newVal){
   userAuthForm.addEventListener("submit", async (e)=>{
     e.preventDefault();
     userAuthError.classList.remove("show");
+    authInfoNote.classList.remove("show");
     authSetupWarning.classList.remove("show");
     const email = document.getElementById("userAuthEmail").value.trim();
-    const password = document.getElementById("userAuthPassword").value;
+
+    if(authMode === "reset"){
+      userAuthSubmitBtn.disabled = true;
+      userAuthSubmitBtn.textContent = "Sending…";
+      try{
+        await ensureBackend();
+        await backend.resetPassword(email);
+      }catch(err){
+        // Don't reveal whether an account exists for this email — only
+        // surface genuine problems (bad format, network, rate limit).
+        const msg = (err && err.message) || "";
+        if(!msg.includes("user-not-found")){
+          userAuthError.textContent = friendlyAccountError(err);
+          userAuthError.classList.add("show");
+          userAuthSubmitBtn.disabled = false;
+          userAuthSubmitBtn.textContent = "Send Reset Link";
+          return;
+        }
+      }
+      authInfoNote.textContent = "If an account exists for that email, a reset link is on its way.";
+      authInfoNote.classList.add("show");
+      userAuthSubmitBtn.disabled = false;
+      userAuthSubmitBtn.textContent = "Send Reset Link";
+      return;
+    }
+
+    const password = userAuthPasswordInput.value;
     const username = document.getElementById("userAuthUsername").value.trim();
     userAuthSubmitBtn.disabled = true;
     userAuthSubmitBtn.textContent = authMode === "signup" ? "Creating account…" : "Signing in…";
@@ -18082,7 +18254,7 @@ window.JX_logAudit = function(field, oldVal, newVal){
       await ensureBackend();
       if(authMode === "signup"){
         await backend.signup(email, password, username);
-        showToast("success", "Account created — welcome to JUTTFHX!");
+        showToast("success", "Account created — check your email to verify your address.");
       } else {
         await backend.login(email, password);
         showToast("success", "Signed in successfully");
@@ -18117,9 +18289,26 @@ window.JX_logAudit = function(field, oldVal, newVal){
   const acctUsernameInput = document.getElementById("acctUsernameInput");
   const acctDrawerName = document.getElementById("acctDrawerName");
   const acctDrawerEmail = document.getElementById("acctDrawerEmail");
+  const acctVerifyBanner = document.getElementById("acctVerifyBanner");
+  const acctResendVerifyBtn = document.getElementById("acctResendVerifyBtn");
   const acctAvatarBig = document.getElementById("acctAvatarBig");
   const acctAvatarInitial = document.getElementById("acctAvatarInitial");
   const avatarUploadInput = document.getElementById("avatarUploadInput");
+
+  acctResendVerifyBtn.addEventListener("click", async ()=>{
+    acctResendVerifyBtn.disabled = true;
+    acctResendVerifyBtn.textContent = "Sending…";
+    try{
+      await ensureBackend();
+      await backend.resendVerificationEmail();
+      showToast("success", "Verification email sent — check your inbox.");
+      acctResendVerifyBtn.textContent = "Sent";
+    }catch(err){
+      showToast("info", friendlyAccountError(err));
+      acctResendVerifyBtn.disabled = false;
+      acctResendVerifyBtn.textContent = "Resend";
+    }
+  });
 
   function openAccountDrawer(){
     renderAccountDrawer();
@@ -18163,6 +18352,12 @@ window.JX_logAudit = function(field, oldVal, newVal){
     acctDrawerName.textContent = currentProfile.username || "Player";
     acctDrawerEmail.textContent = currentProfile.email || "";
     acctUsernameInput.value = currentProfile.username || "";
+    const needsVerify = !!(currentUser && currentUser.emailVerified === false);
+    acctVerifyBanner.style.display = needsVerify ? "flex" : "none";
+    if(needsVerify){
+      acctResendVerifyBtn.disabled = false;
+      acctResendVerifyBtn.textContent = "Resend";
+    }
     if(currentProfile.avatarUrl){
       acctAvatarBig.innerHTML = `<img src="${escapeHtml(currentProfile.avatarUrl)}" alt=""><button type="button" class="acct-avatar-edit" id="acctAvatarEditBtn" title="Change avatar" aria-label="Change avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>`;
     } else {
