@@ -13047,7 +13047,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
      other visitors' activity happening right now, not just this
      session's. Lightweight — only touches the four counters, not a
      full device/review re-sync. Pauses while the tab is hidden. */
-  const LIVE_STATS_INTERVAL_MS = 30000;
+  const LIVE_STATS_INTERVAL_MS = 120000; // was 30s — 30s per open tab is what drove reads sky-high under real traffic
   async function refreshLiveStats(){
     if(document.hidden) return;
     if(typeof window.getBackend !== "function") return;
@@ -14309,7 +14309,7 @@ window.FIREBASE_CONFIGURED = FIREBASE_CONFIGURED;
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, doc, getDoc, setDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp, onSnapshot, increment
+  query, where, orderBy, serverTimestamp, onSnapshot, increment, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getStorage, ref, uploadBytes, uploadString, getDownloadURL, deleteObject
@@ -14698,18 +14698,25 @@ async function incrementDeviceSearch(id){
   await updateDoc(doc(db, "devices", id), { searchCount: increment(1) });
 }
 async function getStats(){
-  const [visitsSnap, searchesSnap, devicesSnap, requestsSnap] = await Promise.all([
-    getDocs(collection(db, "visits")),
-    getDocs(collection(db, "searches")),
-    getDocs(collection(db, "devices")),
-    getDocs(collection(db, "requests"))
+  // Uses getCountFromServer() (aggregation query) instead of getDocs() —
+  // this counts documents server-side without downloading them, so the
+  // cost stays ~flat (roughly 1 read per query) instead of scaling with
+  // collection size. Previously this pulled every document in all four
+  // collections on every call, which is what blew through the Firestore
+  // no-cost read quota. Visitor de-dup already happens client-side
+  // before a "visits" doc is ever written (see trackRealVisitOnce), so
+  // the raw count is already a safe proxy for unique visitors.
+  const [visitsCount, searchesCount, devicesCount, requestsCount] = await Promise.all([
+    getCountFromServer(collection(db, "visits")),
+    getCountFromServer(collection(db, "searches")),
+    getCountFromServer(collection(db, "devices")),
+    getCountFromServer(collection(db, "requests"))
   ]);
-  const uniqueVisitors = new Set(visitsSnap.docs.map(d => d.data().visitorId).filter(Boolean));
   return {
-    totalUsers: uniqueVisitors.size || visitsSnap.size,
-    totalSearches: searchesSnap.size,
-    totalDevices: devicesSnap.size,
-    totalRequests: requestsSnap.size
+    totalUsers: visitsCount.data().count,
+    totalSearches: searchesCount.data().count,
+    totalDevices: devicesCount.data().count,
+    totalRequests: requestsCount.data().count
   };
 }
 
