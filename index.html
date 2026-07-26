@@ -2135,49 +2135,6 @@ html.admin-active{ overflow:hidden; }
 .tourney-entry-fee{ font-family:var(--f-mono); font-size:12px; color:var(--ink-dim); }
 .tourney-entry-fee.free{ color:var(--green); }
 
-/* ---- JX Premium pricing ---- */
-.premium-card{
-  padding:26px 22px; display:flex; flex-direction:column; gap:14px; position:relative;
-  border:1px solid var(--hairline-strong);
-}
-.premium-card.featured{ border-color:rgba(244,196,48,.55); background:rgba(244,196,48,.05); }
-.premium-badge{
-  position:absolute; top:-11px; right:18px; font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
-  padding:4px 11px; border-radius:20px; background:var(--gold); color:#1A1305; font-weight:700;
-}
-.premium-plan-name{ font-family:var(--f-display); font-size:19px; color:var(--ink); }
-.premium-plan-price{ font-family:var(--f-display); font-size:30px; color:var(--gold); line-height:1.1; }
-.premium-plan-price span{ font-family:var(--f-mono); font-size:12px; color:var(--ink-dim); font-weight:400; }
-.premium-plan-list{ list-style:none; padding:0; margin:4px 0; display:flex; flex-direction:column; gap:9px; }
-.premium-plan-list li{ font-size:13px; color:var(--ink-dim); display:flex; align-items:flex-start; gap:8px; line-height:1.5; }
-.premium-plan-list li svg{ width:15px; height:15px; flex-shrink:0; margin-top:2px; color:var(--green); }
-.premium-methods-note{ font-family:var(--f-mono); font-size:11px; letter-spacing:.06em; color:var(--ink-faint); text-align:center; margin-top:6px; }
-
-/* ---- Pro Presets teaser (curiosity hook for JX Premium) ----
-   Real curated presets with some values genuinely blurred until the
-   viewer unlocks Premium — not fake urgency or invented numbers, just
-   an honest locked preview of something that actually exists. */
-.pro-presets-row{ margin-top:26px; }
-.pro-presets-label{
-  font-family:var(--f-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
-  color: var(--gold); display:flex; align-items:center; gap:7px; margin-bottom:14px;
-}
-.pro-preset-card{ padding:18px; display:flex; flex-direction:column; gap:10px; position:relative; }
-.pro-preset-name{ font-family:var(--f-display); font-size:15px; color:var(--ink); }
-.pro-preset-sens-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.pro-preset-sens-grid .sens-item{ padding:8px 10px; }
-.pro-preset-locked .sens-val{
-  filter: blur(5px); user-select:none; -webkit-user-select:none;
-  position:relative;
-}
-.pro-preset-unlock{
-  display:flex; align-items:center; justify-content:center; gap:6px;
-  font-family:var(--f-mono); font-size:11.5px; font-weight:700; letter-spacing:.03em;
-  color:#1A1305; background:var(--gold); border:none; border-radius:8px; padding:9px 12px;
-  cursor:pointer; margin-top:2px;
-}
-.pro-preset-unlock svg{ width:14px; height:14px; }
-
 /* ---- Policy & Rules Blocks (shared) ---- */
 .policy-updated{ font-family:var(--f-mono); font-size:11px; letter-spacing:.06em; color:var(--ink-faint); margin-bottom:28px; text-transform:uppercase; }
 .policy-block{ margin-bottom:30px; }
@@ -6053,7 +6010,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       <a href="#marketplace">Most Used Settings Today</a>
       <a href="#leaderboard">Top Headshot Devices</a>
       <a href="#tournaments">Free Fire Tournaments</a>
-      <a href="#premium">JX Premium</a>
       <a href="#hud-gallery">HUD Layout Gallery</a>
       <a href="#guides">Guides</a>
       <a href="#reviews">User Reviews</a>
@@ -6281,14 +6237,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         </div>
         <div id="genResultContent" style="display:none;"></div>
       </div>
-    </div>
-
-    <div class="pro-presets-row">
-      <div class="pro-presets-label">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M5 18h14l-1.5-9-4 3-1.5-6-1.5 6-4-3z"/></svg>
-        JX Pro Presets
-      </div>
-      <div class="grid grid-3" id="proPresetsGrid"></div>
     </div>
   </div>
 </section>
@@ -6669,72 +6617,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         </div>
 
         <button type="submit" class="btn btn-gold" style="width:100%;" id="tourneyFormSubmitBtn">Confirm Registration</button>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- ============ JX PREMIUM ============ -->
-<section class="section" id="premium">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Go Further</div>
-      <h2 class="section-title">JX Premium</h2>
-      <p class="section-sub">Pro-tuned sensitivity presets, priority Cloud Save (50 slots instead of 10), and a gold badge on your profile. Pay by bank transfer — verified by our team within a few hours.</p>
-    </div>
-    <div class="grid grid-3" id="premiumPlanGrid"></div>
-    <p class="premium-methods-note">Payments accepted via Bank Transfer &amp; Crypto (USDT) — submit a screenshot and we'll activate your plan manually.</p>
-  </div>
-</section>
-
-<div class="modal-overlay" id="premiumModal">
-  <div class="modal-box" style="max-width:520px;">
-    <div class="modal-head">
-      <h3 id="premiumModalPlanName">Go Premium</h3>
-      <button class="btn-icon" id="closePremiumModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-    </div>
-    <div class="modal-body">
-      <div class="tourney-modal-summary">
-        <div>Plan<b id="premiumModalPlanLabel">—</b></div>
-        <div>Price<b id="premiumModalPrice">—</b></div>
-        <div>Duration<b id="premiumModalDuration">—</b></div>
-      </div>
-
-      <form id="premiumForm">
-        <input type="hidden" id="premiumFormPlanId">
-        <div class="field-row">
-          <div class="field">
-            <label for="premiumFormIgn">In-Game Name</label>
-            <input class="field-input" id="premiumFormIgn" type="text" placeholder="e.g. ProGamerX" required maxlength="24">
-          </div>
-          <div class="field">
-            <label for="premiumFormContact">WhatsApp / Contact</label>
-            <input class="field-input" id="premiumFormContact" type="text" placeholder="03XX-XXXXXXX" required>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Select Payment Method</label>
-          <div class="payment-method-row" id="premiumPaymentMethods"></div>
-        </div>
-
-        <div class="payment-details-box" id="premiumPaymentDetails"></div>
-
-        <div class="field">
-          <label for="premiumFormScreenshot">Upload Payment Screenshot</label>
-          <input class="field-input" id="premiumFormScreenshot" type="file" accept="image/png,image/jpeg,image/webp" required>
-        </div>
-
-        <div class="tourney-fine-print">
-          Premium activation is manual — our team verifies your payment and activates your plan, usually within a few hours. Payments are non-refundable once submitted.
-        </div>
-
-        <div class="tourney-consent-row">
-          <input type="checkbox" id="premiumFormConsent" required>
-          <label for="premiumFormConsent">I confirm the details above are accurate and understand plan activation is manual and payment is non-refundable.</label>
-        </div>
-
-        <button type="submit" class="btn btn-gold" style="width:100%;" id="premiumFormSubmitBtn">Submit Payment Proof</button>
       </form>
     </div>
   </div>
@@ -8087,10 +7969,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.5 7.5 11 16M15.5 7.5 13 16"/></svg>
           Character Combos
         </button>
-        <button class="admin-nav-btn" data-panel="propresets">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18h14l-1.5-9-4 3-1.5-6-1.5 6-4-3z"/></svg>
-          Pro Presets
-        </button>
         <button class="admin-nav-btn" data-panel="reviews">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 16.9 5.8 20.3l1.6-6.8-5.2-4.6 6.9-.6z"/></svg>
           Reviews
@@ -8598,56 +8476,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         </div>
       </div>
 
-      <!-- PRO PRESETS -->
-      <section class="admin-panel-section" data-section="propresets" style="display:none;">
-        <div class="admin-topbar">
-          <div><div class="admin-page-title">Pro Presets</div><div class="admin-page-sub">The locked "JX Pro Presets" teaser cards shown under the AI Sensitivity Generator — visible in full only to JX Premium members.</div></div>
-          <button class="btn btn-gold btn-sm" id="addProPresetBtn">+ Add Preset</button>
-        </div>
-        <div class="glass admin-panel">
-          <div class="admin-panel-head"><h3>All Pro Presets</h3></div>
-          <div class="admin-bulkbar" id="proPresetBulkBar" style="display:none;">
-            <span id="proPresetBulkCount">0 selected</span>
-            <div class="admin-bulkbar-actions">
-              <button type="button" class="btn btn-ghost btn-sm danger" id="proPresetBulkDeleteBtn">Delete Selected</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="proPresetBulkClearBtn">Clear</button>
-            </div>
-          </div>
-          <div class="admin-table-wrap">
-            <table class="admin-table">
-              <thead><tr>
-                <th style="width:36px;"><input type="checkbox" id="adminProPresetSelectAll" aria-label="Select all presets"></th>
-                <th>Name</th><th>Tag</th><th>General</th><th>Red Dot</th><th>Actions</th>
-              </tr></thead>
-              <tbody id="adminProPresetTable"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- PRO PRESET ADD/EDIT MODAL -->
-      <div class="modal-overlay" id="proPresetEditModal">
-        <div class="modal-box" style="max-width:560px;">
-          <div class="modal-head"><h3 id="proPresetEditModalTitle">Add Pro Preset</h3><button class="modal-close" id="proPresetEditModalClose">&times;</button></div>
-          <div class="admin-modal-form">
-            <div class="admin-form-grid">
-              <div class="field" style="grid-column:1/-1;"><label for="proPresetFormName">Preset Name</label><input class="field-input" id="proPresetFormName" type="text" placeholder="e.g. Rusher — 4 Finger Claw"></div>
-              <div class="field" style="grid-column:1/-1;"><label for="proPresetFormTag">Tagline</label><input class="field-input" id="proPresetFormTag" type="text" placeholder="e.g. Close-range aggression"></div>
-              <div class="field"><label for="proPresetFormGeneral">General</label><input class="field-input" id="proPresetFormGeneral" type="number" min="0" max="200"></div>
-              <div class="field"><label for="proPresetFormRed">Red Dot</label><input class="field-input" id="proPresetFormRed" type="number" min="0" max="200"></div>
-              <div class="field"><label for="proPresetFormScope2">2x Scope</label><input class="field-input" id="proPresetFormScope2" type="number" min="0" max="200"></div>
-              <div class="field"><label for="proPresetFormScope4">4x Scope</label><input class="field-input" id="proPresetFormScope4" type="number" min="0" max="200"></div>
-              <div class="field"><label for="proPresetFormSniper">Sniper Scope</label><input class="field-input" id="proPresetFormSniper" type="number" min="0" max="200"></div>
-              <div class="field"><label for="proPresetFormFree">Free Look</label><input class="field-input" id="proPresetFormFree" type="number" min="0" max="200"></div>
-            </div>
-          </div>
-          <div class="modal-foot">
-            <button class="btn btn-ghost btn-sm" id="proPresetEditCancelBtn">Cancel</button>
-            <button class="btn btn-gold btn-sm" id="proPresetEditSaveBtn">Save Preset</button>
-          </div>
-        </div>
-      </div>
-
       <!-- REVIEWS -->
       <section class="admin-panel-section" data-section="reviews" style="display:none;">
         <div class="admin-topbar">
@@ -9140,10 +8968,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     <div class="acct-drawer-badge">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 6.8L21 11l-6.6 2.2L12 20l-2.4-6.8L3 11l6.6-2.2z"/></svg>
       JUTTFHX Member
-    </div>
-    <div class="acct-drawer-badge" id="acctPremiumBadge" style="display:none; background:rgba(244,196,48,.14); border-color:rgba(244,196,48,.4); color:var(--gold);">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18h14l-1.5-9-4 3-1.5-6-1.5 6-4-3z"/></svg>
-      <span id="acctPremiumBadgeText">JX Premium</span>
     </div>
   </div>
   <div class="acct-verify-banner" id="acctVerifyBanner">
@@ -11812,7 +11636,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
   const DEFAULT_PAYMENT_METHODS = {
     easypaisa: { label:"Easypaisa", rows:[ ["Account Title","JUTTFHX Esports"], ["Easypaisa Number","0309-1234567"] ] },
     nayapay:   { label:"NayaPay",   rows:[ ["Account Title","JUTTFHX Esports"], ["NayaPay ID / Number","0309-1234567"] ] },
-    bank:      { label:"Bank Transfer", rows:[ ["Account Title","Hamid Ali"], ["Bank","Meezan Bank"], ["Account Number","04070112584821"] ] }
+    bank:      { label:"Bank Transfer", rows:[ ["Account Title","JUTTFHX Esports"], ["Bank","Meezan Bank"], ["Account Number","0401-2345678-9"] ] }
   };
   const PAYMENT_METHODS_KEY = "juttfhx_payment_methods_v1";
   function loadPaymentMethods(){
@@ -11917,46 +11741,13 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     }
   });
 
-  // Screenshots are stored directly inside the Firestore "requests" document
-  // (Spark plan has no Storage bucket to offload them to), and Firestore
-  // caps a document at 1MB. A raw phone screenshot can easily be 2-4MB, so
-  // we downscale + re-encode as JPEG client-side first. Keeps well under
-  // the limit while staying plenty legible for payment verification.
-  function readFileAsDataUrl(file, maxDimension = 1280, quality = 0.72){
+  function readFileAsDataUrl(file){
     return new Promise((resolve, reject)=>{
       const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
       reader.onerror = ()=> reject(new Error("Could not read screenshot file"));
-      reader.onload = ()=>{
-        const img = new Image();
-        img.onerror = ()=> resolve(reader.result); // fall back to raw file if it won't decode as an image
-        img.onload = ()=>{
-          try{
-            let { width, height } = img;
-            if(width > maxDimension || height > maxDimension){
-              const scale = maxDimension / Math.max(width, height);
-              width = Math.round(width * scale);
-              height = Math.round(height * scale);
-            }
-            const canvas = document.createElement("canvas");
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL("image/jpeg", quality));
-          }catch(e){
-            resolve(reader.result); // canvas failed (e.g. tainted/CORS edge case) — fall back to raw
-          }
-        };
-        img.src = reader.result;
-      };
       reader.readAsDataURL(file);
     });
-  }
-
-  // A base64 data URL runs ~33% larger than the raw bytes it encodes, and
-  // the whole request doc (name/contact/other fields) needs headroom too —
-  // 900KB of data URL keeps a safe margin under Firestore's 1MB document cap.
-  function isScreenshotTooLarge(dataUrl){
-    return !!dataUrl && dataUrl.length > 900 * 1024;
   }
 
   tourneyRegisterForm.addEventListener("submit", async (e)=>{
@@ -12005,11 +11796,6 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
       let screenshot = "";
       if(t.entryFee > 0 && screenshotInput.files && screenshotInput.files.length){
         screenshot = await readFileAsDataUrl(screenshotInput.files[0]);
-        if(isScreenshotTooLarge(screenshot)){
-          showToast("info", "That screenshot is too large even after compression — please crop it tighter or use a smaller image.");
-          if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = "Confirm Registration"; }
-          return;
-        }
       }
 
       const payload = {
@@ -12054,168 +11840,6 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     const btn = e.target.closest(".tourney-register-btn");
     if(!btn || btn.disabled) return;
     openTourneyRegisterModal(parseInt(btn.dataset.tourneyId));
-  });
-
-  /* ---- JX Premium — plans, modal, and payment submission ----
-     Reuses the same generic "requests" pipeline as tournaments/HUD/
-     device requests (type:"premium"), so it works across all four
-     backend adapters without any new collection or Firestore rule. */
-  const PREMIUM_PLANS = [
-    { id:"weekly",  name:"Weekly",  price:149,  duration:"7 days",   durationDays:7,   perks:["Priority Cloud Save (50 slots)","Pro sensitivity presets","Gold profile badge"] },
-    { id:"monthly", name:"Monthly", price:399,  duration:"30 days",  durationDays:30,  perks:["Everything in Weekly","Early access to new HUD codes","Priority support"], featured:true },
-    { id:"lifetime",name:"Lifetime",price:1499, duration:"Lifetime", durationDays:0,   perks:["Everything in Monthly","One-time payment, never expires","Priority support"] }
-  ];
-  const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>`;
-  const premiumPlanGrid = document.getElementById("premiumPlanGrid");
-  function renderPremiumPlans(){
-    if(!premiumPlanGrid) return;
-    premiumPlanGrid.innerHTML = PREMIUM_PLANS.map(p => `
-      <div class="glass premium-card ${p.featured ? "featured" : ""}">
-        ${p.featured ? `<span class="premium-badge">Most Popular</span>` : ""}
-        <div class="premium-plan-name">${escapeHtml(p.name)}</div>
-        <div class="premium-plan-price">Rs ${p.price}<span> / ${escapeHtml(p.duration)}</span></div>
-        <ul class="premium-plan-list">
-          ${p.perks.map(perk => `<li>${checkSvg}<span>${escapeHtml(perk)}</span></li>`).join("")}
-        </ul>
-        <button type="button" class="btn ${p.featured ? "btn-gold" : "btn-ghost"}" style="width:100%;" data-premium-plan="${p.id}">Get ${escapeHtml(p.name)}</button>
-      </div>
-    `).join("");
-  }
-  renderPremiumPlans();
-
-  const premiumModal = document.getElementById("premiumModal");
-  const premiumForm = document.getElementById("premiumForm");
-  const premiumPaymentMethods = document.getElementById("premiumPaymentMethods");
-  const premiumPaymentDetails = document.getElementById("premiumPaymentDetails");
-  let selectedPremiumPaymentMethod = null;
-  let activePremiumPlan = null;
-
-  function renderPremiumPaymentChips(){
-    if(!premiumPaymentMethods) return;
-    const methods = window.JX_getPaymentMethods ? window.JX_getPaymentMethods() : PAYMENT_METHODS;
-    const keys = Object.keys(methods);
-    premiumPaymentMethods.innerHTML = keys.length
-      ? keys.map(key => `<div class="payment-method-chip" data-method="${key}">${escapeHtml(methods[key].label)}</div>`).join("")
-      : `<p class="section-sub" style="font-size:12px;">No payment methods are configured yet — contact an admin.</p>`;
-  }
-
-  function openPremiumModal(planId){
-    const p = PREMIUM_PLANS.find(x => x.id === planId);
-    if(!p) return;
-    activePremiumPlan = p;
-    document.getElementById("premiumModalPlanName").textContent = `Go Premium — ${p.name}`;
-    document.getElementById("premiumModalPlanLabel").textContent = p.name;
-    document.getElementById("premiumModalPrice").textContent = "Rs " + p.price;
-    document.getElementById("premiumModalDuration").textContent = p.duration;
-    document.getElementById("premiumFormPlanId").value = p.id;
-
-    premiumForm.reset();
-    selectedPremiumPaymentMethod = null;
-    premiumPaymentDetails.classList.remove("show");
-    premiumPaymentDetails.innerHTML = "";
-    renderPremiumPaymentChips();
-
-    // Pre-fill IGN from the signed-in profile if available (Account
-    // Controller runs in a separate script scope, so we go through the
-    // window.JX_Account bridge rather than reaching for currentProfile directly)
-    if(window.JX_Account && typeof window.JX_Account.getCurrentUsername === "function"){
-      const username = window.JX_Account.getCurrentUsername();
-      const ignField = document.getElementById("premiumFormIgn");
-      if(ignField && username) ignField.value = username;
-    }
-
-    premiumModal.classList.add("open");
-    document.documentElement.classList.add("no-scroll");
-  }
-  function closePremiumModal(){
-    premiumModal.classList.remove("open");
-    document.documentElement.classList.remove("no-scroll");
-  }
-  document.getElementById("closePremiumModal").addEventListener("click", closePremiumModal);
-  premiumModal.addEventListener("click", (e)=>{ if(e.target === premiumModal) closePremiumModal(); });
-
-  if(premiumPlanGrid) premiumPlanGrid.addEventListener("click", (e)=>{
-    const btn = e.target.closest("[data-premium-plan]");
-    if(!btn) return;
-    openPremiumModal(btn.dataset.premiumPlan);
-  });
-
-  if(premiumPaymentMethods) premiumPaymentMethods.addEventListener("click", (e)=>{
-    const chip = e.target.closest(".payment-method-chip");
-    if(!chip) return;
-    premiumPaymentMethods.querySelectorAll(".payment-method-chip").forEach(c=> c.classList.remove("active"));
-    chip.classList.add("active");
-    selectedPremiumPaymentMethod = chip.dataset.method;
-    const methods = window.JX_getPaymentMethods ? window.JX_getPaymentMethods() : PAYMENT_METHODS;
-    const method = methods[selectedPremiumPaymentMethod];
-    if(method){
-      premiumPaymentDetails.innerHTML = `
-        <div style="font-family:var(--f-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--green); margin-bottom:6px;">Send payment to — ${escapeHtml(method.label)}</div>
-        ${method.rows.map(([k,v]) => `<div class="payment-details-row"><span>${escapeHtml(k)}</span><b>${escapeHtml(v)}</b></div>`).join("")}
-      `;
-      premiumPaymentDetails.classList.add("show");
-    }
-  });
-
-  premiumForm.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const p = activePremiumPlan;
-    if(!p) return;
-
-    if(!selectedPremiumPaymentMethod){
-      showToast("info", "Select a payment method first.");
-      return;
-    }
-    const screenshotInput = document.getElementById("premiumFormScreenshot");
-    if(!screenshotInput.files || !screenshotInput.files.length){
-      showToast("info", "Please upload a screenshot of your payment.");
-      return;
-    }
-    if(!document.getElementById("premiumFormConsent").checked){
-      showToast("info", "Please confirm the checkbox to continue.");
-      return;
-    }
-
-    const submitBtn = document.getElementById("premiumFormSubmitBtn");
-    if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = "Submitting…"; }
-
-    try{
-      const screenshot = await readFileAsDataUrl(screenshotInput.files[0]);
-      if(isScreenshotTooLarge(screenshot)){
-        showToast("info", "That screenshot is too large even after compression — please crop it tighter or use a smaller image.");
-        if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = "Submit Payment Proof"; }
-        return;
-      }
-      const payload = {
-        type: "premium",
-        name: document.getElementById("premiumFormIgn").value.trim(),
-        uid: (window.JX_Account && typeof window.JX_Account.getCurrentUid === "function") ? window.JX_Account.getCurrentUid() : "",
-        contact: document.getElementById("premiumFormContact").value.trim(),
-        planId: p.id,
-        planName: p.name,
-        durationDays: p.durationDays,
-        entryFee: p.price,
-        paymentMethod: selectedPremiumPaymentMethod,
-        screenshot,
-        status: "pending",
-        date: new Date().toISOString()
-      };
-
-      if(typeof window.getBackend === "function"){
-        const backend = await window.getBackend();
-        await backend.submitRequest(payload);
-      } else {
-        store.requests.push(payload);
-        saveStore(store);
-      }
-
-      closePremiumModal();
-      showToast("success", `Payment proof submitted for ${p.name} — we'll activate your plan shortly.`);
-    }catch(err){
-      showToast("info", "Could not submit your payment: " + err.message);
-    }finally{
-      if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = "Submit Payment Proof"; }
-    }
   });
 
   renderTrending();
@@ -14558,25 +14182,6 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
          allow read: if true;
          allow write: if isAdmin();
        }
-       // NOTE: hudLayouts/combos/proPresets were previously missing from
-       // this rules file even though the app code for all three has
-       // existed for a while — under Firestore's default-deny behavior
-       // that means, until these three blocks are deployed, admin edits
-       // to the HUD Layout Gallery, Character Combos, and Pro Presets
-       // teaser would silently fail to reach Firestore (each admin's
-       // changes would only ever exist in their own browser).
-       match /hudLayouts/{docId} {
-         allow read: if true;
-         allow write: if isAdmin();
-       }
-       match /combos/{docId} {
-         allow read: if true;
-         allow write: if isAdmin();
-       }
-       match /proPresets/{docId} {
-         allow read: if true;
-         allow write: if isAdmin();
-       }
        match /requests/{docId} {
          allow create: if true;
          allow read, update, delete: if isAdmin();
@@ -14604,13 +14209,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
        // there's no legitimate reason for the dashboard to read or
        // edit another person's private profile doc.)
        match /users/{uid} {
-         // Users can read/write their own profile. Admins can also write
-         // (needed so the Admin Dashboard can flip on `premium`/`premiumPlan`/
-         // `premiumExpiresAt` when approving a JX Premium purchase — the
-         // admin's auth.uid is never the same as the buyer's uid, so a
-         // self-only rule would silently reject that write).
-         allow read: if request.auth != null && request.auth.uid == uid;
-         allow write: if (request.auth != null && request.auth.uid == uid) || isAdmin();
+         allow read, write: if request.auth != null && request.auth.uid == uid;
        }
        // Anonymous analytics counters powering the "By The Numbers"
        // section. Anyone can log a visit/search; nobody should be able
@@ -14646,16 +14245,13 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
 
    NOTE: if you've already deployed rules that only cover devices/
    reviews/requests, Firestore's default-deny behavior means the
-   users/players/visits/searches/huds/settings/hudLayouts/combos/
-   proPresets collections above have NO access at all until you add
-   these — that will silently break account signup/login, the pro
-   player database, the live stats counters, the HUD image gallery
-   (uploads would still work, but the gallery would only show the ones
-   uploaded in the current browser session), Site Settings (Maintenance
-   Mode and every other admin toggle would silently fail to sync to real
-   visitors), and admin edits to the HUD Layout Gallery / Character
-   Combos / Pro Presets teaser (each would only ever persist in the
-   admin's own browser instead of reaching every visitor).
+   users/players/visits/searches/huds/settings collections above have NO
+   access at all until you add these — that will silently break account
+   signup/login, the pro player database, the live stats counters, the
+   HUD image gallery (uploads would still work, but the gallery would
+   only show the ones uploaded in the current browser session), and
+   Site Settings (Maintenance Mode and every other admin toggle would
+   silently fail to sync to real visitors).
 
    IF YOU'RE MIGRATING FROM OLDER RULES that used `request.auth != null`
    for write instead of isAdmin(): any account without the custom claim
@@ -14862,10 +14458,10 @@ async function uploadUserAvatar(uid, dataUrl){
 async function setUserFavorites(uid, favorites){
   await updateUserProfile(uid, { favorites });
 }
-async function addUserSensitivity(uid, entry, limit = 50){
+async function addUserSensitivity(uid, entry){
   const profile = await getUserProfile(uid);
   const history = (profile && profile.sensitivityHistory) || [];
-  const updated = [entry, ...history].slice(0, limit);
+  const updated = [entry, ...history].slice(0, 50);
   await updateUserProfile(uid, { sensitivityHistory: updated });
   return updated;
 }
@@ -14984,31 +14580,6 @@ async function updateCombo(id, updates){
 }
 async function deleteCombo(id){
   await deleteDoc(doc(db, "combos", id));
-}
-
-/* ---------------- PRO PRESETS ----------------
-   Same fix as HUD LAYOUTS / CHARACTER COMBOS above: the "JX Pro
-   Presets" teaser cards shown under the AI Sensitivity Generator
-   (locked/blurred for non-Premium visitors), managed from the
-   Admin → Pro Presets panel. This collection is what makes admin
-   edits visible to every visitor instead of just the admin's own
-   browser. */
-async function getProPresets(){
-  const snap = await getDocs(collection(db, "proPresets"));
-  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
-}
-async function addProPreset(preset){
-  const docRef = await addDoc(collection(db, "proPresets"), {
-    ...preset,
-    createdAt: serverTimestamp()
-  });
-  return docRef.id;
-}
-async function updateProPreset(id, updates){
-  await updateDoc(doc(db, "proPresets", id), updates);
-}
-async function deleteProPreset(id){
-  await deleteDoc(doc(db, "proPresets", id));
 }
 
 /* ---------------- GUILD RECRUITMENT HUB ----------------
@@ -15175,7 +14746,6 @@ window.FirebaseService = {
   uploadHudImage, deleteHudImage, getHuds,
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
-  getProPresets, addProPreset, updateProPreset, deleteProPreset,
   getGuilds, addGuild, updateGuild, deleteGuild,
   getTeamFinder, addTeamFinderListing, updateTeamFinderListing, deleteTeamFinderListing,
   getReviews, addReview, deleteReview, approveReview,
@@ -15391,31 +14961,6 @@ async function deleteCombo(id){
   if(error) throw error;
 }
 
-/* ---------------- PRO PRESETS ----------------
-   Table: create table pro_presets (
-     id uuid primary key default gen_random_uuid(),
-     name text, tag text, sens jsonb,
-     created_at timestamptz default now()
-   ); */
-async function getProPresets(){
-  const { data, error } = await supabase.from("pro_presets").select("*").order("created_at", { ascending:false });
-  if(error) throw error;
-  return data;
-}
-async function addProPreset(preset){
-  const { data, error } = await supabase.from("pro_presets").insert([preset]).select();
-  if(error) throw error;
-  return data[0].id;
-}
-async function updateProPreset(id, updates){
-  const { error } = await supabase.from("pro_presets").update(updates).eq("id", id);
-  if(error) throw error;
-}
-async function deleteProPreset(id){
-  const { error } = await supabase.from("pro_presets").delete().eq("id", id);
-  if(error) throw error;
-}
-
 /* ---------------- REVIEWS ---------------- */
 async function getReviews(){
   const { data, error } = await supabase.from("reviews").select("*").order("created_at", { ascending:false });
@@ -15562,7 +15107,6 @@ window.SupabaseService = {
   uploadHudImage, deleteHudImage,
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
-  getProPresets, addProPreset, updateProPreset, deleteProPreset,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, submitRequest, updateRequestStatus, deleteRequest,
   trackVisit, trackSearch, incrementDeviceSearch, getStats,
@@ -15692,14 +15236,6 @@ async function addCombo(combo){ return callSheets("addCombo", combo); }
 async function updateCombo(id, updates){ return callSheets("updateCombo", { id, updates }); }
 async function deleteCombo(id){ return callSheets("deleteCombo", { id }); }
 
-/* ---------------- PRO PRESETS ----------------
-   Add a "proPresets" tab to the Sheet (headers: id, name, tag, sens,
-   createdAt) and the matching Apps Script cases. */
-async function getProPresets(){ return callSheets("getProPresets", {}); }
-async function addProPreset(preset){ return callSheets("addProPreset", preset); }
-async function updateProPreset(id, updates){ return callSheets("updateProPreset", { id, updates }); }
-async function deleteProPreset(id){ return callSheets("deleteProPreset", { id }); }
-
 /* ---------------- REVIEWS ---------------- */
 async function getReviews(){ return callSheets("getReviews", {}); }
 async function addReview(review){ return callSheets("addReview", { ...review, approved: true }); }
@@ -15773,7 +15309,6 @@ window.SheetsService = {
   uploadHudImage, deleteHudImage,
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
-  getProPresets, addProPreset, updateProPreset, deleteProPreset,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, submitRequest, updateRequestStatus, deleteRequest,
   trackVisit, trackSearch, incrementDeviceSearch, getStats,
@@ -16078,10 +15613,10 @@ window.DemoService = {
     users[uid] = { ...(users[uid] || { uid }), favorites };
     demoUsersSave(users);
   },
-  async addUserSensitivity(uid, entry, limit = 50){
+  async addUserSensitivity(uid, entry){
     const users = demoUsersLoad();
     const existing = (users[uid] && users[uid].sensitivityHistory) || [];
-    const updated = [entry, ...existing].slice(0, limit);
+    const updated = [entry, ...existing].slice(0, 50);
     users[uid] = { ...(users[uid] || { uid }), sensitivityHistory: updated };
     demoUsersSave(users);
     return updated;
@@ -16203,28 +15738,6 @@ window.DemoService = {
   async deleteCombo(id){
     const d = demoLoad();
     d.combos = (d.combos || []).filter(x => x.id !== id);
-    demoSave(d);
-  },
-
-  async getProPresets(){ const d = demoLoad(); return d.proPresets || []; },
-  async addProPreset(preset){
-    const d = demoLoad();
-    if(!d.proPresets) d.proPresets = [];
-    const id = "demo-propreset-" + Date.now();
-    d.proPresets.unshift({ id, ...preset, createdAt: new Date().toISOString() });
-    demoSave(d);
-    return id;
-  },
-  async updateProPreset(id, updates){
-    const d = demoLoad();
-    if(!d.proPresets) d.proPresets = [];
-    const idx = d.proPresets.findIndex(x => x.id === id);
-    if(idx > -1) d.proPresets[idx] = { ...d.proPresets[idx], ...updates };
-    demoSave(d);
-  },
-  async deleteProPreset(id){
-    const d = demoLoad();
-    d.proPresets = (d.proPresets || []).filter(x => x.id !== id);
     demoSave(d);
   },
 
@@ -16707,7 +16220,7 @@ window.getBackend = (function(){
   let playerCache = [];
 
   async function loadAllPanelData(){
-    await Promise.all([loadDevices(), loadReviews(), loadRequests(), loadHuds(), loadHudLayoutsFresh(), loadGuildsFresh(), loadTeamFinderFresh(), loadProPresetsAdmin()]);
+    await Promise.all([loadDevices(), loadReviews(), loadRequests(), loadHuds(), loadHudLayoutsFresh(), loadGuildsFresh(), loadTeamFinderFresh()]);
     renderOverview();
   }
 
@@ -18276,161 +17789,6 @@ adminComboTable.addEventListener("click", async (e)=>{
     }
   }
 });
-
-/* ============================================================
-   PRO PRESETS PANEL
-   ------------------------------------------------------------
-   Unlike Combos/HUD Layouts, there's no localStorage-backed default
-   set here to merge against — presets are fetched straight from the
-   backend, so every row already has a __backendId and Add/Edit/Delete
-   talk to the backend directly. The public teaser page (JX Pro
-   Presets, under the AI Generator) merges these on top of its own
-   3 hardcoded fallback cards. */
-const adminProPresetTable = document.getElementById("adminProPresetTable");
-const proPresetEditModal = document.getElementById("proPresetEditModal");
-let PRO_PRESETS_ADMIN = [];
-
-async function loadProPresetsAdmin(){
-  try{
-    const remote = await backend.getProPresets();
-    PRO_PRESETS_ADMIN = (remote || []).map(r=>{
-      let sens = r.sens;
-      if(typeof sens === "string"){ try{ sens = JSON.parse(sens); }catch(e){ sens = {}; } }
-      return { id: r.id, name: r.name || "Untitled Preset", tag: r.tag || "", sens: sens || {} };
-    });
-  }catch(err){
-    PRO_PRESETS_ADMIN = [];
-  }
-  renderProPresetTable();
-}
-
-async function deleteProPresetById(id){
-  const removed = PRO_PRESETS_ADMIN.find(x=> String(x.id) === String(id));
-  if(!removed) return;
-  await backend.deleteProPreset(id);
-  PRO_PRESETS_ADMIN = PRO_PRESETS_ADMIN.filter(x=> String(x.id) !== String(id));
-  return removed;
-}
-
-const proPresetBulk = initBulkSelect({
-  tbody: adminProPresetTable,
-  selectAll: document.getElementById("adminProPresetSelectAll"),
-  bar: document.getElementById("proPresetBulkBar"),
-  countEl: document.getElementById("proPresetBulkCount"),
-  domAttr: "data-select-propreset",
-  clearBtn: document.getElementById("proPresetBulkClearBtn"),
-  deleteBtn: document.getElementById("proPresetBulkDeleteBtn"),
-  onDelete: (id)=> deleteProPresetById(id),
-  reload: ()=> renderProPresetTable(),
-  label: "Pro Preset"
-});
-
-function renderProPresetTable(){
-  proPresetBulk.prune(new Set(PRO_PRESETS_ADMIN.map(p=> String(p.id))));
-  if(!PRO_PRESETS_ADMIN.length){
-    adminProPresetTable.innerHTML = `<tr class="admin-empty-row"><td colspan="6">No admin-added presets yet — the public teaser is showing its 3 built-in defaults.</td></tr>`;
-    proPresetBulk.updateBar();
-    return;
-  }
-  adminProPresetTable.innerHTML = PRO_PRESETS_ADMIN.map(p=> `
-    <tr data-id="${p.id}" class="${proPresetBulk.rowClass(p.id)}">
-      ${proPresetBulk.cellHtml(p.id, p.name)}
-      <td class="cell-name">${escapeHtml(p.name)}</td>
-      <td>${escapeHtml(p.tag)}</td>
-      <td>${p.sens.general ?? "—"}</td>
-      <td>${p.sens.red ?? "—"}</td>
-      <td class="cell-actions">
-        <button class="admin-icon-btn" data-edit-propreset="${p.id}" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
-        <button class="admin-icon-btn danger" data-delete-propreset="${p.id}" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>
-      </td>
-    </tr>`).join("");
-  proPresetBulk.updateBar();
-}
-
-function openProPresetEditModal(p){
-  document.getElementById("proPresetEditModalTitle").textContent = p ? "Edit Pro Preset" : "Add Pro Preset";
-  proPresetEditModal.dataset.editId = p ? p.id : "";
-  document.getElementById("proPresetFormName").value = p ? p.name : "";
-  document.getElementById("proPresetFormTag").value = p ? p.tag : "";
-  const s = (p && p.sens) || {};
-  document.getElementById("proPresetFormGeneral").value = s.general ?? "";
-  document.getElementById("proPresetFormRed").value = s.red ?? "";
-  document.getElementById("proPresetFormScope2").value = s.scope2 ?? "";
-  document.getElementById("proPresetFormScope4").value = s.scope4 ?? "";
-  document.getElementById("proPresetFormSniper").value = s.sniper ?? "";
-  document.getElementById("proPresetFormFree").value = s.free ?? "";
-  proPresetEditModal.classList.add("open");
-}
-function closeProPresetEditModal(){ proPresetEditModal.classList.remove("open"); }
-document.getElementById("addProPresetBtn").addEventListener("click", ()=> openProPresetEditModal(null));
-document.getElementById("proPresetEditModalClose").addEventListener("click", closeProPresetEditModal);
-document.getElementById("proPresetEditCancelBtn").addEventListener("click", closeProPresetEditModal);
-proPresetEditModal.addEventListener("click", (e)=>{ if(e.target === proPresetEditModal) closeProPresetEditModal(); });
-document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && proPresetEditModal.classList.contains("open")) closeProPresetEditModal(); });
-
-document.getElementById("proPresetEditSaveBtn").addEventListener("click", async ()=>{
-  const name = document.getElementById("proPresetFormName").value.trim();
-  if(!name){ showToastSafe("info", "Preset name is required."); return; }
-  const id = proPresetEditModal.dataset.editId;
-  const numField = (elId)=>{
-    const v = parseInt(document.getElementById(elId).value, 10);
-    return Number.isFinite(v) ? v : 0;
-  };
-  const fields = {
-    name,
-    tag: document.getElementById("proPresetFormTag").value.trim(),
-    sens: {
-      general: numField("proPresetFormGeneral"),
-      red: numField("proPresetFormRed"),
-      scope2: numField("proPresetFormScope2"),
-      scope4: numField("proPresetFormScope4"),
-      sniper: numField("proPresetFormSniper"),
-      free: numField("proPresetFormFree")
-    }
-  };
-  const saveBtn = document.getElementById("proPresetEditSaveBtn");
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Saving…";
-  try{
-    if(id){
-      await backend.updateProPreset(id, fields);
-      PRO_PRESETS_ADMIN = PRO_PRESETS_ADMIN.map(p=> String(p.id) === String(id) ? { ...p, ...fields } : p);
-    } else {
-      const newId = await backend.addProPreset(fields);
-      PRO_PRESETS_ADMIN = [...PRO_PRESETS_ADMIN, { id: newId, ...fields }];
-    }
-    renderProPresetTable();
-    window.JX_logAudit("Pro Preset", id ? "edited" : "added", name);
-    closeProPresetEditModal();
-    showToastSafe("success", "Preset saved — live on the public teaser now.");
-  }catch(err){
-    showToastSafe("info", "Could not save preset: " + err.message);
-  }finally{
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Save Preset";
-  }
-});
-
-adminProPresetTable.addEventListener("click", async (e)=>{
-  const editBtn = e.target.closest("[data-edit-propreset]");
-  if(editBtn){
-    const p = PRO_PRESETS_ADMIN.find(x=> String(x.id) === editBtn.dataset.editPropreset);
-    if(p) openProPresetEditModal(p);
-    return;
-  }
-  const delBtn = e.target.closest("[data-delete-propreset]");
-  if(delBtn){
-    if(!confirm("Delete this preset?")) return;
-    try{
-      await deleteProPresetById(delBtn.dataset.deletePropreset);
-      renderProPresetTable();
-      window.JX_logAudit("Pro Preset", "deleted", delBtn.dataset.deletePropreset);
-      showToastSafe("success", "Preset deleted.");
-    }catch(err){
-      showToastSafe("info", "Could not delete preset: " + err.message);
-    }
-  }
-});
 /* ============================================================
    HUD LAYOUTS — full CRUD (added above the legacy quick-upload flow)
    ============================================================ */
@@ -18990,16 +18348,14 @@ window.JX_logAudit = function(field, oldVal, newVal){
       const isPlayer = r.type === "player";
       const isHud = r.type === "hud";
       const isTourney = r.type === "tournament";
-      const isPremium = r.type === "premium";
       const statusClass = r.status === "approved" ? "status-approved" : r.status === "added" ? "status-added" : "status-pending";
-      const statusLabel = r.status === "approved" ? "Approved" : r.status === "added" ? "Activated" : "Pending";
+      const statusLabel = r.status === "approved" ? "Approved" : r.status === "added" ? "Added to DB" : "Pending";
       // Device requests: Details = brand, Device column = —
       // Player requests: Details = role · team, Device column = their device
       // HUD requests: Details = grip · notes (truncated), Device column = —
       // Tournament requests: Details = tournament name · level, Device column = entry fee/payment method
-      // Premium requests: Details = plan name · duration, Device column = payment method
-      const typeLabel = isPlayer ? "Player" : isHud ? "HUD Code" : isTourney ? "Tournament" : isPremium ? "Premium" : "Device";
-      const displayName = r.name || r.model || (isHud ? "HUD Code Request" : isTourney ? "Tournament Entry" : isPremium ? "Premium Purchase" : "—");
+      const typeLabel = isPlayer ? "Player" : isHud ? "HUD Code" : isTourney ? "Tournament" : "Device";
+      const displayName = r.name || r.model || (isHud ? "HUD Code Request" : isTourney ? "Tournament Entry" : "—");
       const fingerLabels = { "2F": "2 Finger", "3F": "3 Finger", "4F": "4 Finger" };
       const details = isPlayer
         ? [r.role, r.team].filter(Boolean).join(" · ")
@@ -19007,10 +18363,8 @@ window.JX_logAudit = function(field, oldVal, newVal){
           ? [fingerLabels[r.fingers] || r.fingers, r.notes && r.notes.length > 40 ? r.notes.slice(0, 40) + "…" : r.notes].filter(Boolean).join(" · ")
           : isTourney
             ? [r.tournamentName, r.level ? `Lvl ${r.level}` : ""].filter(Boolean).join(" · ")
-            : isPremium
-              ? [r.planName, r.durationDays ? `${r.durationDays}d` : "Lifetime", "Rs " + r.entryFee].filter(Boolean).join(" · ")
-              : (r.brand || "");
-      const deviceCol = isPlayer ? (r.device || "—") : (isTourney || isPremium) ? (r.entryFee > 0 ? (r.paymentMethod || "Paid") : "Free") : "—";
+            : (r.brand || "");
+      const deviceCol = isPlayer ? (r.device || "—") : isTourney ? (r.entryFee > 0 ? (r.paymentMethod || "Paid") : "Free") : "—";
       return `<tr data-id="${r.id}" data-req-row="${r.id}" class="admin-clickable-row ${reqBulk.rowClass(r.id)}">
         ${reqBulk.cellHtml(r.id, displayName)}
         <td class="cell-name">${typeLabel}</td>
@@ -19045,34 +18399,8 @@ window.JX_logAudit = function(field, oldVal, newVal){
   }
   async function markRequestAdded(id){
     try{
-      const r = requestCache.find(req => String(req.id) === String(id));
       await backend.updateRequestStatus(id, "added");
-
-      // Premium purchases: "Added" = activated. If the buyer was signed in
-      // (r.uid present) and the active backend supports user profiles
-      // (Firebase / Demo — Supabase/Sheets don't have accounts), flip on
-      // their premium flag and compute an expiry from the plan's duration.
-      if(r && r.type === "premium" && r.uid && typeof backend.updateUserProfile === "function"){
-        try{
-          const expiresAt = r.durationDays > 0
-            ? new Date(Date.now() + r.durationDays * 24 * 60 * 60 * 1000).toISOString()
-            : null; // lifetime plan — no expiry
-          await backend.updateUserProfile(r.uid, {
-            premium: true,
-            premiumPlan: r.planId || "",
-            premiumActivatedAt: new Date().toISOString(),
-            premiumExpiresAt: expiresAt
-          });
-          showToastSafe("success", "Request marked as Added — Premium activated for this user");
-        }catch(profileErr){
-          // Request is still marked "added" even if the profile update fails
-          // (e.g. account backend doesn't support profiles) — surface it separately.
-          showToastSafe("info", "Marked as Added, but couldn't activate premium on the user profile: " + profileErr.message);
-        }
-      } else {
-        showToastSafe("success", "Request marked as Added to Database");
-      }
-
+      showToastSafe("success", "Request marked as Added to Database");
       await loadRequests();
       renderOverview();
     }catch(err){
@@ -19126,37 +18454,35 @@ window.JX_logAudit = function(field, oldVal, newVal){
     const isPlayer = r.type === "player";
     const isHud = r.type === "hud";
     const isTourney = r.type === "tournament";
-    const isPremium = r.type === "premium";
     const fingerLabels = { "2F": "2 Finger", "3F": "3 Finger", "4F": "4 Finger" };
-    document.getElementById("reqDetailName").textContent = r.name || r.model || (isHud ? "HUD Code Request" : isTourney ? "Tournament Entry" : isPremium ? "Premium Purchase" : "—");
-    document.getElementById("reqDetailBrand").textContent = isPlayer ? "Player Request" : isHud ? "HUD Code Request" : isTourney ? "Tournament Request" : isPremium ? "Premium Request" : (r.brand || "—");
+    document.getElementById("reqDetailName").textContent = r.name || r.model || (isHud ? "HUD Code Request" : isTourney ? "Tournament Entry" : "—");
+    document.getElementById("reqDetailBrand").textContent = isPlayer ? "Player Request" : isHud ? "HUD Code Request" : isTourney ? "Tournament Request" : (r.brand || "—");
     document.getElementById("reqDetailStatusPill").textContent = statusLabel;
     document.getElementById("reqDetailStatusPill").className = "status-pill " + statusClass;
 
-    // These fields are repurposed as Grip/Notes for HUD requests, as
-    // Level/UID for Tournament requests, and as Plan/Duration for Premium
-    // requests. Device requests no longer collect RAM/Processor, so
-    // they're hidden here.
+    // These fields are repurposed as Grip/Notes for HUD requests, and
+    // as Level/UID for Tournament requests. Device requests no longer
+    // collect RAM/Processor, so they're hidden here.
     const ramField = document.getElementById("reqDetailRamField");
     const processorField = document.getElementById("reqDetailProcessorField");
-    ramField.style.display = (isHud || isTourney || isPremium) ? "" : "none";
-    processorField.style.display = (isHud || isTourney || isPremium) ? "" : "none";
-    ramField.querySelector("label").textContent = isTourney ? "Player Level" : isPremium ? "Plan" : "Grip / Fingers";
-    processorField.querySelector("label").textContent = isTourney ? "In-Game UID" : isPremium ? "Duration" : "Notes";
-    document.getElementById("reqDetailRam").textContent = isTourney ? (r.level || "—") : isPremium ? (r.planName || "—") : (fingerLabels[r.fingers] || r.fingers || "—");
-    document.getElementById("reqDetailProcessor").textContent = isTourney ? (r.uid || "—") : isPremium ? (r.durationDays > 0 ? `${r.durationDays} days` : "Lifetime") : (r.notes || "—");
+    ramField.style.display = (isHud || isTourney) ? "" : "none";
+    processorField.style.display = (isHud || isTourney) ? "" : "none";
+    ramField.querySelector("label").textContent = isTourney ? "Player Level" : "Grip / Fingers";
+    processorField.querySelector("label").textContent = isTourney ? "In-Game UID" : "Notes";
+    document.getElementById("reqDetailRam").textContent = isTourney ? (r.level || "—") : (fingerLabels[r.fingers] || r.fingers || "—");
+    document.getElementById("reqDetailProcessor").textContent = isTourney ? (r.uid || "—") : (r.notes || "—");
 
-    // Player-only fields, repurposed as Tournament/Premium Payment
+    // Player-only fields, repurposed as Tournament/Payment for Tournament requests
     const teamField = document.getElementById("reqDetailTeamField");
     const roleField = document.getElementById("reqDetailRoleField");
-    teamField.style.display = (isPlayer || isTourney || isPremium) ? "" : "none";
-    roleField.style.display = (isPlayer || isTourney || isPremium) ? "" : "none";
-    teamField.querySelector("label").textContent = isTourney ? "Tournament" : isPremium ? "Amount" : "Team";
-    roleField.querySelector("label").textContent = (isTourney || isPremium) ? "Payment" : "Role";
+    teamField.style.display = (isPlayer || isTourney) ? "" : "none";
+    roleField.style.display = (isPlayer || isTourney) ? "" : "none";
+    teamField.querySelector("label").textContent = isTourney ? "Tournament" : "Team";
+    roleField.querySelector("label").textContent = isTourney ? "Payment" : "Role";
     document.getElementById("reqDetailDeviceField").style.display = isPlayer ? "" : "none";
     document.getElementById("reqDetailSensField").style.display = isPlayer ? "" : "none";
     const screenshotField = document.getElementById("reqDetailScreenshotField");
-    if((isTourney || isPremium) && r.screenshot){
+    if(isTourney && r.screenshot){
       screenshotField.style.display = "";
       document.getElementById("reqDetailScreenshot").src = r.screenshot;
     } else {
@@ -19180,10 +18506,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
     if(isTourney){
       document.getElementById("reqDetailTeam").textContent = r.tournamentName || "—";
       document.getElementById("reqDetailRole").textContent = r.entryFee > 0 ? (r.paymentMethod || "Paid") : "Free entry";
-    }
-    if(isPremium){
-      document.getElementById("reqDetailTeam").textContent = "Rs " + (r.entryFee || 0);
-      document.getElementById("reqDetailRole").textContent = r.paymentMethod || "—";
     }
 
     document.getElementById("reqDetailContact").textContent = r.contact || "Not provided";
@@ -19720,18 +19042,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
   let currentProfile = null; // Firestore users/{uid} doc (username, avatarUrl, favorites, sensitivityHistory)
   let authMode = "login"; // "login" | "signup" | "reset"
 
-  // JX Premium perk: more Cloud Save slots for the sensitivity generator.
-  // Free accounts keep a rolling window of their most recent saves;
-  // premium accounts get a much larger history.
-  const FREE_HISTORY_LIMIT = 10;
-  const PREMIUM_HISTORY_LIMIT = 50;
-  function isCurrentUserPremium(){
-    return !!(currentProfile && currentProfile.premium && (!currentProfile.premiumExpiresAt || new Date(currentProfile.premiumExpiresAt) > new Date()));
-  }
-  function currentHistoryLimit(){
-    return isCurrentUserPremium() ? PREMIUM_HISTORY_LIMIT : FREE_HISTORY_LIMIT;
-  }
-
   const accountBtn = document.getElementById("accountBtn");
   const userAuthModal = document.getElementById("userAuthModal");
   const accountDrawer = document.getElementById("accountDrawer");
@@ -19834,9 +19144,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
     // Refresh the homepage "welcome back" strip — after the favorites
     // mirror above so it reflects the synced list, not a stale one.
     if(window.JX_WelcomeBack) window.JX_WelcomeBack.render(currentProfile);
-    // Flip the Pro Presets teaser between locked/unlocked now that we
-    // know whether this account is Premium.
-    if(window.JX_ProPresets) window.JX_ProPresets.refresh();
   }
 
   function renderAccountButton(){
@@ -20090,22 +19397,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
       acctResendVerifyBtn.disabled = false;
       acctResendVerifyBtn.textContent = "Resend";
     }
-
-    // JX Premium badge — shown while premium is true and (if the plan has
-    // an expiry) that date hasn't passed yet. Lifetime plans store
-    // premiumExpiresAt as null, so they never show as expired here.
-    const acctPremiumBadge = document.getElementById("acctPremiumBadge");
-    if(acctPremiumBadge){
-      const isActive = !!currentProfile.premium && (!currentProfile.premiumExpiresAt || new Date(currentProfile.premiumExpiresAt) > new Date());
-      acctPremiumBadge.style.display = isActive ? "inline-flex" : "none";
-      if(isActive){
-        const label = currentProfile.premiumPlan
-          ? currentProfile.premiumPlan.charAt(0).toUpperCase() + currentProfile.premiumPlan.slice(1)
-          : "";
-        document.getElementById("acctPremiumBadgeText").textContent = label ? `JX Premium — ${label}` : "JX Premium";
-      }
-    }
-
     if(currentProfile.avatarUrl){
       acctAvatarBig.innerHTML = `<img src="${escapeHtml(currentProfile.avatarUrl)}" alt=""><button type="button" class="acct-avatar-edit" id="acctAvatarEditBtn" title="Change avatar" aria-label="Change avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>`;
     } else {
@@ -20239,12 +19530,11 @@ window.JX_logAudit = function(field, oldVal, newVal){
   function renderHistoryPanel(){
     const panel = document.getElementById("acctHistoryPanel");
     const history = (currentProfile && currentProfile.sensitivityHistory) || [];
-    const limit = currentHistoryLimit();
     if(!history.length){
       panel.innerHTML = `<div class="drawer-empty">No sensitivities generated yet. Every sensitivity you generate is saved here automatically.</div>`;
       return;
     }
-    const itemsHtml = history.map(entry => `
+    panel.innerHTML = history.map(entry => `
       <div class="acct-hist-item">
         <div class="ahi-main">
           <div class="ahi-device">${escapeHtml(entry.deviceName || "Device")}</div>
@@ -20252,16 +19542,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
         </div>
       </div>
     `).join("");
-    // Free accounts get a rolling window of recent saves rather than
-    // unlimited history — nudge toward Premium once they're near the cap.
-    const footerHtml = !isCurrentUserPremium()
-      ? `<div class="acct-hist-footer" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--hairline); font-family:var(--f-mono); font-size:11px; color:var(--ink-faint); text-align:center;">
-           ${history.length}/${limit} Cloud Save slots used — <a href="#premium" style="color:var(--gold);">Go Premium</a> for ${PREMIUM_HISTORY_LIMIT} slots
-         </div>`
-      : `<div class="acct-hist-footer" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--hairline); font-family:var(--f-mono); font-size:11px; color:var(--gold);">
-           ${history.length}/${limit} Premium Cloud Save slots used
-         </div>`;
-    panel.innerHTML = itemsHtml + footerHtml;
   }
 
   /* ---------------- PUBLIC HOOKS (used by the rest of the site) ----------------
@@ -20271,9 +19551,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
      this script needing to know about them, and vice versa. */
   window.JX_Account = {
     isSignedIn(){ return !!(currentUser && currentProfile); },
-    getCurrentUid(){ return currentUser ? currentUser.uid : ""; },
-    getCurrentUsername(){ return currentProfile ? (currentProfile.username || "") : ""; },
-    isPremium(){ return isCurrentUserPremium(); },
 
     async saveSensitivity(data){
       try{
@@ -20295,13 +19572,9 @@ window.JX_logAudit = function(field, oldVal, newVal){
           age: data.age,
           savedAt: new Date().toISOString()
         };
-        const limit = currentHistoryLimit();
-        const wasAtLimit = !isCurrentUserPremium() && (currentProfile.sensitivityHistory || []).length >= limit;
-        const updated = await backend.addUserSensitivity(currentUser.uid, entry, limit);
+        const updated = await backend.addUserSensitivity(currentUser.uid, entry);
         currentProfile = { ...currentProfile, sensitivityHistory: updated };
-        showToast("success", wasAtLimit
-          ? `Sensitivity saved (oldest entry dropped — free accounts keep your last ${limit}). Go Premium for ${PREMIUM_HISTORY_LIMIT} slots.`
-          : "Sensitivity saved to your account");
+        showToast("success", "Sensitivity saved to your account");
       }catch(err){
         showToast("info", friendlyAccountError(err));
       }
@@ -20328,7 +19601,7 @@ window.JX_logAudit = function(field, oldVal, newVal){
           age: data.age,
           savedAt: new Date().toISOString()
         };
-        const updated = await backend.addUserSensitivity(currentUser.uid, entry, currentHistoryLimit());
+        const updated = await backend.addUserSensitivity(currentUser.uid, entry);
         currentProfile = { ...currentProfile, sensitivityHistory: updated };
         // Live-refresh the drawer's history tab if it happens to be open
         // already, so Recent History updates in real time.
@@ -21355,114 +20628,6 @@ html.jx-scroll-active *::after{
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('touchmove', onScroll, { passive: true });
-})();
-</script>
-
-<script>
-/* ============================================================
-   JUTTFHX — PRO PRESETS TEASER
-   ------------------------------------------------------------
-   A curiosity hook for JX Premium: real sensitivity presets,
-   built around common playstyle archetypes (not attributed to
-   any real named player — these are generic role-based setups,
-   not claims about a specific pro's actual settings). General and
-   Red Dot are shown in full; the scope/free-look values are
-   genuinely blurred until the viewer is Premium, so what's behind
-   the blur is real, not a fake countdown or invented urgency.
-   ============================================================ */
-(function(){
-  "use strict";
-
-  // Always-available fallback so the teaser never shows empty on a cold
-  // load, offline visit, or before the backend responds. Admin-added
-  // presets (via Admin → Pro Presets) are merged in on top of these once
-  // the backend responds — same "defaults + custom" pattern already used
-  // for Character Combos and HUD Layouts elsewhere in this file.
-  const DEFAULT_PRO_PRESETS = [
-    { name: "Rusher — 4 Finger Claw", tag: "Close-range aggression", sens: { general:132, red:138, scope2:112, scope4:88, sniper:64, free:145 } },
-    { name: "Sniper — 2 Finger Precision", tag: "Long-range accuracy", sens: { general:98, red:104, scope2:76, scope4:52, sniper:31, free:118 } },
-    { name: "IGL / Support — 3 Finger", tag: "Balanced all-rounder", sens: { general:115, red:120, scope2:94, scope4:70, sniper:46, free:130 } }
-  ];
-  let PRESETS = DEFAULT_PRO_PRESETS.slice();
-
-  function isPremiumMember(){
-    return !!(window.JX_Account && typeof window.JX_Account.isPremium === "function" && window.JX_Account.isPremium());
-  }
-
-  const lockSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>`;
-
-  function renderProPresets(){
-    const grid = document.getElementById("proPresetsGrid");
-    if(!grid) return;
-    const premium = isPremiumMember();
-
-    grid.innerHTML = PRESETS.map(p => `
-      <div class="glass pro-preset-card ${premium ? "" : "pro-preset-locked"}">
-        <div class="pro-preset-name">${p.name}</div>
-        <div class="sens-label" style="opacity:.7;">${p.tag}</div>
-        <div class="pro-preset-sens-grid">
-          <div class="sens-item"><span class="sens-label">General</span><span class="sens-val">${p.sens.general}</span></div>
-          <div class="sens-item"><span class="sens-label">Red Dot</span><span class="sens-val">${p.sens.red}</span></div>
-          <div class="sens-item"><span class="sens-label">2x Scope</span><span class="sens-val">${p.sens.scope2}</span></div>
-          <div class="sens-item"><span class="sens-label">4x Scope</span><span class="sens-val">${p.sens.scope4}</span></div>
-          <div class="sens-item"><span class="sens-label">Sniper Scope</span><span class="sens-val">${p.sens.sniper}</span></div>
-          <div class="sens-item"><span class="sens-label">Free Look</span><span class="sens-val">${p.sens.free}</span></div>
-        </div>
-        ${premium ? "" : `<button type="button" class="pro-preset-unlock" data-unlock-preset>${lockSvg} Unlock with JX Premium</button>`}
-      </div>
-    `).join("");
-  }
-
-  // Pulls admin-added presets (Admin → Pro Presets) from whichever backend
-  // is active and merges them on top of the defaults. Sheets/Supabase
-  // store `sens` as a JSON string (no native object column), Firebase
-  // returns it as a real object already — this accepts either.
-  async function loadRemotePresets(){
-    if(typeof window.getBackend !== "function") return;
-    try{
-      const backend = await window.getBackend();
-      if(typeof backend.getProPresets !== "function") return;
-      const remote = await backend.getProPresets();
-      if(!remote || !remote.length) return;
-      const mapped = remote.map(r => {
-        let sens = r.sens;
-        if(typeof sens === "string"){ try{ sens = JSON.parse(sens); }catch(e){ sens = {}; } }
-        return {
-          name: r.name || "Untitled Preset",
-          tag: r.tag || "",
-          sens: {
-            general: sens?.general ?? 0, red: sens?.red ?? 0,
-            scope2: sens?.scope2 ?? 0, scope4: sens?.scope4 ?? 0,
-            sniper: sens?.sniper ?? 0, free: sens?.free ?? 0
-          }
-        };
-      });
-      PRESETS = DEFAULT_PRO_PRESETS.concat(mapped);
-      renderProPresets();
-    }catch(err){
-      // Offline, backend not configured yet, or Supabase/Sheets without a
-      // proPresets table set up — defaults already rendered, fail quiet.
-    }
-  }
-
-  if(document.getElementById("proPresetsGrid")){
-    document.getElementById("proPresetsGrid").addEventListener("click", (e)=>{
-      if(!e.target.closest("[data-unlock-preset]")) return;
-      const premiumSection = document.getElementById("premium");
-      if(premiumSection) premiumSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
-  // The Account Controller calls window.JX_ProPresets.refresh() itself
-  // right after sign-in/sign-out resolves, so cards flip from locked to
-  // unlocked (or back) without needing a page reload.
-  window.JX_ProPresets = { refresh: renderProPresets };
-
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", () => setTimeout(()=>{ renderProPresets(); loadRemotePresets(); }, 300));
-  } else {
-    setTimeout(()=>{ renderProPresets(); loadRemotePresets(); }, 300);
-  }
 })();
 </script>
 </body>
