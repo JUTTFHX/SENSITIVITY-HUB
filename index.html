@@ -11846,6 +11846,27 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     return (store && store.requests) || [];
   }
 
+  // Scoped to one account's own request(s) — required because /requests
+  // is admin-read-only in Firestore (it holds every submitter's Gmail/
+  // WhatsApp contact info, so a regular signed-in user can't list the
+  // whole collection). fetchAllRequests() above only works for an admin;
+  // for a normal user checking their own status or the form checking
+  // for a duplicate submission, this is the one to use.
+  async function fetchMyRequests(uid){
+    if(!uid) return [];
+    if(typeof window.getBackend === "function"){
+      const backend = await window.getBackend();
+      if(typeof backend.getMyRequests === "function"){
+        return await backend.getMyRequests(uid).catch(()=> []);
+      }
+      // Adapter predates getMyRequests — fall back to the full list
+      // filtered client-side (fine for backends without per-row rules).
+      const all = await backend.getRequests().catch(()=> []);
+      return all.filter(r => r.uid === uid);
+    }
+    return ((store && store.requests) || []).filter(r => r.uid === uid);
+  }
+
   /* ---------- Contact popup (Gmail / WhatsApp) ---------- */
   const reqContactModal = document.getElementById("reqContactModal");
   const reqContactInput = document.getElementById("reqContactInput");
@@ -11985,11 +12006,13 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
 
     try{
       // Only 1 device request per account: re-check the live backend by
-      // account uid (falling back to contact match for any older,
-      // pre-login entries) so this can't be bypassed by clearing local
-      // storage or logging in under a new contact.
-      const allRequests = await fetchAllRequests();
-      const dup = allRequests.find(r => !r.type && ((r.uid && r.uid === acctUser.uid) || contactsMatch(r.contact, contact)));
+      // account uid so this can't be bypassed by clearing local storage.
+      // (Matching by contact as a fallback was removed — it required
+      // listing every user's request including their contact info,
+      // which /requests' admin-only read rule correctly no longer
+      // allows a regular signed-in user to do.)
+      const myRequests = await fetchMyRequests(acctUser.uid);
+      const dup = myRequests.find(r => !r.type && r.uid === acctUser.uid);
       if(dup){
         showToast("info", "You've already submitted a device request with this account. Check its status below.");
         if(typeof renderTrackResult === "function") renderTrackResult(dup);
@@ -12063,8 +12086,8 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     lastKnownUid = uid;
     if(reqTrackRefreshBtn){ reqTrackRefreshBtn.disabled = true; reqTrackRefreshBtn.textContent = "Checking…"; }
     try{
-      const allRequests = await fetchAllRequests();
-      const matches = allRequests.filter(r => !r.type && r.uid === uid);
+      const myRequests = await fetchMyRequests(uid);
+      const matches = myRequests.filter(r => !r.type && r.uid === uid);
       matches.sort((a, b)=> new Date(b.date || 0) - new Date(a.date || 0));
       const match = matches[0];
       if(match){
@@ -13679,7 +13702,17 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
        }
        match /requests/{docId} {
          allow create: if true;
-         allow read, update, delete: if isAdmin();
+         // A signed-in user may read back ONLY their own request doc(s)
+         // (needed for the "check my request status" tracker on the
+         // public Request Center) — never the full collection, since
+         // every doc also holds another user's Gmail/WhatsApp contact
+         // info. This works because the client always queries with
+         // where("uid","==", myUid), which Firestore can verify against
+         // resource.data.uid without needing to list everyone else's
+         // docs. update/delete stay admin-only (moderation only happens
+         // from the Admin → Device Requests panel).
+         allow read: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.uid);
+         allow update, delete: if isAdmin();
        }
        // Guild Recruitment Hub ("Create a Guild") and Team Finder ("List
        // Yourself") both let any visitor submit a new entry, but only an
@@ -13755,6 +13788,15 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
    which is the intended fix. Make sure your own admin account has the
    claim set BEFORE deploying these rules, or you'll lock yourself out
    of the dashboard too.
+
+   IF YOUR /requests RULE STILL SAYS "allow read, update, delete: if
+   isAdmin()" (no owner clause): that's what causes a user's own
+   Request Center status tracker to say "You haven't submitted a device
+   request yet" even right after a successful submission and repeated
+   refreshes — the read is silently denied and the app has nothing to
+   show. Redeploy the updated /requests rule above (which adds
+   "|| (request.auth != null && request.auth.uid == resource.data.uid)")
+   to fix it; regular users still can't list anyone else's request.
 
    STORAGE SECURITY RULES (paste into Storage > Rules):
 
@@ -14194,6 +14236,22 @@ async function getRequests(){
   const snap = await getDocs(query(collection(db, "requests"), orderBy("createdAt", "desc")));
   return snap.docs.map(d => ({ id:d.id, ...d.data() }));
 }
+/* getRequests() above needs the isAdmin() read rule on /requests — a
+   regular signed-in user calling it gets permission-denied (silently
+   swallowed by the .catch(()=>[]) callers use), which is exactly what
+   the "check my submitted request status" feature needs to NOT do.
+   This scoped version adds a where("uid","==",uid) constraint, which
+   Firestore can statically verify against a rule like
+   `allow read: if request.auth.uid == resource.data.uid`, so a normal
+   user can read back their own request doc(s) without being able to
+   list anyone else's (which contain other users' Gmail/WhatsApp
+   contact info and must stay admin-only). Requires the matching rule
+   change described in the FIRESTORE SECURITY RULES comment above. */
+async function getMyRequests(uid){
+  if(!uid) return [];
+  const snap = await getDocs(query(collection(db, "requests"), where("uid", "==", uid)));
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
+}
 async function submitRequest(request){
   await addDoc(collection(db, "requests"), {
     ...request,
@@ -14296,7 +14354,7 @@ window.FirebaseService = {
   getGuilds, addGuild, updateGuild, deleteGuild,
   getTeamFinder, addTeamFinderListing, updateTeamFinderListing, deleteTeamFinderListing,
   getReviews, addReview, deleteReview, approveReview,
-  getRequests, submitRequest, updateRequestStatus, deleteRequest,
+  getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
   trackVisit, trackSearch, incrementDeviceSearch, getStats,
   getSiteSettings, saveSiteSettings, watchSiteSettings
 };
@@ -14534,6 +14592,17 @@ async function getRequests(){
   if(error) throw error;
   return data;
 }
+// Scoped variant for a signed-in user checking their own request status
+// (mirrors the Firebase adapter's getMyRequests — see its comment for
+// why this exists as a separate call rather than filtering getRequests()
+// client-side: it lets row-level security stay locked to admin-only for
+// the unscoped read without breaking this feature).
+async function getMyRequests(uid){
+  if(!uid) return [];
+  const { data, error } = await supabase.from("requests").select("*").eq("uid", uid);
+  if(error) throw error;
+  return data;
+}
 async function submitRequest(request){
   const { error } = await supabase.from("requests").insert([{ ...request, status:"pending" }]);
   if(error) throw error;
@@ -14655,7 +14724,7 @@ window.SupabaseService = {
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
   getReviews, addReview, deleteReview, approveReview,
-  getRequests, submitRequest, updateRequestStatus, deleteRequest,
+  getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
   trackVisit, trackSearch, incrementDeviceSearch, getStats,
   getSiteSettings, saveSiteSettings, watchSiteSettings
 };
@@ -14791,6 +14860,15 @@ async function approveReview(id, approved){ return callSheets("approveReview", {
 
 /* ---------------- DEVICE REQUESTS ---------------- */
 async function getRequests(){ return callSheets("getRequests", {}); }
+// Sheets has no per-row security rules to route around like Firestore
+// does — this just filters the full list. Kept as a separate function
+// purely so the adapter interface matches Firebase's (getMyRequests),
+// which callers rely on.
+async function getMyRequests(uid){
+  if(!uid) return [];
+  const all = await callSheets("getRequests", {});
+  return (all || []).filter(r => r.uid === uid);
+}
 async function submitRequest(request){ return callSheets("submitRequest", request); }
 async function updateRequestStatus(id, status){ return callSheets("updateRequestStatus", { id, status }); }
 async function deleteRequest(id){ return callSheets("deleteRequest", { id }); }
@@ -14857,7 +14935,7 @@ window.SheetsService = {
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
   getReviews, addReview, deleteReview, approveReview,
-  getRequests, submitRequest, updateRequestStatus, deleteRequest,
+  getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
   trackVisit, trackSearch, incrementDeviceSearch, getStats,
   getSiteSettings, saveSiteSettings, watchSiteSettings
 };
@@ -15358,6 +15436,7 @@ window.DemoService = {
   },
 
   async getRequests(){ return demoLoad().requests; },
+  async getMyRequests(uid){ if(!uid) return []; return demoLoad().requests.filter(r => r.uid === uid); },
   async submitRequest(request){
     const d = demoLoad();
     d.requests.unshift({ id: "demo-req-" + Date.now(), ...request, status:"pending", createdAt: new Date().toISOString() });
