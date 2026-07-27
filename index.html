@@ -11312,7 +11312,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
 
   tourneyRegisterForm.addEventListener("submit", async (e)=>{
     e.preventDefault();
-    const id = parseInt(document.getElementById("tourneyFormEventId").value);
+    const id = document.getElementById("tourneyFormEventId").value;
     const t = TOURNAMENTS.find(x=>x.id===id);
     if(!t) return;
 
@@ -11399,7 +11399,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
   if(tourneyGrid) tourneyGrid.addEventListener("click", (e)=>{
     const btn = e.target.closest(".tourney-register-btn");
     if(!btn || btn.disabled) return;
-    openTourneyRegisterModal(parseInt(btn.dataset.tourneyId));
+    openTourneyRegisterModal(btn.dataset.tourneyId);
   });
 
   renderTournaments();
@@ -12541,6 +12541,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
       // renderComboTable lives in the separate Admin panel closure — same
       // reachable-only-via-window-global reasoning as renderHudLayoutTable.
       if(combosChanged && typeof window.JX_renderComboTable === "function") window.JX_renderComboTable();
+      if(tournamentsChanged && typeof window.JX_renderTournaments === "function") window.JX_renderTournaments();
       if(tournamentsChanged && typeof window.JX_renderTourneyTable === "function") window.JX_renderTourneyTable();
       if(reviewsChanged) renderReviews();
       if(guildsChanged && typeof window.JX_renderGuildHub === "function") window.JX_renderGuildHub();
