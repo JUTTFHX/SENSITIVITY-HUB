@@ -13711,9 +13711,22 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
          return request.auth != null && request.auth.token.admin == true
            && request.auth.token.role == "super_admin";
        }
+       // Regular write (edit price/specs/etc.) stays admin-only. The one
+       // carve-out is searchCount: incrementDeviceSearch() runs from
+       // EVERY visitor's browser (it's what makes the "Searches" number
+       // on each device card live), not just the admin dashboard — with
+       // write locked to isAdmin() only, that call permission-denies for
+       // every non-admin visitor and the count on every card stays
+       // frozen at its seed value forever. The extra clause below lets
+       // an update through ONLY if searchCount is the sole field being
+       // changed, so a visitor still can't touch price/specs/anything
+       // else on the doc.
        match /devices/{docId} {
          allow read: if true;
-         allow write: if isAdmin();
+         allow create, delete: if isAdmin();
+         allow update: if isAdmin()
+           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['searchCount'])
+               && request.resource.data.searchCount is number);
        }
        match /players/{docId} {
          allow read: if true;
