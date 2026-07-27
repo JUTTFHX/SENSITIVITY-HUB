@@ -9077,6 +9077,10 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <label>Payment Screenshot</label>
           <img id="reqDetailScreenshot" src="" alt="Payment screenshot" style="width:100%; border-radius:10px; border:1px solid var(--hairline-strong); display:block;">
         </div>
+        <div class="field" id="reqDetailRejectReasonField" style="grid-column:1/-1; margin-bottom:0; display:none;">
+          <label>Reject Reason</label>
+          <div class="field-input" style="pointer-events:none; word-break:break-word; color:var(--red);" id="reqDetailRejectReason">—</div>
+        </div>
         <div class="field" style="grid-column:1/-1; margin-bottom:0;">
           <label>Contact</label>
           <div class="field-input" style="pointer-events:none; word-break:break-word;" id="reqDetailContact">—</div>
@@ -12012,10 +12016,25 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
       // which /requests' admin-only read rule correctly no longer
       // allows a regular signed-in user to do.)
       const myRequests = await fetchMyRequests(acctUser.uid);
-      const dup = myRequests.find(r => !r.type && r.uid === acctUser.uid);
-      if(dup){
+      const myDeviceRequests = myRequests.filter(r => !r.type && r.uid === acctUser.uid);
+      const norm = s => (s || "").trim().toLowerCase();
+      // Any request that isn't rejected yet is still "in flight" — block a
+      // second submission outright until admin resolves it.
+      const active = myDeviceRequests.find(r => r.status !== "rejected");
+      if(active){
         showToast("info", "You've already submitted a device request with this account. Check its status below.");
-        if(typeof renderTrackResult === "function") renderTrackResult(dup);
+        if(typeof renderTrackResult === "function") renderTrackResult(active);
+        const trackShell = document.getElementById("reqTrackShell");
+        if(trackShell) trackShell.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      // Rejected requests can be followed up with a request for a
+      // *different* device, but re-submitting the exact same device that
+      // was already rejected is spam — block it and surface the reason.
+      const sameDeviceRejected = myDeviceRequests.find(r => r.status === "rejected" && norm(r.brand) === norm(brand) && norm(r.name) === norm(name));
+      if(sameDeviceRejected){
+        showToast("info", "This device was already requested and rejected. " + (sameDeviceRejected.rejectReason ? ("Reason: " + sameDeviceRejected.rejectReason) : "Please try a different device."));
+        if(typeof renderTrackResult === "function") renderTrackResult(sameDeviceRejected);
         const trackShell = document.getElementById("reqTrackShell");
         if(trackShell) trackShell.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
@@ -12075,7 +12094,10 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     });
     if(!reqTrackDeviceInfo) return;
     if(request.status === "rejected"){
-      reqTrackDeviceInfo.innerHTML = '<span style="color:var(--red); font-weight:600;">This request was rejected.</span> Contact support if you think this was a mistake.';
+      const reasonHtml = request.rejectReason
+        ? '<br><span style="color:var(--ink-faint);">Reason: ' + escapeHtml(request.rejectReason) + '</span>'
+        : '';
+      reqTrackDeviceInfo.innerHTML = '<span style="color:var(--red); font-weight:600;">This request was rejected.</span> Contact support if you think this was a mistake, or submit a request for a different device.' + reasonHtml;
     } else {
       const label = request.status === "added" ? "added to the database" : request.status === "approved" ? "approved and being finalized" : "pending review";
       reqTrackDeviceInfo.textContent = [request.brand, request.name].filter(Boolean).join(" ") + " — " + label + ".";
@@ -14259,8 +14281,10 @@ async function submitRequest(request){
     createdAt: serverTimestamp()
   });
 }
-async function updateRequestStatus(id, status){
-  await updateDoc(doc(db, "requests", id), { status });
+async function updateRequestStatus(id, status, reason){
+  const updates = { status };
+  if(status === "rejected") updates.rejectReason = reason || "";
+  await updateDoc(doc(db, "requests", id), updates);
 }
 async function deleteRequest(id){
   await deleteDoc(doc(db, "requests", id));
@@ -14607,8 +14631,10 @@ async function submitRequest(request){
   const { error } = await supabase.from("requests").insert([{ ...request, status:"pending" }]);
   if(error) throw error;
 }
-async function updateRequestStatus(id, status){
-  const { error } = await supabase.from("requests").update({ status }).eq("id", id);
+async function updateRequestStatus(id, status, reason){
+  const updates = { status };
+  if(status === "rejected") updates.rejectReason = reason || "";
+  const { error } = await supabase.from("requests").update(updates).eq("id", id);
   if(error) throw error;
 }
 async function deleteRequest(id){
@@ -14870,7 +14896,7 @@ async function getMyRequests(uid){
   return (all || []).filter(r => r.uid === uid);
 }
 async function submitRequest(request){ return callSheets("submitRequest", request); }
-async function updateRequestStatus(id, status){ return callSheets("updateRequestStatus", { id, status }); }
+async function updateRequestStatus(id, status, reason){ return callSheets("updateRequestStatus", { id, status, rejectReason: status === "rejected" ? (reason || "") : undefined }); }
 async function deleteRequest(id){ return callSheets("deleteRequest", { id }); }
 
 /* ---------------- REAL-TIME ANALYTICS ----------------
@@ -14975,7 +15001,7 @@ function handleAction(action, payload) {
     case "approveReview": return updateRow(ss.getSheetByName("reviews"), payload.id, { approved: payload.approved });
     case "getRequests": return readSheet(ss.getSheetByName("requests"));
     case "submitRequest": return appendRow(ss.getSheetByName("requests"), payload);
-    case "updateRequestStatus": return updateRow(ss.getSheetByName("requests"), payload.id, { status: payload.status });
+    case "updateRequestStatus": return updateRow(ss.getSheetByName("requests"), payload.id, payload.status === "rejected" ? { status: payload.status, rejectReason: payload.rejectReason || "" } : { status: payload.status });
     case "deleteRequest": return deleteRow(ss.getSheetByName("requests"), payload.id);
     case "uploadHudImage": return uploadImage(payload);
     case "deleteHudImage": return deleteImage(payload.fileId);
@@ -15442,10 +15468,13 @@ window.DemoService = {
     d.requests.unshift({ id: "demo-req-" + Date.now(), ...request, status:"pending", createdAt: new Date().toISOString() });
     demoSave(d);
   },
-  async updateRequestStatus(id, status){
+  async updateRequestStatus(id, status, reason){
     const d = demoLoad();
     const idx = d.requests.findIndex(x => x.id === id);
-    if(idx > -1) d.requests[idx].status = status;
+    if(idx > -1){
+      d.requests[idx].status = status;
+      if(status === "rejected") d.requests[idx].rejectReason = reason || "";
+    }
     demoSave(d);
   },
   async deleteRequest(id){
@@ -18068,8 +18097,10 @@ window.JX_logAudit = function(field, oldVal, newVal){
     }
   }
   async function rejectRequest(id){
+    const reason = window.prompt("Reason for rejecting this request (shown to the user):", "");
+    if(reason === null) return; // admin cancelled
     try{
-      await backend.updateRequestStatus(id, "rejected");
+      await backend.updateRequestStatus(id, "rejected", reason.trim());
       showToastSafe("success", "Request rejected");
       await loadRequests();
       renderOverview();
@@ -18178,6 +18209,13 @@ window.JX_logAudit = function(field, oldVal, newVal){
       document.getElementById("reqDetailRole").textContent = r.entryFee > 0 ? (r.paymentMethod || "Paid") : "Free entry";
     }
 
+    const rejectReasonField = document.getElementById("reqDetailRejectReasonField");
+    if(r.status === "rejected" && r.rejectReason){
+      rejectReasonField.style.display = "";
+      document.getElementById("reqDetailRejectReason").textContent = r.rejectReason;
+    } else {
+      rejectReasonField.style.display = "none";
+    }
     document.getElementById("reqDetailContact").textContent = r.contact || "Not provided";
     document.getElementById("reqDetailDate").textContent = fmtReqDate(r.date || r.createdAt);
     document.getElementById("reqDetailId").textContent = r.id;
