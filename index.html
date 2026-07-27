@@ -8208,8 +8208,9 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <div class="admin-bulkbar" id="reqBulkBar" style="display:none;">
             <span id="reqBulkCount">0 selected</span>
             <div class="admin-bulkbar-actions">
+              <button type="button" class="btn btn-gold btn-sm" id="reqBulkApproveBtn">Approve Selected</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="reqBulkRejectBtn" style="border-color: rgba(255,92,92,.4); color: var(--red);">Reject Selected</button>
               <button type="button" class="btn btn-ghost btn-sm danger" id="reqBulkDeleteBtn">Delete Selected</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="reqBulkClearBtn">Clear</button>
             </div>
           </div>
           <div class="admin-table-wrap">
@@ -18008,7 +18009,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
     bar: document.getElementById("reqBulkBar"),
     countEl: document.getElementById("reqBulkCount"),
     domAttr: "data-select-req",
-    clearBtn: document.getElementById("reqBulkClearBtn"),
     deleteBtn: document.getElementById("reqBulkDeleteBtn"),
     onDelete: (id)=> backend.deleteRequest(id),
     reload: ()=> loadRequests(),
@@ -18119,6 +18119,35 @@ window.JX_logAudit = function(field, oldVal, newVal){
       showToastSafe("info", "Could not delete request: " + err.message);
     }
   }
+
+  async function bulkSetRequestStatus(status, reason){
+    const ids = Array.from(reqBulk.selected);
+    if(!ids.length) return;
+    let successCount = 0, failCount = 0;
+    for(const id of ids){
+      try{
+        await backend.updateRequestStatus(id, status, reason);
+        successCount++;
+      }catch(err){
+        console.error(err);
+        failCount++;
+      }
+    }
+    window.JX_logAudit && window.JX_logAudit("Requests", "", `Bulk marked ${successCount} request${successCount === 1 ? "" : "s"} as ${status}${failCount ? `, ${failCount} failed` : ""}`);
+    showToastSafe(failCount ? "info" : "success", failCount ? `Updated ${successCount}, ${failCount} failed` : `${successCount} request${successCount === 1 ? "" : "s"} marked ${status}`);
+    reqBulk.selected.clear();
+    await loadRequests();
+    renderOverview();
+  }
+
+  document.getElementById("reqBulkApproveBtn").addEventListener("click", ()=> bulkSetRequestStatus("approved"));
+  document.getElementById("reqBulkRejectBtn").addEventListener("click", ()=>{
+    const ids = Array.from(reqBulk.selected);
+    if(!ids.length) return;
+    const reason = window.prompt(`Reason for rejecting ${ids.length} selected request${ids.length > 1 ? "s" : ""} (shown to each user):`, "");
+    if(reason === null) return; // admin cancelled
+    bulkSetRequestStatus("rejected", reason.trim());
+  });
 
   adminRequestTable.addEventListener("click", async (e)=>{
     const approveBtn = e.target.closest("[data-approve-req]");
