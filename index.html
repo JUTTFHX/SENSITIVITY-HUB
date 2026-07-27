@@ -13763,16 +13763,29 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
          allow read, write: if request.auth != null && request.auth.uid == uid;
        }
        // Anonymous analytics counters powering the "By The Numbers"
-       // section. Anyone can log a visit/search; nobody should be able
-       // to read the raw event log back out (only the admin-only
-       // getStats() aggregate, which runs as a signed-in admin).
+       // section. Anyone can log a visit/search. Read must ALSO be
+       // public (not admin-only) — getStats() runs for every regular
+       // visitor on page load (it powers "Total Searches"/"Total
+       // Users" for everyone, not just the admin dashboard), and its
+       // getCountFromServer() aggregation queries are evaluated
+       // against this same read rule. If read stays admin-only, that
+       // aggregation silently permission-denies for every non-admin
+       // visitor, getStats() rejects, and the stat stuck at 0 forever
+       // (this is exactly why "Total Searches" wasn't moving while
+       // Devices Tracked/Avg. Match Score, which don't depend on this
+       // read, kept working). Individual docs only ever hold a random
+       // client-generated visitorId + a search string, nothing
+       // sensitive, so public read is an acceptable trade for a
+       // working public counter. update/delete stay admin-only.
        match /visits/{docId} {
          allow create: if true;
-         allow read, update, delete: if isAdmin();
+         allow read: if true;
+         allow update, delete: if isAdmin();
        }
        match /searches/{docId} {
          allow create: if true;
-         allow read, update, delete: if isAdmin();
+         allow read: if true;
+         allow update, delete: if isAdmin();
        }
        // Metadata index for HUD images (the actual image bytes live in
        // Storage; this just lets the admin grid list/persist them).
@@ -14329,12 +14342,28 @@ async function getStats(){
   // no-cost read quota. Visitor de-dup already happens client-side
   // before a "visits" doc is ever written (see trackRealVisitOnce), so
   // the raw count is already a safe proxy for unique visitors.
-  const [visitsCount, searchesCount, devicesCount, requestsCount] = await Promise.all([
+  //
+  // Promise.allSettled (not Promise.all): these four counts are
+  // independent, so one collection rejecting (e.g. Firestore rules for
+  // "visits"/"searches" haven't been redeployed with public read yet)
+  // must not null out the other three too — that was exactly why
+  // "Total Searches" got stuck at 0 while "Devices Tracked" kept
+  // working: a single rejected count in Promise.all() failed the whole
+  // call, and only totalDevices/avgMatchScore had a local fallback to
+  // hide it.
+  const [visitsRes, searchesRes, devicesRes, requestsRes] = await Promise.allSettled([
     getCountFromServer(collection(db, "visits")),
     getCountFromServer(collection(db, "searches")),
     getCountFromServer(collection(db, "devices")),
     getCountFromServer(collection(db, "requests"))
   ]);
+  const countOf = (res)=> res.status === "fulfilled" ? res.value.data().count : null;
+  const visitsCount = { data: ()=>({ count: countOf(visitsRes) }) };
+  const searchesCount = { data: ()=>({ count: countOf(searchesRes) }) };
+  const devicesCount = { data: ()=>({ count: countOf(devicesRes) }) };
+  const requestsCount = { data: ()=>({ count: countOf(requestsRes) }) };
+  if(searchesRes.status === "rejected") console.warn("[JUTTFHX] Total Searches count failed — check that Firestore rules allow public read on 'searches':", searchesRes.reason && searchesRes.reason.message);
+  if(visitsRes.status === "rejected") console.warn("[JUTTFHX] Total Users count failed — check that Firestore rules allow public read on 'visits':", visitsRes.reason && visitsRes.reason.message);
   return {
     totalUsers: visitsCount.data().count,
     totalSearches: searchesCount.data().count,
