@@ -11061,13 +11061,37 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
   // the public-page sync closure) because it needs direct access to
   // the private TOURNAMENTS array; exposed via
   // window.JX_mergeCustomTournaments so that closure can call in.
+  // Backend-persisted Tournaments, added via Admin → Tournaments. Fully
+  // reconciles the local (localStorage-cached) TOURNAMENTS list against
+  // whatever the backend currently has, every sync:
+  //  - removes any local entry whose __backendId is no longer present
+  //    (admin deleted it)
+  //  - updates fields on entries that still exist but changed (admin
+  //    edited price/status/slots/etc — previously these edits never
+  //    reached visitors because an existing __backendId short-circuited
+  //    with no update)
+  //  - adds entries that are new
+  // NOTE: intentionally does NOT bail out early when customTournaments
+  // is empty/falsy from an error — an empty ARRAY (valid "zero
+  // tournaments" response) must still run so deletions propagate; only
+  // a null/undefined (fetch failed) is treated as "no data, skip".
   function mergeCustomTournaments(customTournaments){
-    if(!customTournaments || !customTournaments.length) return false;
+    if(!customTournaments) return false;
     let changed = false;
+
+    // Remove local copies of anything the admin deleted from the backend.
+    const backendIds = new Set(customTournaments.map(ct => ct.id));
+    for(let i = TOURNAMENTS.length - 1; i >= 0; i--){
+      const t = TOURNAMENTS[i];
+      if(t.__backendId && !backendIds.has(t.__backendId)){
+        TOURNAMENTS.splice(i, 1);
+        changed = true;
+      }
+    }
+
+    // Add new tournaments / update fields on existing ones.
     customTournaments.forEach(ct=>{
-      const exists = TOURNAMENTS.some(t => t.__backendId === ct.id);
-      if(exists) return;
-      TOURNAMENTS.unshift({
+      const fresh = {
         id: "tourney-" + ct.id,
         __backendId: ct.id,
         name: ct.name || "Untitled Tournament",
@@ -11081,9 +11105,22 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
         slotsTotal: parseInt(ct.slotsTotal, 10) || 1,
         slotsFilled: parseInt(ct.slotsFilled, 10) || 0,
         desc: ct.desc || ""
-      });
-      changed = true;
+      };
+      const idx = TOURNAMENTS.findIndex(t => t.__backendId === ct.id);
+      if(idx === -1){
+        TOURNAMENTS.unshift(fresh);
+        changed = true;
+      } else {
+        const existing = TOURNAMENTS[idx];
+        const keys = Object.keys(fresh);
+        const isDifferent = keys.some(k => existing[k] !== fresh[k]);
+        if(isDifferent){
+          keys.forEach(k => { existing[k] = fresh[k]; });
+          changed = true;
+        }
+      }
     });
+
     if(changed){
       persistTournaments(TOURNAMENTS);
       if(typeof renderTournaments === "function") renderTournaments();
@@ -11091,6 +11128,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     return changed;
   }
   window.JX_mergeCustomTournaments = mergeCustomTournaments;
+
   window.JX_renderTournaments = () => { if(typeof renderTournaments === "function") renderTournaments(); };
 
   const tourneyGrid = document.getElementById("tourneyGrid");
@@ -11212,6 +11250,22 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     Object.keys(PAYMENT_METHODS).forEach(k=> delete PAYMENT_METHODS[k]);
     Object.assign(PAYMENT_METHODS, updated);
     try{ localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(PAYMENT_METHODS)); }catch(e){ /* storage unavailable */ }
+  };
+  // Pulls the admin's real payment account details in from the backend.
+  // Previously PAYMENT_METHODS only ever came from localStorage, so an
+  // admin's actual bank/Easypaisa/NayaPay numbers never left the
+  // browser that saved them — every other visitor kept seeing the
+  // hardcoded DEFAULT_PAYMENT_METHODS placeholder numbers as the "real"
+  // payment destination for a paid tournament. Called from
+  // syncWithBackend() on page load (and safe to call again later).
+  window.JX_mergePaymentMethods = (remoteMethods) => {
+    if(!remoteMethods || typeof remoteMethods !== "object") return false;
+    const current = JSON.stringify(PAYMENT_METHODS);
+    const next = JSON.stringify(remoteMethods);
+    if(current === next) return false;
+    window.JX_savePaymentMethods(remoteMethods);
+    if(typeof renderTourneyPaymentChips === "function") renderTourneyPaymentChips();
+    return true;
   };
 
   const tourneyRegisterModal = document.getElementById("tourneyRegisterModal");
@@ -11342,6 +11396,11 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
         showToast("info", "Please upload a screenshot of your payment.");
         return;
       }
+      const screenshotFile = screenshotInput.files[0];
+      if(screenshotFile.size > 700 * 1024){
+        showToast("info", "Screenshot is too large — please upload one under 700KB (try a cropped or compressed screenshot).");
+        return;
+      }
     }
 
     if(!document.getElementById("tourneyFormConsent").checked){
@@ -11376,6 +11435,9 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
       if(typeof window.getBackend === "function"){
         const backend = await window.getBackend();
         await backend.submitRequest(payload);
+        if(t.__backendId && typeof backend.incrementTournamentSlot === "function"){
+          backend.incrementTournamentSlot(t.__backendId).catch(()=>{});
+        }
       } else {
         store.requests.push(payload);
         saveStore(store);
@@ -12496,8 +12558,18 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
       let tournamentsChanged = false;
       try{
         if(typeof backend.getTournaments === "function" && typeof window.JX_mergeCustomTournaments === "function"){
-          const remoteTournaments = await backend.getTournaments().catch(()=> []);
+          const remoteTournaments = await backend.getTournaments().catch(()=> null);
           tournamentsChanged = window.JX_mergeCustomTournaments(remoteTournaments);
+        }
+      }catch(e){ /* best-effort */ }
+
+      // Tournament payment method details (bank/Easypaisa/NayaPay account
+      // info shown in the paid-registration modal) — same fix pattern as
+      // tournaments above.
+      try{
+        if(typeof backend.getPaymentMethods === "function" && typeof window.JX_mergePaymentMethods === "function"){
+          const remoteMethods = await backend.getPaymentMethods().catch(()=> null);
+          window.JX_mergePaymentMethods(remoteMethods);
         }
       }catch(e){ /* best-effort */ }
 
@@ -13860,9 +13932,26 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
        // Admin → Tournaments), public registers but doesn't create
        // tournament docs directly (registration goes through /requests
        // as a type:"tournament" request instead).
+       // Free Fire Tournaments — admin-managed only (added/edited from
+       // Admin → Tournaments), public registers but doesn't create
+       // tournament docs directly (registration goes through /requests
+       // as a type:"tournament" request instead). Same searchCount-style
+       // carve-out as /devices above: incrementTournamentSlot() runs from
+       // every visitor's browser right after a successful registration,
+       // so it's what keeps the "X/Y slots filled" number live for
+       // everyone instead of frozen at whatever it was when the admin
+       // last edited the tournament. Locked down to ONLY slotsFilled,
+       // by exactly +1 per write, and never past slotsTotal — a visitor
+       // still can't touch price/name/anything else on the doc, or
+       // "fill" more slots than actually exist.
        match /tournaments/{docId} {
          allow read: if true;
-         allow write: if isAdmin();
+         allow create, delete: if isAdmin();
+         allow update: if isAdmin()
+           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slotsFilled'])
+               && request.resource.data.slotsFilled is number
+               && request.resource.data.slotsFilled == resource.data.slotsFilled + 1
+               && request.resource.data.slotsFilled <= resource.data.slotsTotal);
        }
        // Metadata index for HUD images (the actual image bytes live in
        // Storage; this just lets the admin grid list/persist them).
@@ -14301,6 +14390,13 @@ async function updateTournament(id, updates){
 async function deleteTournament(id){
   await deleteDoc(doc(db, "tournaments", id));
 }
+// Bumps a single tournament's own slotsFilled by 1 (atomic, no read
+// needed) every time a visitor successfully registers — this is what
+// makes the "X/Y slots filled" number live for every other visitor
+// instead of only updating in the registering visitor's own browser.
+async function incrementTournamentSlot(id){
+  await updateDoc(doc(db, "tournaments", id), { slotsFilled: increment(1) });
+}
 
 /* ---------------- GUILD RECRUITMENT HUB ----------------
    Same fix as HUD LAYOUTS / CHARACTER COMBOS above: the public "Guild
@@ -14495,6 +14591,28 @@ function watchSiteSettings(callback){
   }, err=>{ console.error("[JUTTFHX] settings listener error:", err); });
 }
 
+// Tournament payment method details (bank/Easypaisa/NayaPay account info
+// shown to every visitor registering for a paid tournament). Same
+// settings/{docId} doc pattern as settings/site above — public read,
+// super-admin write — reused under its own doc id so it's independent
+// of the rest of Site Settings. Previously this only lived in
+// localStorage, so an admin's real account details never left the
+// browser that saved them and every other visitor kept seeing the
+// hardcoded placeholder numbers as the "real" payment destination.
+async function getPaymentMethods(){
+  const snap = await getDoc(doc(db, "settings", "paymentMethods"));
+  return snap.exists() ? snap.data() : null;
+}
+async function savePaymentMethods(methods){
+  await setDoc(doc(db, "settings", "paymentMethods"), methods);
+}
+function watchPaymentMethods(callback){
+  if(!firebaseReady) return ()=>{};
+  return onSnapshot(doc(db, "settings", "paymentMethods"), snap=>{
+    if(snap.exists()) callback(snap.data());
+  }, err=>{ console.error("[JUTTFHX] payment methods listener error:", err); });
+}
+
 window.FirebaseService = {
   name: "firebase",
   init: initFirebase,
@@ -14507,13 +14625,8 @@ window.FirebaseService = {
   uploadHudImage, deleteHudImage, getHuds,
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
-  getTournaments, addTournament, updateTournament, deleteTournament,
-  getGuilds, addGuild, updateGuild, deleteGuild,
-  getTeamFinder, addTeamFinderListing, updateTeamFinderListing, deleteTeamFinderListing,
-  getReviews, addReview, deleteReview, approveReview,
-  getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
-  trackVisit, trackSearch, incrementDeviceSearch, getStats,
-  getSiteSettings, saveSiteSettings, watchSiteSettings
+  getTournaments, addTournament, updateTournament, deleteTournament, incrementTournamentSlot,
+  getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods
 };
 
 </script>
@@ -14750,6 +14863,13 @@ async function deleteTournament(id){
   const { error } = await supabase.from("tournaments").delete().eq("id", id);
   if(error) throw error;
 }
+async function incrementTournamentSlot(id){
+  const { data, error } = await supabase.from("tournaments").select("slotsFilled").eq("id", id).maybeSingle();
+  if(error) throw error;
+  const next = ((data && data.slotsFilled) || 0) + 1;
+  const { error: updErr } = await supabase.from("tournaments").update({ slotsFilled: next }).eq("id", id);
+  if(updErr) throw updErr;
+}
 
 /* ---------------- REVIEWS ---------------- */
 async function getReviews(){
@@ -14885,6 +15005,26 @@ function watchSiteSettings(callback){
   return () => supabase.removeChannel(channel);
 }
 
+// Tournament payment method details — same settings table, own row id.
+async function getPaymentMethods(){
+  const { data, error } = await supabase.from("settings").select("data").eq("id", "paymentMethods").maybeSingle();
+  if(error) throw error;
+  return data ? data.data : null;
+}
+async function savePaymentMethods(methods){
+  const { error } = await supabase.from("settings").upsert({ id: "paymentMethods", data: methods });
+  if(error) throw error;
+}
+function watchPaymentMethods(callback){
+  if(!supabase) return ()=>{};
+  const channel = supabase.channel("settings-paymentMethods")
+    .on("postgres_changes", { event: "*", schema: "public", table: "settings", filter: "id=eq.paymentMethods" }, payload=>{
+      if(payload.new && payload.new.data) callback(payload.new.data);
+    })
+    .subscribe();
+  return () => supabase.removeChannel(channel);
+}
+
 function userAccountsUnsupported(){
   throw new Error("User accounts (sign up, Google sign-in, profiles) are only implemented for the Firebase adapter right now. Switch ACTIVE_BACKEND to \"firebase\" in backend-selector.js to use this feature.");
 }
@@ -14910,11 +15050,11 @@ window.SupabaseService = {
   uploadHudImage, deleteHudImage,
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
-  getTournaments, addTournament, updateTournament, deleteTournament,
+  getTournaments, addTournament, updateTournament, deleteTournament, incrementTournamentSlot,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
   trackVisit, trackSearch, incrementDeviceSearch, getStats,
-  getSiteSettings, saveSiteSettings, watchSiteSettings
+  getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods
 };
 
 </script>
@@ -15049,6 +15189,7 @@ async function getTournaments(){ return callSheets("getTournaments", {}); }
 async function addTournament(tournament){ return callSheets("addTournament", tournament); }
 async function updateTournament(id, updates){ return callSheets("updateTournament", { id, updates }); }
 async function deleteTournament(id){ return callSheets("deleteTournament", { id }); }
+async function incrementTournamentSlot(id){ return callSheets("incrementTournamentSlot", { id }); }
 
 /* ---------------- REVIEWS ---------------- */
 async function getReviews(){ return callSheets("getReviews", {}); }
@@ -15101,6 +15242,13 @@ async function getSiteSettings(){
 async function saveSiteSettings(settings){ return callSheets("saveSiteSettings", { settings }); }
 function watchSiteSettings(){ return ()=>{}; }
 
+async function getPaymentMethods(){
+  const result = await callSheets("getPaymentMethods", {});
+  return result || null;
+}
+async function savePaymentMethods(methods){ return callSheets("savePaymentMethods", { methods }); }
+function watchPaymentMethods(){ return ()=>{}; }
+
 function userAccountsUnsupported(){
   throw new Error("User accounts (sign up, Google sign-in, profiles) are only implemented for the Firebase adapter right now. Switch ACTIVE_BACKEND to \"firebase\" in backend-selector.js to use this feature.");
 }
@@ -15132,11 +15280,11 @@ window.SheetsService = {
   uploadHudImage, deleteHudImage,
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
-  getTournaments, addTournament, updateTournament, deleteTournament,
+  getTournaments, addTournament, updateTournament, deleteTournament, incrementTournamentSlot,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
   trackVisit, trackSearch, incrementDeviceSearch, getStats,
-  getSiteSettings, saveSiteSettings, watchSiteSettings
+  getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods
 };
 
 /* ============================================================
@@ -15190,6 +15338,7 @@ function handleAction(action, payload) {
     case "addTournament": return appendRow(ss.getSheetByName("tournaments"), payload);
     case "updateTournament": return updateRow(ss.getSheetByName("tournaments"), payload.id, payload.updates);
     case "deleteTournament": return deleteRow(ss.getSheetByName("tournaments"), payload.id);
+    case "incrementTournamentSlot": return incrementTournamentSlotCount(ss.getSheetByName("tournaments"), payload.id);
     case "trackVisit": return appendRow(ss.getSheetByName("visits"), { visitorId: payload.visitorId });
     case "trackSearch": return appendRow(ss.getSheetByName("searches"), { query: payload.query, visitorId: payload.visitorId });
     case "incrementDeviceSearch": return incrementDeviceSearchCount(ss.getSheetByName("devices"), payload.id);
@@ -15267,6 +15416,21 @@ function incrementDeviceSearchCount(sheet, id) {
   const current = parseInt(cell.getValue(), 10) || 0;
   cell.setValue(current + 1);
   return { id, searchCount: current + 1 };
+}
+
+// Bumps one tournament row's slotsFilled cell by 1 — mirrors
+// incrementDeviceSearchCount above, fired every time a visitor
+// successfully registers for that tournament.
+function incrementTournamentSlotCount(sheet, id) {
+  const rowIndex = findRowIndexById(sheet, id);
+  if (rowIndex === -1) throw new Error("Row not found: " + id);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const col = headers.indexOf("slotsFilled");
+  if (col === -1) throw new Error("tournaments sheet is missing a slotsFilled column");
+  const cell = sheet.getRange(rowIndex, col + 1);
+  const current = parseInt(cell.getValue(), 10) || 0;
+  cell.setValue(current + 1);
+  return { id, slotsFilled: current + 1 };
 }
 
 function uploadImage(payload) {
@@ -15594,6 +15758,13 @@ window.DemoService = {
     d.tournaments = (d.tournaments || []).filter(x => x.id !== id);
     demoSave(d);
   },
+  async incrementTournamentSlot(id){
+    const d = demoLoad();
+    if(!d.tournaments) d.tournaments = [];
+    const idx = d.tournaments.findIndex(x => x.id === id);
+    if(idx > -1) d.tournaments[idx].slotsFilled = (d.tournaments[idx].slotsFilled || 0) + 1;
+    demoSave(d);
+  },
 
   /* ---------------- GUILD RECRUITMENT HUB ----------------
      Same demo-mode contract as HUD Layouts / Combos above: persisted
@@ -15738,7 +15909,15 @@ window.DemoService = {
   async saveSiteSettings(settings){
     try{ localStorage.setItem("juttfhx_site_settings_v1", JSON.stringify(settings)); }catch(e){}
   },
-  watchSiteSettings(){ return ()=>{}; }
+  watchSiteSettings(){ return ()=>{}; },
+  async getPaymentMethods(){
+    try{ const raw = localStorage.getItem("juttfhx_payment_methods_v1"); return raw ? JSON.parse(raw) : null; }
+    catch(e){ return null; }
+  },
+  async savePaymentMethods(methods){
+    try{ localStorage.setItem("juttfhx_payment_methods_v1", JSON.stringify(methods)); }catch(e){}
+  },
+  watchPaymentMethods(){ return ()=>{}; }
 };
 
 /* ---------------- RESOLVE ACTIVE BACKEND ---------------- */
@@ -15823,7 +16002,23 @@ window.getBackend = (function(){
       history.replaceState(null, "", location.pathname + location.search + "#admin");
     }
   }
+  let adminRequestPollTimer = null;
+  const ADMIN_REQUEST_POLL_MS = 20000; // 20s — keeps the "new registration" badge fresh without a manual reload
+  function startAdminRequestPolling(){
+    stopAdminRequestPolling();
+    adminRequestPollTimer = setInterval(async ()=>{
+      try{
+        await loadRequests();
+        renderOverview();
+      }catch(e){ /* best-effort — next tick will retry */ }
+    }, ADMIN_REQUEST_POLL_MS);
+  }
+  function stopAdminRequestPolling(){
+    if(adminRequestPollTimer){ clearInterval(adminRequestPollTimer); adminRequestPollTimer = null; }
+  }
+
   function exitAdminMode(){
+    stopAdminRequestPolling();
     adminRoute.classList.remove("active");
     document.body.classList.remove("admin-active");
     document.documentElement.classList.remove("admin-active");
@@ -15959,6 +16154,7 @@ window.getBackend = (function(){
     renderAdminRolePill();
     applyAdminRoleGating();
     loadAllPanelData();
+    startAdminRequestPolling();
   }
 
   // The sidebar used to hardcode the text "Super Admin" for every admin,
@@ -17473,6 +17669,13 @@ function renderPaymentMethodsEditor(){
   `).join("") || `<p class="section-sub" style="padding:16px 0;">No payment methods yet. Click "+ Add Payment Method" above to create one.</p>`;
 }
 renderPaymentMethodsEditor();
+if(backend && typeof backend.getPaymentMethods === "function"){
+  backend.getPaymentMethods().then(remote=>{
+    if(remote && window.JX_mergePaymentMethods && window.JX_mergePaymentMethods(remote)){
+      renderPaymentMethodsEditor();
+    }
+  }).catch(()=>{ /* best-effort — admin can still edit/save from local defaults */ });
+}
 document.getElementById("paymentMethodAddBtn").addEventListener("click", ()=>{
   const methods = window.JX_getPaymentMethods ? window.JX_getPaymentMethods() : {};
   let n = Object.keys(methods).length + 1;
@@ -17514,7 +17717,7 @@ document.getElementById("paymentMethodsEditor").addEventListener("click", (e)=>{
   const rmBtn = e.target.closest("[data-remove-row]");
   if(rmBtn) rmBtn.closest(".jx-dyn-row").remove();
 });
-document.getElementById("paymentMethodsSaveBtn").addEventListener("click", ()=>{
+document.getElementById("paymentMethodsSaveBtn").addEventListener("click", async ()=>{
   const updated = {};
   document.querySelectorAll("#paymentMethodsEditor [data-method]").forEach(fieldset=>{
     const key = fieldset.dataset.method;
@@ -17525,10 +17728,23 @@ document.getElementById("paymentMethodsSaveBtn").addEventListener("click", ()=>{
     ]).filter(r=> r[0] || r[1]);
     updated[key] = { label, rows };
   });
-  window.JX_savePaymentMethods(updated);
-  window.JX_logAudit("Payment Methods", "", "updated");
-  renderPaymentMethodsEditor();
-  showToastSafe("success", "Payment methods saved.");
+  const saveBtn = document.getElementById("paymentMethodsSaveBtn");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Saving…";
+  try{
+    window.JX_savePaymentMethods(updated);
+    if(backend && typeof backend.savePaymentMethods === "function"){
+      await backend.savePaymentMethods(updated);
+    }
+    window.JX_logAudit("Payment Methods", "", "updated");
+    renderPaymentMethodsEditor();
+    showToastSafe("success", "Payment methods saved — live for every visitor now.");
+  }catch(err){
+    showToastSafe("info", "Saved locally, but could not sync to the backend: " + err.message);
+  }finally{
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Payment Methods";
+  }
 });
 
 /* ============================================================
