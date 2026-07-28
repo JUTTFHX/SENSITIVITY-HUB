@@ -14709,13 +14709,27 @@ window.FirebaseService = {
   login, logout, watchAuth, watchSiteAuth: watchAuth, isAdmin, getAdminRole,
   signup, loginWithGoogle, checkGoogleRedirectResult, resetPassword, resendVerificationEmail,
   getUserProfile, updateUserProfile, uploadUserAvatar, setUserFavorites, addUserSensitivity,
-  getDevices, watchDevices, addDevice, updateDevice, deleteDevice,
+  getDevices, watchDevices, addDevice, updateDevice, deleteDevice, incrementDeviceSearch,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
   uploadHudImage, deleteHudImage, getHuds,
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
   getCombos, addCombo, updateCombo, deleteCombo,
   getTournaments, addTournament, updateTournament, deleteTournament, incrementTournamentSlot,
-  getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods
+  getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods,
+  // The functions below were defined earlier in this file but never
+  // reached this export object — calling any of them (backend.getReviews(),
+  // backend.submitRequest(), etc.) threw "is not a function". Several
+  // call sites have no typeof guard, so this broke reviews, device
+  // requests, guild recruitment, team finder, live stats, and visit/
+  // search tracking outright, and — because getReviews() is called
+  // un-guarded inside syncWithBackend()'s Promise.all — the resulting
+  // thrown error aborted that ENTIRE sync before getDevices() could
+  // resolve, which is why devices never appeared either.
+  getReviews, addReview, deleteReview, approveReview,
+  getRequests, getMyRequests, submitRequest, deleteRequest, updateRequestStatus,
+  getGuilds, addGuild, updateGuild, deleteGuild,
+  getTeamFinder, addTeamFinderListing, updateTeamFinderListing, deleteTeamFinderListing,
+  getStats, trackVisit, trackSearch
 };
 
 </script>
