@@ -2326,6 +2326,8 @@ html.admin-active{ overflow:hidden; }
   background:linear-gradient(90deg, var(--gold-deep), var(--gold-bright), var(--gold-deep));
 }
 .guild-card:hover{ border-color:var(--hairline-strong); box-shadow:0 8px 32px rgba(0,0,0,.3); }
+.tf-card{ cursor:pointer; }
+.tf-card [data-tf-contact]{ cursor:pointer; }
 
 .guild-card-top{ display:flex; align-items:center; gap:14px; }
 .guild-emblem{
@@ -7513,6 +7515,47 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
   </div>
 </section>
+
+<!-- ---- Team Finder Player Details Modal ---- -->
+<div class="modal-overlay" id="tfDetailsModal">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-head">
+      <h3 id="tfDetailsName">Player Details</h3>
+      <button class="btn-icon" id="closeTfDetailsModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="guild-card-top" style="margin-bottom:18px;">
+        <div class="guild-emblem" id="tfDetailsEmblem">??</div>
+        <div class="guild-info">
+          <div class="guild-name" id="tfDetailsNameInner">—</div>
+          <div class="guild-tag" id="tfDetailsRegionTag">—</div>
+        </div>
+        <span class="role-badge" id="tfDetailsRoleBadge">—</span>
+      </div>
+
+      <div class="guild-meta" style="margin-bottom:18px;">
+        <div class="guild-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M12 15v7M9 19l3 3 3-3"/></svg>
+          <b id="tfDetailsRank">—</b>
+        </div>
+        <div class="guild-meta-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span id="tfDetailsRegion">—</span>
+        </div>
+      </div>
+
+      <div class="guild-requirements" id="tfDetailsAboutWrap" style="display:none;">
+        <strong>About</strong>
+        <span id="tfDetailsAboutText"></span>
+      </div>
+
+      <button type="button" class="btn btn-gold" id="tfDetailsCopyBtn" style="width:100%; margin-top:18px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy Contact
+      </button>
+    </div>
+  </div>
+</div>
 
 </main>
 
@@ -13680,7 +13723,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     function tfCardHtml(p){
       const initials = (p.ign || "?").replace(/[_\-]/g, " ").split(" ").map(w=>w[0]).filter(Boolean).slice(0,2).join("").toUpperCase();
       return `
-        <div class="guild-card reveal">
+        <div class="guild-card reveal tf-card" data-tf-view="${p.id}">
           <div class="guild-card-top">
             <div class="guild-emblem">${escapeHtml(initials)}</div>
             <div class="guild-info">
@@ -13758,6 +13801,61 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
       } else {
         showToast("info", `${ign}'s contact: ${contact}`);
       }
+    });
+
+    /* ---- Player Details Modal ---- */
+    const tfDetailsModal = document.getElementById("tfDetailsModal");
+    let currentTfDetailsId = null;
+
+    function openTfDetailsModal(playerId){
+      const p = TEAMFINDER.find(x => x.id === playerId);
+      if(!p || !tfDetailsModal) return;
+      currentTfDetailsId = playerId;
+
+      const initials = (p.ign || "?").replace(/[_\-]/g, " ").split(" ").map(w=>w[0]).filter(Boolean).slice(0,2).join("").toUpperCase();
+      document.getElementById("tfDetailsName").textContent = p.ign || "Player Details";
+      document.getElementById("tfDetailsNameInner").textContent = p.ign || "—";
+      document.getElementById("tfDetailsEmblem").textContent = initials;
+      document.getElementById("tfDetailsRegionTag").textContent = p.region || "";
+      const roleBadge = document.getElementById("tfDetailsRoleBadge");
+      roleBadge.textContent = p.role || "—";
+      roleBadge.className = "role-badge role-" + tfRoleSlug(p.role);
+      document.getElementById("tfDetailsRank").textContent = p.rank || "—";
+      document.getElementById("tfDetailsRegion").textContent = p.region || "—";
+
+      const aboutWrap = document.getElementById("tfDetailsAboutWrap");
+      if(p.bio){
+        aboutWrap.style.display = "block";
+        document.getElementById("tfDetailsAboutText").textContent = p.bio;
+      } else {
+        aboutWrap.style.display = "none";
+      }
+
+      const copyBtn = document.getElementById("tfDetailsCopyBtn");
+      copyBtn.dataset.tfContact = p.contact || "";
+      copyBtn.dataset.tfIgn = p.ign || "";
+
+      tfDetailsModal.classList.add("open");
+      document.documentElement.classList.add("no-scroll");
+    }
+
+    function closeTfDetailsModal(){
+      tfDetailsModal.classList.remove("open");
+      document.documentElement.classList.remove("no-scroll");
+      currentTfDetailsId = null;
+    }
+
+    document.getElementById("closeTfDetailsModal").addEventListener("click", closeTfDetailsModal);
+    tfDetailsModal.addEventListener("click", (e)=>{ if(e.target === tfDetailsModal) closeTfDetailsModal(); });
+
+    // Open modal when a card is clicked (but not when the card's own
+    // Copy Contact button is clicked — that's handled by the delegated
+    // [data-tf-contact] handler above).
+    document.addEventListener("click", (e) => {
+      const card = e.target.closest("[data-tf-view]");
+      if(!card) return;
+      if(e.target.closest("[data-tf-contact]")) return;
+      openTfDetailsModal(parseInt(card.dataset.tfView));
     });
 
     // List-yourself form submit
