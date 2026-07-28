@@ -12341,20 +12341,24 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
      ============================================================ */
   let nextSyntheticId = 1000000; // far above any seeded device id, avoids collisions
 
+  // Reconciles the live DEVICES array against the backend's current device
+  // list (customDevices). Called both from the one-time syncWithBackend()
+  // fetch AND from the realtime watchDevices() snapshot handler — in both
+  // cases customDevices is the FULL current collection, not a delta, so
+  // this must add new devices, update fields on existing ones, and drop
+  // devices that were deleted in the Admin Dashboard. The old version only
+  // ever added devices (an `exists` check skipped anything already
+  // present), which meant admin edits/deletes never reached the public
+  // site without a hard reload — and even then, edits still wouldn't show
+  // because "already exists" always won.
   function mergeCustomDevices(customDevices){
-    if(!customDevices || !customDevices.length) return false;
+    if(!Array.isArray(customDevices)) return false;
     let changed = false;
+    const seenBackendIds = new Set();
+
     customDevices.forEach(cd=>{
-      // Firestore/Supabase/Sheets ids are strings; the rest of the
-      // site indexes devices by numeric id, so map each real device
-      // to a stable synthetic numeric id while keeping the original
-      // backend id around for admin round-trips if ever needed.
-      const numericId = nextSyntheticId++;
-      const exists = DEVICES.some(d => d.__backendId === cd.id);
-      if(exists) return;
-      DEVICES.unshift({
-        id: numericId,
-        __backendId: cd.id,
+      seenBackendIds.add(cd.id);
+      const fields = {
         brand: cd.brand || "Other",
         model: cd.name || "Unnamed Device",
         name: cd.name || "Unnamed Device",
@@ -12364,7 +12368,6 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
         headshot: parseInt(cd.headshot, 10) || 70,
         popularity: parseInt(cd.popularity, 10) || 50,
         searchCount: parseInt(cd.searchCount, 10) || 0,
-        rnd: hashStr(String(cd.name || cd.id)),
         // Compare Devices tool fields — admin-managed hardware/software specs
         // and classification, shown side-by-side on the public Compare
         // Devices section.
@@ -12386,9 +12389,41 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
         // fields would save fine but have no visible effect anywhere.
         sensOverride: cd.sensOverride || null,
         verified: !!cd.verified
+      };
+
+      const existing = DEVICES.find(d => d.__backendId === cd.id);
+      if(existing){
+        // Update in place so id/rnd stay stable across re-syncs (a
+        // favorite'd device, an open compare slot, etc. shouldn't lose
+        // its identity just because an admin tweaked its DPI).
+        const before = JSON.stringify(existing);
+        Object.assign(existing, fields);
+        if(JSON.stringify(existing) !== before) changed = true;
+        return;
+      }
+      // Firestore/Supabase/Sheets ids are strings; the rest of the
+      // site indexes devices by numeric id, so map each real device
+      // to a stable synthetic numeric id while keeping the original
+      // backend id around for admin round-trips if ever needed.
+      DEVICES.unshift({
+        id: nextSyntheticId++,
+        __backendId: cd.id,
+        rnd: hashStr(String(cd.name || cd.id)),
+        ...fields
       });
       changed = true;
     });
+
+    // Drop devices that used to be backend-sourced but no longer appear
+    // in the current collection (deleted from the Admin Dashboard).
+    for(let i = DEVICES.length - 1; i >= 0; i--){
+      const d = DEVICES[i];
+      if(d.__backendId != null && !seenBackendIds.has(d.__backendId)){
+        DEVICES.splice(i, 1);
+        changed = true;
+      }
+    }
+
     return changed;
   }
 
@@ -12492,11 +12527,23 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     try{
       const backend = await window.getBackend();
       trackRealVisitOnce(backend);
+      // DIAGNOSTIC: surface which backend actually resolved. If this ever
+      // logs "demo" while ACTIVE_BACKEND is "firebase" in backend-selector.js,
+      // FirebaseService.init() returned false/threw — check the console just
+      // above this line for the real init error (bad config, blocked domain,
+      // etc.), not this log itself.
+      console.log("[JUTTFHX] Backend resolved:", backend && backend.name);
 
       const [customDevices, realReviews, customPlayers] = await Promise.all([
-        backend.getDevices().catch(()=> []),
-        backend.getReviews().catch(()=> []),
-        (typeof backend.getPlayers === "function" ? backend.getPlayers() : Promise.resolve([])).catch(()=> [])
+        backend.getDevices().catch(err=>{
+          // Swallowing this silently is exactly why "Device Not Found"
+          // could show with zero console explanation — surface it instead.
+          console.error("[JUTTFHX] getDevices() failed — devices will not appear on the site:", err);
+          showToast("info", "Couldn't load devices — check console for details.");
+          return [];
+        }),
+        backend.getReviews().catch(err=>{ console.error("[JUTTFHX] getReviews() failed:", err); return []; }),
+        (typeof backend.getPlayers === "function" ? backend.getPlayers() : Promise.resolve([])).catch(err=>{ console.error("[JUTTFHX] getPlayers() failed:", err); return []; })
       ]);
 
       const devicesChanged = mergeCustomDevices(customDevices);
@@ -12711,6 +12758,37 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}px`;
     })();
   }
   waitForGetBackendThenSync();
+
+  /* ---------- Realtime device sync ----------
+     On top of the one-time syncWithBackend() fetch above (which paints
+     devices as fast as possible on load), subscribe to live changes so
+     an admin adding/editing/deleting a device pushes to every open tab
+     without needing a refresh. Only backends that implement watchDevices
+     (currently: Firebase, via onSnapshot) get this — Supabase/Sheets/Demo
+     fall back to the one-time fetch only, which is still correct, just
+     not live. */
+  let unsubscribeDevicesRealtime = null;
+  function subscribeDevicesRealtime(timeoutMs = 4000){
+    const start = Date.now();
+    (function poll(){
+      if(typeof window.getBackend !== "function"){
+        if(Date.now() - start < timeoutMs) setTimeout(poll, 50);
+        return;
+      }
+      window.getBackend().then(backend=>{
+        if(typeof backend.watchDevices !== "function") return; // graceful no-op for non-Firebase backends
+        if(unsubscribeDevicesRealtime) unsubscribeDevicesRealtime();
+        unsubscribeDevicesRealtime = backend.watchDevices(customDevices=>{
+          const devicesChanged = mergeCustomDevices(customDevices);
+          if(devicesChanged){
+            renderDeviceResults(deviceSearchInput.value);
+            if(typeof window.__jxRefreshCompareSelects === "function") window.__jxRefreshCompareSelects();
+          }
+        });
+      }).catch(err=> console.error("[JUTTFHX] Failed to start realtime device sync:", err));
+    })();
+  }
+  subscribeDevicesRealtime();
 
   /* ---------- Live stat refresh ----------
      Re-pulls real getStats() on an interval so the counters reflect
@@ -14255,6 +14333,17 @@ async function getDevices(){
   const snap = await getDocs(collection(db, "devices"));
   return snap.docs.map(d => ({ id:d.id, ...d.data() }));
 }
+// Realtime device sync: fires immediately with the current collection and
+// again on every add/edit/delete from the Admin Dashboard, in any browser.
+// Callers should treat each callback payload as the FULL current device
+// list, not a delta. Returns the Firestore unsubscribe function.
+function watchDevices(callback){
+  return onSnapshot(collection(db, "devices"), snap=>{
+    callback(snap.docs.map(d => ({ id:d.id, ...d.data() })));
+  }, err=>{
+    console.error("[JUTTFHX] watchDevices realtime listener failed (falling back to one-time syncWithBackend only):", err);
+  });
+}
 async function addDevice(device){
   const docRef = await addDoc(collection(db, "devices"), {
     ...device,
@@ -14620,7 +14709,7 @@ window.FirebaseService = {
   login, logout, watchAuth, watchSiteAuth: watchAuth, isAdmin, getAdminRole,
   signup, loginWithGoogle, checkGoogleRedirectResult, resetPassword, resendVerificationEmail,
   getUserProfile, updateUserProfile, uploadUserAvatar, setUserFavorites, addUserSensitivity,
-  getDevices, addDevice, updateDevice, deleteDevice,
+  getDevices, watchDevices, addDevice, updateDevice, deleteDevice,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
   uploadHudImage, deleteHudImage, getHuds,
   getHudLayouts, addHudLayout, updateHudLayout, deleteHudLayout,
