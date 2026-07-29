@@ -15669,6 +15669,17 @@ const ACTIVE_BACKEND = "firebase";
 
 /* ---------------- DEMO FALLBACK (localStorage) ---------------- */
 const DEMO_KEY = "juttfhx_admin_demo_v1";
+// Collision-proof ID generator for demo/local-storage records. Date.now()
+// alone only has millisecond resolution, so two records created in the
+// same millisecond (double-click on submit, a fast bulk-import loop, etc.)
+// used to get the SAME id. That made them indistinguishable to the
+// backend: deleting/editing "one" of a duplicate pair actually acted on
+// both, since deleteDevice/updateDevice match by id. Appending a random
+// suffix guarantees every generated id is unique, even for adds that
+// happen in the same millisecond.
+function demoUid(prefix){
+  return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
+}
 function demoLoad(){
   try{
     const raw = localStorage.getItem(DEMO_KEY);
@@ -15818,7 +15829,7 @@ window.DemoService = {
   async getDevices(){ return demoLoad().devices; },
   async addDevice(device){
     const d = demoLoad();
-    const id = "demo-" + Date.now();
+    const id = demoUid("demo");
     d.devices.unshift({ id, ...device, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
@@ -15839,7 +15850,7 @@ window.DemoService = {
   async addPlayer(player){
     const d = demoLoad();
     if(!d.players) d.players = [];
-    const id = "demo-player-" + Date.now();
+    const id = demoUid("demo-player");
     d.players.unshift({ id, ...player, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
@@ -15867,7 +15878,7 @@ window.DemoService = {
       reader.readAsDataURL(file);
     });
     const d = demoLoad();
-    const id = "demo-img-" + Date.now();
+    const id = demoUid("demo-img");
     d.huds.unshift({ id, name: layoutName, url: dataUrl });
     demoSave(d);
     return { url: dataUrl, path: id };
@@ -15888,7 +15899,7 @@ window.DemoService = {
   async addHudLayout(layout){
     const d = demoLoad();
     if(!d.hudLayouts) d.hudLayouts = [];
-    const id = "demo-hudlayout-" + Date.now();
+    const id = demoUid("demo-hudlayout");
     d.hudLayouts.unshift({ id, ...layout, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
@@ -15916,7 +15927,7 @@ window.DemoService = {
   async addCombo(combo){
     const d = demoLoad();
     if(!d.combos) d.combos = [];
-    const id = "demo-combo-" + Date.now();
+    const id = demoUid("demo-combo");
     d.combos.unshift({ id, ...combo, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
@@ -15942,7 +15953,7 @@ window.DemoService = {
   async addTournament(tournament){
     const d = demoLoad();
     if(!d.tournaments) d.tournaments = [];
-    const id = "demo-tourney-" + Date.now();
+    const id = demoUid("demo-tourney");
     d.tournaments.unshift({ id, ...tournament, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
@@ -15975,7 +15986,7 @@ window.DemoService = {
   async addGuild(guild){
     const d = demoLoad();
     if(!d.guilds) d.guilds = [];
-    const id = "demo-guild-" + Date.now();
+    const id = demoUid("demo-guild");
     d.guilds.unshift({ id, ...guild, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
@@ -15998,7 +16009,7 @@ window.DemoService = {
   async addTeamFinderListing(listing){
     const d = demoLoad();
     if(!d.teamFinder) d.teamFinder = [];
-    const id = "demo-tf-" + Date.now();
+    const id = demoUid("demo-tf");
     d.teamFinder.unshift({ id, ...listing, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
@@ -16019,7 +16030,7 @@ window.DemoService = {
   async getReviews(){ return demoLoad().reviews; },
   async addReview(review){
     const d = demoLoad();
-    const id = "demo-review-" + Date.now();
+    const id = demoUid("demo-review");
     d.reviews.unshift({ id, ...review, approved: true, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
@@ -16040,7 +16051,7 @@ window.DemoService = {
   async getMyRequests(uid){ if(!uid) return []; return demoLoad().requests.filter(r => r.uid === uid); },
   async submitRequest(request){
     const d = demoLoad();
-    d.requests.unshift({ id: "demo-req-" + Date.now(), ...request, status:"pending", createdAt: new Date().toISOString() });
+    d.requests.unshift({ id: demoUid("demo-req"), ...request, status:"pending", createdAt: new Date().toISOString() });
     demoSave(d);
   },
   async updateRequestStatus(id, status, reason){
