@@ -14429,7 +14429,12 @@ async function addUserSensitivity(uid, entry){
 /* ---------------- DEVICES ---------------- */
 async function getDevices(){
   const snap = await getDocs(collection(db, "devices"));
-  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  // NOTE: spread d.data() BEFORE id:d.id so the real Firestore document id
+  // always wins, even if the document's data contains a stray "id" field
+  // (e.g. left over from importing a previously-exported devices JSON).
+  // Doing it the other way round let a stale id silently overwrite the
+  // real one, which made imported devices undeletable — see addDevice().
+  return snap.docs.map(d => ({ ...d.data(), id:d.id }));
 }
 // Realtime device sync: fires immediately with the current collection and
 // again on every add/edit/delete from the Admin Dashboard, in any browser.
@@ -14437,20 +14442,32 @@ async function getDevices(){
 // list, not a delta. Returns the Firestore unsubscribe function.
 function watchDevices(callback){
   return onSnapshot(collection(db, "devices"), snap=>{
-    callback(snap.docs.map(d => ({ id:d.id, ...d.data() })));
+    // Same fix as getDevices(): real doc id must win over any stray "id"
+    // field baked into the document data.
+    callback(snap.docs.map(d => ({ ...d.data(), id:d.id })));
   }, err=>{
     console.error("[JUTTFHX] watchDevices realtime listener failed (falling back to one-time syncWithBackend only):", err);
   });
 }
 async function addDevice(device){
+  // Strip any "id" field the caller might have included (e.g. a device
+  // object re-imported from a previous JSON export, which carries its old
+  // document id). Firestore assigns the real id via docRef.id below; if we
+  // let an old id ride along as plain data, it later shadows the real id
+  // when the document is read back (see getDevices/watchDevices) and the
+  // device becomes impossible to edit or delete from the admin dashboard.
+  const { id, ...deviceData } = device || {};
   const docRef = await addDoc(collection(db, "devices"), {
-    ...device,
+    ...deviceData,
     createdAt: serverTimestamp()
   });
   return docRef.id;
 }
 async function updateDevice(id, updates){
-  await updateDoc(doc(db, "devices", id), updates);
+  // Same reasoning as addDevice: never let an "id" field ride along inside
+  // the update payload and get written as plain document data.
+  const { id: _drop, ...cleanUpdates } = updates || {};
+  await updateDoc(doc(db, "devices", id), cleanUpdates);
 }
 async function deleteDevice(id){
   await deleteDoc(doc(db, "devices", id));
@@ -14932,12 +14949,21 @@ async function getDevices(){
   return data;
 }
 async function addDevice(device){
-  const { data, error } = await supabase.from("devices").insert([device]).select();
+  // Strip any "id" field the caller might have included (e.g. a device
+  // re-imported from a previous JSON export). Letting an old id ride
+  // along could insert a row with a duplicate/foreign id instead of
+  // letting Postgres assign a fresh one — same class of bug as the
+  // Firebase adapter's addDevice.
+  const { id, ...deviceData } = device || {};
+  const { data, error } = await supabase.from("devices").insert([deviceData]).select();
   if(error) throw error;
   return data[0].id;
 }
 async function updateDevice(id, updates){
-  const { error } = await supabase.from("devices").update(updates).eq("id", id);
+  // Same reasoning as addDevice — never let a stray "id" field in the
+  // updates payload try to overwrite the row's primary key.
+  const { id: _drop, ...cleanUpdates } = updates || {};
+  const { error } = await supabase.from("devices").update(cleanUpdates).eq("id", id);
   if(error) throw error;
 }
 async function deleteDevice(id){
