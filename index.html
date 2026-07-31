@@ -12454,6 +12454,37 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
      ============================================================ */
   let nextSyntheticId = 1000000; // far above any seeded device id, avoids collisions
 
+  // parseInt(x,10) || fallback silently discards a legitimate 0 — 0 is
+  // falsy, so `parseInt("0",10) || 400` evaluates to 400, not 0. That bug
+  // was overwriting real values (e.g. an admin's intentional dpi:0 "not
+  // yet measured" placeholder, or a genuine 0 headshot rate) with fake
+  // defaults on every device that had it. This only falls back when the
+  // value is actually missing/unparsable (NaN), never for a real zero.
+  function numOrDefault(val, fallback){
+    const n = parseInt(val, 10);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  // Classification tiers were renamed from {Mid Range, Upper Mid Range,
+  // Flagship, Gaming Phone} to {Low-End, Mid-Range, Upper Mid-Range,
+  // High-End, Ultra-Premium}. Devices added/exported before that rename
+  // still carry the old label strings. Without this normalizer, an old
+  // label doesn't match any <option> in the classification dropdown, so
+  // re-opening the device for edit shows the field blank/reset — the
+  // classification effectively vanishes even though it's sitting right
+  // there in the stored data.
+  const CLASSIFICATION_LEGACY_MAP = {
+    "Mid Range": "Mid-Range",
+    "Upper Mid Range": "Upper Mid-Range",
+    "Flagship": "High-End",
+    "Gaming Phone": "Ultra-Premium"
+  };
+  function normalizeClassification(val){
+    if(!val) return "Mid-Range";
+    return CLASSIFICATION_LEGACY_MAP[val] || val;
+  }
+  window.JX_normalizeClassification = normalizeClassification;
+
   // Reconciles the live DEVICES array against the backend's current device
   // list (customDevices). Called both from the one-time syncWithBackend()
   // fetch AND from the realtime watchDevices() snapshot handler — in both
@@ -12477,23 +12508,23 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
         name: cd.name || "Unnamed Device",
         ram: cd.ram || "—",
         refresh: cd.refresh || "—",
-        dpi: parseInt(cd.dpi, 10) || 400,
-        headshot: parseInt(cd.headshot, 10) || 70,
-        popularity: parseInt(cd.popularity, 10) || 50,
-        searchCount: parseInt(cd.searchCount, 10) || 0,
+        dpi: numOrDefault(cd.dpi, 400),
+        headshot: numOrDefault(cd.headshot, 70),
+        popularity: numOrDefault(cd.popularity, 50),
+        searchCount: numOrDefault(cd.searchCount, 0),
         // Compare Devices tool fields — admin-managed hardware/software specs
         // and classification, shown side-by-side on the public Compare
         // Devices section.
         processor: cd.processor || "—",
         rom: cd.rom || "—",
         screenSize: cd.screenSize || "—",
-        avgFps: parseInt(cd.avgFps, 10) || null,
+        avgFps: numOrDefault(cd.avgFps, null),
         cooling: cd.cooling || "—",
         osVersion: cd.osVersion || "—",
         gamingOpt: cd.gamingOpt || "None",
         deviceAge: cd.deviceAge || "—",
         ffCompat: cd.ffCompat || "Compatible",
-        classification: cd.classification || "Mid-Range",
+        classification: normalizeClassification(cd.classification),
         // Carry the admin-entered manual sensitivity values and verified
         // flag through to the live device object. Without these, every
         // number entered in the Admin Dashboard's Add/Edit Device form
@@ -15033,8 +15064,15 @@ async function updateDevice(id, updates){
   // Same reasoning as addDevice — never let a stray "id" field in the
   // updates payload try to overwrite the row's primary key.
   const { id: _drop, ...cleanUpdates } = updates || {};
-  const { error } = await supabase.from("devices").update(cleanUpdates).eq("id", id);
+  // .select() so we get back the rows actually touched. Without this,
+  // .update().eq("id", id) resolves successfully (no `error`) even when
+  // zero rows match — e.g. importing a JSON export whose ids don't exist
+  // in this database. Callers rely on a rejection here to fall back to
+  // addDevice(); silently "succeeding" with 0 rows affected meant those
+  // devices were dropped during import while it reported success.
+  const { data, error } = await supabase.from("devices").update(cleanUpdates).eq("id", id).select();
   if(error) throw error;
+  if(!data || data.length === 0) throw new Error(`No device found with id "${id}"`);
 }
 async function deleteDevice(id){
   const { error } = await supabase.from("devices").delete().eq("id", id);
@@ -15926,14 +15964,32 @@ window.DemoService = {
   async addDevice(device){
     const d = demoLoad();
     const id = demoUid("demo");
-    d.devices.unshift({ id, ...device, createdAt: new Date().toISOString() });
+    // Strip any "id" field the caller might have included (e.g. a device
+    // re-imported from a previous JSON export, which carries its old id).
+    // Spreading ...device AFTER id used to let a stale imported id silently
+    // overwrite the freshly generated one — if that old id happened to
+    // match an existing device already in storage, the two devices ended
+    // up sharing one id, so editing/deleting the "new" one actually hit
+    // whichever entry findIndex() reached first. Same class of bug already
+    // fixed in the Firebase/Supabase adapters' addDevice().
+    const { id: _drop, ...deviceData } = device || {};
+    d.devices.unshift({ id, ...deviceData, createdAt: new Date().toISOString() });
     demoSave(d);
     return id;
   },
   async updateDevice(id, updates){
     const d = demoLoad();
     const idx = d.devices.findIndex(x => x.id === id);
-    if(idx > -1) d.devices[idx] = { ...d.devices[idx], ...updates };
+    // IMPORTANT: must throw (not silently no-op) when the id isn't found.
+    // Callers — notably the bulk JSON import — do
+    //   updateDevice(d.id, d).catch(() => addDevice(d))
+    // relying on a rejection to fall back to creating the device. Before
+    // this fix, an unmatched id here just returned successfully having
+    // done nothing, so the fallback addDevice() never ran and the device
+    // was silently dropped — imports reported "success" for devices that
+    // never actually made it into storage.
+    if(idx === -1) throw new Error(`No device found with id "${id}"`);
+    d.devices[idx] = { ...d.devices[idx], ...updates };
     demoSave(d);
   },
   async deleteDevice(id){
@@ -16980,9 +17036,9 @@ window.AdminProgress = (function(){
         <td>${escapeHtml(d.ram || "—")}</td>
         <td>${escapeHtml(d.refresh || "—")}</td>
         <td>${escapeHtml(d.processor || "—")}</td>
-        <td>${d.classification ? `<span class="status-pill" style="opacity:.85;">${escapeHtml(d.classification)}</span>` : `<span class="status-pill" style="opacity:.5;">—</span>`}</td>
-        <td>${escapeHtml(d.dpi || "—")}</td>
-        <td>${escapeHtml(d.headshot || "—")}%</td>
+        <td>${d.classification ? `<span class="status-pill" style="opacity:.85;">${escapeHtml(window.JX_normalizeClassification ? window.JX_normalizeClassification(d.classification) : d.classification)}</span>` : `<span class="status-pill" style="opacity:.5;">—</span>`}</td>
+        <td>${escapeHtml(Number.isFinite(d.dpi) ? d.dpi : (d.dpi || "—"))}</td>
+        <td>${escapeHtml(Number.isFinite(d.headshot) ? d.headshot : (d.headshot || "—"))}%</td>
         <td>${d.verified ? `<span class="status-pill status-approved">Verified</span>` : `<span class="status-pill" style="opacity:.5;">—</span>`}</td>
         <td>${sensOverrideBadge(d)}</td>
         <td class="cell-actions">
@@ -17159,22 +17215,22 @@ window.AdminProgress = (function(){
     if(device){
       document.getElementById("deviceFormName").value = device.name || "";
       document.getElementById("deviceFormBrand").value = device.brand || "";
-      document.getElementById("deviceFormDpi").value = device.dpi || "";
-      document.getElementById("deviceFormHeadshot").value = device.headshot || "";
-      document.getElementById("deviceFormPopularity").value = device.popularity || "";
+      document.getElementById("deviceFormDpi").value = Number.isFinite(device.dpi) ? device.dpi : (device.dpi || "");
+      document.getElementById("deviceFormHeadshot").value = Number.isFinite(device.headshot) ? device.headshot : (device.headshot || "");
+      document.getElementById("deviceFormPopularity").value = Number.isFinite(device.popularity) ? device.popularity : (device.popularity || "");
       document.getElementById("deviceFormVerified").checked = !!device.verified;
       document.getElementById("deviceFormProcessor").value = device.processor || "";
       document.getElementById("deviceFormRam").value = device.ram && device.ram !== "—" ? device.ram : "";
       document.getElementById("deviceFormRom").value = device.rom || "";
       document.getElementById("deviceFormScreenSize").value = device.screenSize || "";
       document.getElementById("deviceFormRefresh").value = device.refresh && device.refresh !== "—" ? device.refresh : "";
-      document.getElementById("deviceFormAvgFps").value = device.avgFps || "";
+      document.getElementById("deviceFormAvgFps").value = Number.isFinite(device.avgFps) ? device.avgFps : (device.avgFps || "");
       document.getElementById("deviceFormCooling").value = device.cooling || "";
       document.getElementById("deviceFormOsVersion").value = device.osVersion || "";
       document.getElementById("deviceFormGamingOpt").value = device.gamingOpt || "None";
       document.getElementById("deviceFormDeviceAge").value = device.deviceAge || "";
       document.getElementById("deviceFormFFCompat").value = device.ffCompat || "Compatible";
-      document.getElementById("deviceFormClassification").value = device.classification || "Mid-Range";
+      document.getElementById("deviceFormClassification").value = window.JX_normalizeClassification ? window.JX_normalizeClassification(device.classification) : (device.classification || "Mid-Range");
     } else {
       document.getElementById("deviceFormGamingOpt").value = "None";
       document.getElementById("deviceFormFFCompat").value = "Compatible";
@@ -17462,12 +17518,37 @@ document.getElementById("importDevicesInput").addEventListener("change", async (
     if(!Array.isArray(list)) throw new Error("File must contain a JSON array of devices.");
     if(list.length === 0) throw new Error("The JSON array is empty — nothing to import.");
 
+    // Duplicate Protection — same rule as the single Add Device form
+    // (case-insensitive match on name + brand). Applies only when an item
+    // is actually going to be newly CREATED: an item whose id already
+    // matches an existing device is an intentional update, not a
+    // duplicate. Keys accumulate as the loop runs so two entries with the
+    // same name+brand inside the same import file only create one device,
+    // not two.
+    const dupKey = (name, brand) => `${(name || "").trim().toLowerCase()}::${(brand || "").trim().toLowerCase()}`;
+    const existingKeys = new Set(deviceCache.map(d => dupKey(d.name, d.brand)));
+    const existingIds = new Set(deviceCache.map(d => d.id));
+    const skippedNames = [];
+
     let successCount = 0;
     let failCount = 0;
+    let dupCount = 0;
     for(let i=0; i<list.length; i++){
       const d = list[i];
       if(importBtn) importBtn.textContent = `Importing ${i+1}/${list.length}…`;
       window.AdminProgress.set(10 + ((i+1) / list.length) * 80);
+
+      const willCreateNew = !(d.id && existingIds.has(d.id));
+      if(willCreateNew){
+        const key = dupKey(d.name, d.brand);
+        if(existingKeys.has(key)){
+          dupCount++;
+          skippedNames.push(d.name || "(unnamed)");
+          continue; // Duplicate Protection: skip, don't create a copy
+        }
+        existingKeys.add(key); // reserve so a repeat later in this same file is also caught
+      }
+
       try{
         if(d.id) await backend.updateDevice(d.id, d).catch(()=> backend.addDevice(d));
         else await backend.addDevice(d);
@@ -17480,12 +17561,16 @@ document.getElementById("importDevicesInput").addEventListener("change", async (
 
     await loadDevices();
     renderOverview();
-    window.JX_logAudit("Devices", "", `Bulk imported ${successCount} devices${failCount ? `, ${failCount} failed` : ""}`);
+    window.JX_logAudit("Devices", "", `Bulk imported ${successCount} devices${dupCount ? `, ${dupCount} skipped as duplicates` : ""}${failCount ? `, ${failCount} failed` : ""}`);
+    if(dupCount) console.info("Device import: skipped as duplicates —", skippedNames);
 
-    if(failCount === 0){
+    if(failCount === 0 && dupCount === 0){
       showToastSafe("success", `Imported ${successCount} devices.`);
     }else{
-      showToastSafe("info", `Imported ${successCount} devices, ${failCount} failed. Check console for details.`);
+      const parts = [`Imported ${successCount} devices`];
+      if(dupCount) parts.push(`${dupCount} skipped as duplicates`);
+      if(failCount) parts.push(`${failCount} failed`);
+      showToastSafe("info", parts.join(", ") + ". Check console for details.");
     }
   }catch(err){
     console.error("Device import failed:", err);
