@@ -1729,6 +1729,26 @@ html.admin-active{ overflow:hidden; }
 .admin-table input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--gold); cursor:pointer; }
 .admin-table tr.row-selected td{ background: rgba(244,196,48,.06); }
 
+/* Highlight rows just created/updated by Add Device or Bulk Import.
+   A quick brighter pulse settles into a soft persistent gold wash +
+   left edge bar, so freshly-imported devices stay easy to spot in the
+   list until the highlight auto-clears a few seconds later. */
+@keyframes jxImportPulse{
+  0%{ background: rgba(244,196,48,.38); }
+  100%{ background: rgba(244,196,48,.1); }
+}
+.admin-table tr.row-just-imported td{
+  background: rgba(244,196,48,.1);
+  box-shadow: inset 3px 0 0 var(--gold);
+  animation: jxImportPulse 1.6s ease-out 1;
+}
+.badge-new-import{
+  display:inline-block; font-family:var(--f-mono); font-size:9.5px; font-weight:700;
+  letter-spacing:.05em; text-transform:uppercase; color:#1A1305;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
+  border-radius:20px; padding:2px 7px; margin-left:7px; vertical-align:middle;
+}
+
 .status-pill{ font-family:var(--f-mono); font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
 .status-pending{ background: rgba(244,196,48,.12); color: var(--gold); }
 .status-approved{ background: rgba(95,215,138,.12); color: var(--green); }
@@ -9357,6 +9377,36 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
 
       <button type="submit" class="btn btn-gold" style="width:100%; margin-top:18px;" id="deviceFormSubmitBtn">Save Device</button>
     </form>
+  </div>
+</div>
+
+<!-- ============================================================
+     DUPLICATE DEVICE RESOLVER
+     Shared by the single Add Device form AND the bulk JSON import.
+     Replaces the old plain confirm() dialog so the admin gets a real
+     choice instead of just OK/Cancel on "add it again as a duplicate?".
+     ============================================================ -->
+<div class="modal-overlay" id="dupResolveModal">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-head">
+      <h3>Possible Duplicate</h3>
+      <button class="btn-icon" id="dupResolveCloseBtn" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--ink-dim); font-size:13.5px; line-height:1.5; margin-bottom:16px;" id="dupResolveMessage">
+        A device with this name and brand already exists.
+      </p>
+      <div id="dupResolveBulkNote" style="display:none; font-size:12.5px; color:var(--ink-faint); margin-bottom:16px; padding:10px 12px; background:rgba(255,255,255,.03); border:1px solid var(--hairline); border-radius:8px;"></div>
+      <label class="admin-override-toggle" id="dupResolveApplyAllWrap" style="display:none; margin-bottom:4px;">
+        <input type="checkbox" id="dupResolveApplyAll">
+        <span>Apply this choice to all remaining duplicates in this import</span>
+      </label>
+    </div>
+    <div class="modal-foot" style="flex-direction:column; gap:8px; align-items:stretch;">
+      <button class="btn btn-gold btn-sm" id="dupResolveUpdateBtn" style="width:100%;">Update Existing Device</button>
+      <button class="btn btn-ghost btn-sm" id="dupResolveDuplicateBtn" style="width:100%;">Add Anyway (Create Duplicate)</button>
+      <button class="btn btn-ghost btn-sm" id="dupResolveSkipBtn" style="width:100%;">Skip / Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -17214,6 +17264,34 @@ window.AdminProgress = (function(){
   let hudCache = [];
   let playerCache = [];
 
+  // Ids of devices that were just created or touched by an Add/Import
+  // action, so renderDeviceTable() can visually flag them (gold glow +
+  // "New" badge). Cleared automatically a few seconds after each batch —
+  // see markDevicesRecentlyImported().
+  let recentlyImportedIds = new Set();
+  let recentlyImportedClearTimer = null;
+  function markDevicesRecentlyImported(ids, opts){
+    opts = opts || {};
+    const list = (ids || []).filter(Boolean);
+    if(!list.length) return;
+    recentlyImportedIds = new Set(list);
+    if(recentlyImportedClearTimer) clearTimeout(recentlyImportedClearTimer);
+    recentlyImportedClearTimer = setTimeout(()=>{
+      recentlyImportedIds = new Set();
+      recentlyImportedClearTimer = null;
+      if(typeof renderDeviceTable === "function") renderDeviceTable();
+    }, opts.ms || 9000);
+    // Scroll the first newly-added row into view so it's not missed if
+    // it landed outside the current viewport (e.g. alphabetized under a
+    // different brand group than whatever was last on screen).
+    if(!opts.skipScroll){
+      requestAnimationFrame(()=>{
+        const el = adminDeviceTable && adminDeviceTable.querySelector(`tr[data-id="${list[0]}"]`);
+        if(el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    }
+  }
+
   async function loadAllPanelData(){
     await Promise.all([loadDevices(), loadReviews(), loadRequests(), loadHuds(), loadHudLayoutsFresh(), loadGuildsFresh(), loadTeamFinderFresh()]);
     renderOverview();
@@ -17494,9 +17572,9 @@ window.AdminProgress = (function(){
         lastSeries = series;
       }
       rows += `
-      <tr data-id="${d.id}" class="${selectedDeviceIds.has(d.id) ? 'row-selected' : ''}">
+      <tr data-id="${d.id}" class="${[selectedDeviceIds.has(d.id) ? 'row-selected' : '', recentlyImportedIds.has(d.id) ? 'row-just-imported' : ''].filter(Boolean).join(' ')}">
         <td class="cell-check"><input type="checkbox" class="device-row-check" data-select-device="${d.id}" aria-label="Select ${escapeHtml(d.name)}" ${selectedDeviceIds.has(d.id) ? 'checked' : ''}></td>
-        <td class="cell-name">${escapeHtml(d.name)}</td>
+        <td class="cell-name">${escapeHtml(d.name)}${recentlyImportedIds.has(d.id) ? ' <span class="badge-new-import">New</span>' : ''}</td>
         <td>${getBrandEmoji(brand)} ${escapeHtml(d.brand)}</td>
         <td>${escapeHtml(d.ram || "—")}</td>
         <td>${escapeHtml(d.refresh || "—")}</td>
@@ -17714,6 +17792,63 @@ window.AdminProgress = (function(){
   document.getElementById("closeDeviceModal").addEventListener("click", closeDeviceModal);
   deviceModal.addEventListener("click", (e)=>{ if(e.target === deviceModal) closeDeviceModal(); });
 
+  /* ============================================================
+     DUPLICATE DEVICE RESOLVER
+     Shared between the single Add Device form and the bulk JSON
+     import. Given the device that's colliding (same name+brand),
+     shows a modal offering three choices instead of a plain
+     confirm(): update the existing record, add anyway as a genuine
+     duplicate, or skip/cancel. When called from bulk import
+     (opts.bulk = true, opts.remaining = count of dupes still queued
+     after this one), an "apply to all" checkbox is shown so the
+     admin isn't forced to answer once per row.
+     Resolves to { action: 'update'|'duplicate'|'skip', applyToAll }.
+     ============================================================ */
+  function resolveDuplicateDevice(existingDevice, incomingName, incomingBrand, opts){
+    opts = opts || {};
+    const modal = document.getElementById("dupResolveModal");
+    const msgEl = document.getElementById("dupResolveMessage");
+    const bulkNote = document.getElementById("dupResolveBulkNote");
+    const applyAllWrap = document.getElementById("dupResolveApplyAllWrap");
+    const applyAllBox = document.getElementById("dupResolveApplyAll");
+    const updateBtn = document.getElementById("dupResolveUpdateBtn");
+    const dupBtn = document.getElementById("dupResolveDuplicateBtn");
+    const skipBtn = document.getElementById("dupResolveSkipBtn");
+    const closeBtn = document.getElementById("dupResolveCloseBtn");
+
+    msgEl.textContent = `"${incomingName}" (${incomingBrand || "—"}) matches an existing device already in your list. What would you like to do?`;
+    if(opts.bulk){
+      bulkNote.style.display = "block";
+      bulkNote.textContent = opts.remaining > 0
+        ? `${opts.remaining} more duplicate${opts.remaining === 1 ? "" : "s"} left to resolve in this import.`
+        : "This is the last duplicate in this import.";
+      applyAllWrap.style.display = "flex";
+    } else {
+      bulkNote.style.display = "none";
+      applyAllWrap.style.display = "none";
+    }
+    applyAllBox.checked = false;
+
+    return new Promise((resolve)=>{
+      function finish(action){
+        modal.classList.remove("open");
+        updateBtn.removeEventListener("click", onUpdate);
+        dupBtn.removeEventListener("click", onDup);
+        skipBtn.removeEventListener("click", onSkip);
+        closeBtn.removeEventListener("click", onSkip);
+        resolve({ action: action, applyToAll: opts.bulk ? applyAllBox.checked : false });
+      }
+      function onUpdate(){ finish("update"); }
+      function onDup(){ finish("duplicate"); }
+      function onSkip(){ finish("skip"); }
+      updateBtn.addEventListener("click", onUpdate);
+      dupBtn.addEventListener("click", onDup);
+      skipBtn.addEventListener("click", onSkip);
+      closeBtn.addEventListener("click", onSkip);
+      modal.classList.add("open");
+    });
+  }
+
   deviceForm.addEventListener("submit", async (e)=>{
     e.preventDefault();
     const id = document.getElementById("deviceFormId").value;
@@ -17762,16 +17897,29 @@ window.AdminProgress = (function(){
           (d.brand || "").trim().toLowerCase() === (payload.brand || "").trim().toLowerCase()
         );
         if(dup){
-          const proceed = confirm(`⚠️ "${payload.name}" (${payload.brand}) has already been added.\n\nAdd it again as a duplicate?`);
-          if(!proceed){
+          const { action } = await resolveDuplicateDevice(dup, payload.name, payload.brand);
+          if(action === "skip"){
             deviceFormSubmitBtn.disabled = false;
             deviceFormSubmitBtn.textContent = "Add Device";
             showToastSafe("info", "Device not added — it already exists.");
             return;
           }
+          if(action === "update"){
+            await backend.updateDevice(dup.id, payload);
+            showToastSafe("success", `Updated existing "${dup.name}" instead of adding a duplicate.`);
+            closeDeviceModal();
+            markDevicesRecentlyImported([dup.id]);
+            await loadDevices();
+            renderOverview();
+            deviceFormSubmitBtn.disabled = false;
+            deviceFormSubmitBtn.textContent = "Add Device";
+            return;
+          }
+          // action === "duplicate" → fall through and add as a new record
         }
-        await backend.addDevice(payload);
+        const newId = await backend.addDevice(payload);
         showToastSafe("success", "Device added");
+        markDevicesRecentlyImported([newId]);
       }
       closeDeviceModal();
       await loadDevices();
@@ -17990,49 +18138,109 @@ document.getElementById("importDevicesInput").addEventListener("change", async (
     // duplicate. Keys accumulate as the loop runs so two entries with the
     // same name+brand inside the same import file only create one device,
     // not two.
+    // Duplicates are no longer silently skipped — resolveDuplicateDevice()
+    // asks the admin whether each collision should update the existing
+    // device, be added anyway as a genuine duplicate, or be skipped. An
+    // "apply to all" checkbox lets that choice carry through the rest of
+    // the import instead of prompting for every row.
     const dupKey = (name, brand) => `${(name || "").trim().toLowerCase()}::${(brand || "").trim().toLowerCase()}`;
-    const existingKeys = new Set(deviceCache.map(d => dupKey(d.name, d.brand)));
+    const existingByKey = new Map(deviceCache.map(d => [dupKey(d.name, d.brand), d]));
+    const existingKeys = new Set(existingByKey.keys());
     const existingIds = new Set(deviceCache.map(d => d.id));
-    const skippedNames = [];
 
+    // Pre-scan (on cloned sets, no side effects) just to know how many
+    // duplicate rows are in this file, so the resolver modal can show an
+    // accurate "N more duplicates left" count as it works through them.
+    let totalDupes = 0;
+    {
+      const scanKeys = new Set(existingKeys);
+      for(let i=0; i<list.length; i++){
+        const d = list[i];
+        const willCreateNew = !(d.id && existingIds.has(d.id));
+        if(!willCreateNew) continue;
+        const key = dupKey(d.name, d.brand);
+        if(scanKeys.has(key)) totalDupes++;
+        else scanKeys.add(key);
+      }
+    }
+
+    const skippedNames = [];
+    const importedIds = [];
     let successCount = 0;
+    let updatedCount = 0;
     let failCount = 0;
     let dupCount = 0;
+    let dupesSeen = 0;
+    let forcedAction = null; // set once "apply to all" is checked
+
     for(let i=0; i<list.length; i++){
       const d = list[i];
       if(importBtn) importBtn.textContent = `Importing ${i+1}/${list.length}…`;
       window.AdminProgress.set(10 + ((i+1) / list.length) * 80);
 
       const willCreateNew = !(d.id && existingIds.has(d.id));
+      let targetExisting = null;
       if(willCreateNew){
         const key = dupKey(d.name, d.brand);
         if(existingKeys.has(key)){
-          dupCount++;
-          skippedNames.push(d.name || "(unnamed)");
-          continue; // Duplicate Protection: skip, don't create a copy
+          dupesSeen++;
+          const remaining = totalDupes - dupesSeen;
+          let action;
+          if(forcedAction){
+            action = forcedAction;
+          } else {
+            const resolved = await resolveDuplicateDevice(existingByKey.get(key), d.name, d.brand, { bulk: true, remaining: remaining });
+            action = resolved.action;
+            if(resolved.applyToAll) forcedAction = action;
+          }
+          if(action === "skip"){
+            dupCount++;
+            skippedNames.push(d.name || "(unnamed)");
+            continue; // admin chose to skip this duplicate
+          }
+          if(action === "update"){
+            targetExisting = existingByKey.get(key);
+          }
+          // action === "duplicate" → fall through and create a new record
         }
         existingKeys.add(key); // reserve so a repeat later in this same file is also caught
+        if(!existingByKey.has(key)) existingByKey.set(key, d);
       }
 
       try{
-        if(d.id) await backend.updateDevice(d.id, d).catch(()=> backend.addDevice(d));
-        else await backend.addDevice(d);
-        successCount++;
+        if(targetExisting){
+          await backend.updateDevice(targetExisting.id, d).catch(()=> backend.addDevice(d));
+          updatedCount++;
+          importedIds.push(targetExisting.id);
+        } else if(d.id){
+          await backend.updateDevice(d.id, d).catch(()=> backend.addDevice(d));
+          successCount++;
+          importedIds.push(d.id);
+        } else {
+          const newId = await backend.addDevice(d);
+          successCount++;
+          importedIds.push(newId);
+        }
       }catch(itemErr){
         failCount++;
         console.error("Device import: failed on item", i, d, itemErr);
       }
     }
 
+    // Highlight every device this import touched (added or updated) with
+    // a gold glow + "New" badge in the admin table below, for a longer
+    // window than a single Add since there can be many rows to spot.
+    markDevicesRecentlyImported(importedIds, { ms: 12000, skipScroll: importedIds.length > 1 });
     await loadDevices();
     renderOverview();
-    window.JX_logAudit("Devices", "", `Bulk imported ${successCount} devices${dupCount ? `, ${dupCount} skipped as duplicates` : ""}${failCount ? `, ${failCount} failed` : ""}`);
+    window.JX_logAudit("Devices", "", `Bulk imported ${successCount} devices${updatedCount ? `, ${updatedCount} updated existing` : ""}${dupCount ? `, ${dupCount} skipped as duplicates` : ""}${failCount ? `, ${failCount} failed` : ""}`);
     if(dupCount) console.info("Device import: skipped as duplicates —", skippedNames);
 
-    if(failCount === 0 && dupCount === 0){
+    if(failCount === 0 && dupCount === 0 && updatedCount === 0){
       showToastSafe("success", `Imported ${successCount} devices.`);
     }else{
       const parts = [`Imported ${successCount} devices`];
+      if(updatedCount) parts.push(`${updatedCount} updated existing`);
       if(dupCount) parts.push(`${dupCount} skipped as duplicates`);
       if(failCount) parts.push(`${failCount} failed`);
       showToastSafe("info", parts.join(", ") + ". Check console for details.");
