@@ -1730,17 +1730,18 @@ html.admin-active{ overflow:hidden; }
 .admin-table tr.row-selected td{ background: rgba(244,196,48,.06); }
 
 /* Highlight rows just created/updated by Add Device or Bulk Import.
-   A quick brighter pulse settles into a soft persistent gold wash +
+   A slow brighter pulse settles into a stronger persistent gold wash +
    left edge bar, so freshly-imported devices stay easy to spot in the
-   list until the highlight auto-clears a few seconds later. */
+   list until the highlight auto-clears (25s single add / 40s bulk
+   import — see markDevicesRecentlyImported()). */
 @keyframes jxImportPulse{
-  0%{ background: rgba(244,196,48,.38); }
-  100%{ background: rgba(244,196,48,.1); }
+  0%{ background: rgba(244,196,48,.42); }
+  100%{ background: rgba(244,196,48,.16); }
 }
 .admin-table tr.row-just-imported td{
-  background: rgba(244,196,48,.1);
-  box-shadow: inset 3px 0 0 var(--gold);
-  animation: jxImportPulse 1.6s ease-out 1;
+  background: rgba(244,196,48,.16);
+  box-shadow: inset 4px 0 0 var(--gold);
+  animation: jxImportPulse 4s ease-out 1;
 }
 .badge-new-import{
   display:inline-block; font-family:var(--f-mono); font-size:9.5px; font-weight:700;
@@ -17280,7 +17281,7 @@ window.AdminProgress = (function(){
       recentlyImportedIds = new Set();
       recentlyImportedClearTimer = null;
       if(typeof renderDeviceTable === "function") renderDeviceTable();
-    }, opts.ms || 9000);
+    }, opts.ms || 25000);
     // Scroll the first newly-added row into view so it's not missed if
     // it landed outside the current viewport (e.g. alphabetized under a
     // different brand group than whatever was last on screen).
@@ -18230,7 +18231,7 @@ document.getElementById("importDevicesInput").addEventListener("change", async (
     // Highlight every device this import touched (added or updated) with
     // a gold glow + "New" badge in the admin table below, for a longer
     // window than a single Add since there can be many rows to spot.
-    markDevicesRecentlyImported(importedIds, { ms: 12000, skipScroll: importedIds.length > 1 });
+    markDevicesRecentlyImported(importedIds, { ms: 40000, skipScroll: importedIds.length > 1 });
     await loadDevices();
     renderOverview();
     window.JX_logAudit("Devices", "", `Bulk imported ${successCount} devices${updatedCount ? `, ${updatedCount} updated existing` : ""}${dupCount ? `, ${dupCount} skipped as duplicates` : ""}${failCount ? `, ${failCount} failed` : ""}`);
