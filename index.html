@@ -1728,26 +1728,14 @@ html.admin-active{ overflow:hidden; }
 .admin-table td.cell-check, .admin-table th:first-child{ width:36px; text-align:center; }
 .admin-table input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--gold); cursor:pointer; }
 .admin-table tr.row-selected td{ background: rgba(244,196,48,.06); }
-
-/* Highlight rows just created/updated by Add Device or Bulk Import.
-   A slow brighter pulse settles into a stronger persistent gold wash +
-   left edge bar, so freshly-imported devices stay easy to spot in the
-   list until the highlight auto-clears (25s single add / 40s bulk
-   import — see markDevicesRecentlyImported()). */
-@keyframes jxImportPulse{
-  0%{ background: rgba(244,196,48,.42); }
-  100%{ background: rgba(244,196,48,.16); }
+.admin-table tr.row-just-added td{ animation: rowJustAddedFlash 2.6s ease-out 1; }
+@keyframes rowJustAddedFlash{
+  0%   { background: rgba(80,220,140,.32); }
+  70%  { background: rgba(80,220,140,.16); }
+  100% { background: transparent; }
 }
-.admin-table tr.row-just-imported td{
-  background: rgba(244,196,48,.16);
-  box-shadow: inset 4px 0 0 var(--gold);
-  animation: jxImportPulse 4s ease-out 1;
-}
-.badge-new-import{
-  display:inline-block; font-family:var(--f-mono); font-size:9.5px; font-weight:700;
-  letter-spacing:.05em; text-transform:uppercase; color:#1A1305;
-  background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep));
-  border-radius:20px; padding:2px 7px; margin-left:7px; vertical-align:middle;
+@media (prefers-reduced-motion: reduce){
+  .admin-table tr.row-just-added td{ animation: none; background: rgba(80,220,140,.22); }
 }
 
 .status-pill{ font-family:var(--f-mono); font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
@@ -8994,6 +8982,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     <button class="acct-tab active" data-acct-tab="profile">Profile</button>
     <button class="acct-tab" data-acct-tab="favorites">Favorites</button>
     <button class="acct-tab" data-acct-tab="history">Recent History</button>
+    <button class="acct-tab" data-acct-tab="requests">My Requests</button>
   </div>
   <div class="drawer-body" style="padding:0;">
     <div class="acct-tab-panel active" data-acct-panel="profile">
@@ -9018,6 +9007,9 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
     <div class="acct-tab-panel" data-acct-panel="history" id="acctHistoryPanel">
       <div class="drawer-empty">No saved sensitivities yet.</div>
+    </div>
+    <div class="acct-tab-panel" data-acct-panel="requests" id="acctRequestsPanel">
+      <div class="drawer-empty">No requests submitted yet.</div>
     </div>
   </div>
 </div>
@@ -9378,36 +9370,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
 
       <button type="submit" class="btn btn-gold" style="width:100%; margin-top:18px;" id="deviceFormSubmitBtn">Save Device</button>
     </form>
-  </div>
-</div>
-
-<!-- ============================================================
-     DUPLICATE DEVICE RESOLVER
-     Shared by the single Add Device form AND the bulk JSON import.
-     Replaces the old plain confirm() dialog so the admin gets a real
-     choice instead of just OK/Cancel on "add it again as a duplicate?".
-     ============================================================ -->
-<div class="modal-overlay" id="dupResolveModal">
-  <div class="modal-box" style="max-width:460px;">
-    <div class="modal-head">
-      <h3>Possible Duplicate</h3>
-      <button class="btn-icon" id="dupResolveCloseBtn" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-    </div>
-    <div class="modal-body">
-      <p style="color:var(--ink-dim); font-size:13.5px; line-height:1.5; margin-bottom:16px;" id="dupResolveMessage">
-        A device with this name and brand already exists.
-      </p>
-      <div id="dupResolveBulkNote" style="display:none; font-size:12.5px; color:var(--ink-faint); margin-bottom:16px; padding:10px 12px; background:rgba(255,255,255,.03); border:1px solid var(--hairline); border-radius:8px;"></div>
-      <label class="admin-override-toggle" id="dupResolveApplyAllWrap" style="display:none; margin-bottom:4px;">
-        <input type="checkbox" id="dupResolveApplyAll">
-        <span>Apply this choice to all remaining duplicates in this import</span>
-      </label>
-    </div>
-    <div class="modal-foot" style="flex-direction:column; gap:8px; align-items:stretch;">
-      <button class="btn btn-gold btn-sm" id="dupResolveUpdateBtn" style="width:100%;">Update Existing Device</button>
-      <button class="btn btn-ghost btn-sm" id="dupResolveDuplicateBtn" style="width:100%;">Add Anyway (Create Duplicate)</button>
-      <button class="btn btn-ghost btn-sm" id="dupResolveSkipBtn" style="width:100%;">Skip / Cancel</button>
-    </div>
   </div>
 </div>
 
@@ -14063,6 +14025,12 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       if(!contact){ showToast("info", "Please add a way for the admin to contact you."); return; }
       if(!pendingJoinGuild) return;
 
+      // uid is required here — without it the request has no owner to
+      // match against, so both getMyRequests() and the Firestore rule
+      // (resource.data.uid == request.auth.uid) can never find it again.
+      // requireVerifiedAccount() above already guarantees we're signed in.
+      const acctUser = window.JX_Account.getCurrentUser();
+
       const submitBtn = document.getElementById("guildJoinReqSubmitBtn");
       submitBtn.disabled = true;
       try{
@@ -14070,6 +14038,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
           type: "guildJoin",
           guildId: pendingJoinGuild.id,
           guildName: pendingJoinGuild.name,
+          uid: acctUser.uid,
           ign, contact,
           status: "pending",
           date: new Date().toISOString()
@@ -17260,38 +17229,16 @@ window.AdminProgress = (function(){
 
   /* ---------------- SHARED STATE ---------------- */
   let deviceCache = [];
+  // Ids of devices created by the most recent Add/Import action, so
+  // renderDeviceTable() can flash-highlight them once and the admin can
+  // instantly see what just landed instead of hunting through the list.
+  // Cleared after the highlight is applied so it never re-fires on a
+  // later unrelated re-render (e.g. search/filter/edit).
+  let recentlyAddedDeviceIds = new Set();
   let reviewCache = [];
   let requestCache = [];
   let hudCache = [];
   let playerCache = [];
-
-  // Ids of devices that were just created or touched by an Add/Import
-  // action, so renderDeviceTable() can visually flag them (gold glow +
-  // "New" badge). Cleared automatically a few seconds after each batch —
-  // see markDevicesRecentlyImported().
-  let recentlyImportedIds = new Set();
-  let recentlyImportedClearTimer = null;
-  function markDevicesRecentlyImported(ids, opts){
-    opts = opts || {};
-    const list = (ids || []).filter(Boolean);
-    if(!list.length) return;
-    recentlyImportedIds = new Set(list);
-    if(recentlyImportedClearTimer) clearTimeout(recentlyImportedClearTimer);
-    recentlyImportedClearTimer = setTimeout(()=>{
-      recentlyImportedIds = new Set();
-      recentlyImportedClearTimer = null;
-      if(typeof renderDeviceTable === "function") renderDeviceTable();
-    }, opts.ms || 25000);
-    // Scroll the first newly-added row into view so it's not missed if
-    // it landed outside the current viewport (e.g. alphabetized under a
-    // different brand group than whatever was last on screen).
-    if(!opts.skipScroll){
-      requestAnimationFrame(()=>{
-        const el = adminDeviceTable && adminDeviceTable.querySelector(`tr[data-id="${list[0]}"]`);
-        if(el) el.scrollIntoView({ block: "center", behavior: "smooth" });
-      });
-    }
-  }
 
   async function loadAllPanelData(){
     await Promise.all([loadDevices(), loadReviews(), loadRequests(), loadHuds(), loadHudLayoutsFresh(), loadGuildsFresh(), loadTeamFinderFresh()]);
@@ -17572,10 +17519,14 @@ window.AdminProgress = (function(){
         rows += `<tr class="admin-group-row admin-group-row-series"><td colspan="12">${escapeHtml(series)}</td></tr>`;
         lastSeries = series;
       }
+      const rowClasses = [
+        selectedDeviceIds.has(d.id) ? 'row-selected' : '',
+        recentlyAddedDeviceIds.has(d.id) ? 'row-just-added' : ''
+      ].filter(Boolean).join(' ');
       rows += `
-      <tr data-id="${d.id}" class="${[selectedDeviceIds.has(d.id) ? 'row-selected' : '', recentlyImportedIds.has(d.id) ? 'row-just-imported' : ''].filter(Boolean).join(' ')}">
+      <tr data-id="${d.id}" class="${rowClasses}">
         <td class="cell-check"><input type="checkbox" class="device-row-check" data-select-device="${d.id}" aria-label="Select ${escapeHtml(d.name)}" ${selectedDeviceIds.has(d.id) ? 'checked' : ''}></td>
-        <td class="cell-name">${escapeHtml(d.name)}${recentlyImportedIds.has(d.id) ? ' <span class="badge-new-import">New</span>' : ''}</td>
+        <td class="cell-name">${escapeHtml(d.name)}</td>
         <td>${getBrandEmoji(brand)} ${escapeHtml(d.brand)}</td>
         <td>${escapeHtml(d.ram || "—")}</td>
         <td>${escapeHtml(d.refresh || "—")}</td>
@@ -17594,6 +17545,13 @@ window.AdminProgress = (function(){
     });
     adminDeviceTable.innerHTML = rows;
     updateDeviceBulkBar();
+    if(recentlyAddedDeviceIds.size){
+      const firstNewRow = adminDeviceTable.querySelector(".row-just-added");
+      firstNewRow?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // One-shot: don't let the same devices re-flash on the next
+      // unrelated render (search input, brand tab switch, edit, etc).
+      recentlyAddedDeviceIds = new Set();
+    }
   }
   function sensOverrideBadge(d){
     const count = d.sensOverride ? Object.keys(d.sensOverride).length : 0;
@@ -17793,63 +17751,6 @@ window.AdminProgress = (function(){
   document.getElementById("closeDeviceModal").addEventListener("click", closeDeviceModal);
   deviceModal.addEventListener("click", (e)=>{ if(e.target === deviceModal) closeDeviceModal(); });
 
-  /* ============================================================
-     DUPLICATE DEVICE RESOLVER
-     Shared between the single Add Device form and the bulk JSON
-     import. Given the device that's colliding (same name+brand),
-     shows a modal offering three choices instead of a plain
-     confirm(): update the existing record, add anyway as a genuine
-     duplicate, or skip/cancel. When called from bulk import
-     (opts.bulk = true, opts.remaining = count of dupes still queued
-     after this one), an "apply to all" checkbox is shown so the
-     admin isn't forced to answer once per row.
-     Resolves to { action: 'update'|'duplicate'|'skip', applyToAll }.
-     ============================================================ */
-  function resolveDuplicateDevice(existingDevice, incomingName, incomingBrand, opts){
-    opts = opts || {};
-    const modal = document.getElementById("dupResolveModal");
-    const msgEl = document.getElementById("dupResolveMessage");
-    const bulkNote = document.getElementById("dupResolveBulkNote");
-    const applyAllWrap = document.getElementById("dupResolveApplyAllWrap");
-    const applyAllBox = document.getElementById("dupResolveApplyAll");
-    const updateBtn = document.getElementById("dupResolveUpdateBtn");
-    const dupBtn = document.getElementById("dupResolveDuplicateBtn");
-    const skipBtn = document.getElementById("dupResolveSkipBtn");
-    const closeBtn = document.getElementById("dupResolveCloseBtn");
-
-    msgEl.textContent = `"${incomingName}" (${incomingBrand || "—"}) matches an existing device already in your list. What would you like to do?`;
-    if(opts.bulk){
-      bulkNote.style.display = "block";
-      bulkNote.textContent = opts.remaining > 0
-        ? `${opts.remaining} more duplicate${opts.remaining === 1 ? "" : "s"} left to resolve in this import.`
-        : "This is the last duplicate in this import.";
-      applyAllWrap.style.display = "flex";
-    } else {
-      bulkNote.style.display = "none";
-      applyAllWrap.style.display = "none";
-    }
-    applyAllBox.checked = false;
-
-    return new Promise((resolve)=>{
-      function finish(action){
-        modal.classList.remove("open");
-        updateBtn.removeEventListener("click", onUpdate);
-        dupBtn.removeEventListener("click", onDup);
-        skipBtn.removeEventListener("click", onSkip);
-        closeBtn.removeEventListener("click", onSkip);
-        resolve({ action: action, applyToAll: opts.bulk ? applyAllBox.checked : false });
-      }
-      function onUpdate(){ finish("update"); }
-      function onDup(){ finish("duplicate"); }
-      function onSkip(){ finish("skip"); }
-      updateBtn.addEventListener("click", onUpdate);
-      dupBtn.addEventListener("click", onDup);
-      skipBtn.addEventListener("click", onSkip);
-      closeBtn.addEventListener("click", onSkip);
-      modal.classList.add("open");
-    });
-  }
-
   deviceForm.addEventListener("submit", async (e)=>{
     e.preventDefault();
     const id = document.getElementById("deviceFormId").value;
@@ -17898,29 +17799,16 @@ window.AdminProgress = (function(){
           (d.brand || "").trim().toLowerCase() === (payload.brand || "").trim().toLowerCase()
         );
         if(dup){
-          const { action } = await resolveDuplicateDevice(dup, payload.name, payload.brand);
-          if(action === "skip"){
+          const proceed = confirm(`⚠️ "${payload.name}" (${payload.brand}) has already been added.\n\nAdd it again as a duplicate?`);
+          if(!proceed){
             deviceFormSubmitBtn.disabled = false;
             deviceFormSubmitBtn.textContent = "Add Device";
             showToastSafe("info", "Device not added — it already exists.");
             return;
           }
-          if(action === "update"){
-            await backend.updateDevice(dup.id, payload);
-            showToastSafe("success", `Updated existing "${dup.name}" instead of adding a duplicate.`);
-            closeDeviceModal();
-            markDevicesRecentlyImported([dup.id]);
-            await loadDevices();
-            renderOverview();
-            deviceFormSubmitBtn.disabled = false;
-            deviceFormSubmitBtn.textContent = "Add Device";
-            return;
-          }
-          // action === "duplicate" → fall through and add as a new record
         }
-        const newId = await backend.addDevice(payload);
+        await backend.addDevice(payload);
         showToastSafe("success", "Device added");
-        markDevicesRecentlyImported([newId]);
       }
       closeDeviceModal();
       await loadDevices();
@@ -18139,109 +18027,67 @@ document.getElementById("importDevicesInput").addEventListener("change", async (
     // duplicate. Keys accumulate as the loop runs so two entries with the
     // same name+brand inside the same import file only create one device,
     // not two.
-    // Duplicates are no longer silently skipped — resolveDuplicateDevice()
-    // asks the admin whether each collision should update the existing
-    // device, be added anyway as a genuine duplicate, or be skipped. An
-    // "apply to all" checkbox lets that choice carry through the rest of
-    // the import instead of prompting for every row.
     const dupKey = (name, brand) => `${(name || "").trim().toLowerCase()}::${(brand || "").trim().toLowerCase()}`;
-    const existingByKey = new Map(deviceCache.map(d => [dupKey(d.name, d.brand), d]));
-    const existingKeys = new Set(existingByKey.keys());
+    const existingKeys = new Set(deviceCache.map(d => dupKey(d.name, d.brand)));
     const existingIds = new Set(deviceCache.map(d => d.id));
-
-    // Pre-scan (on cloned sets, no side effects) just to know how many
-    // duplicate rows are in this file, so the resolver modal can show an
-    // accurate "N more duplicates left" count as it works through them.
-    let totalDupes = 0;
-    {
-      const scanKeys = new Set(existingKeys);
-      for(let i=0; i<list.length; i++){
-        const d = list[i];
-        const willCreateNew = !(d.id && existingIds.has(d.id));
-        if(!willCreateNew) continue;
-        const key = dupKey(d.name, d.brand);
-        if(scanKeys.has(key)) totalDupes++;
-        else scanKeys.add(key);
-      }
-    }
-
     const skippedNames = [];
-    const importedIds = [];
+
     let successCount = 0;
-    let updatedCount = 0;
     let failCount = 0;
     let dupCount = 0;
-    let dupesSeen = 0;
-    let forcedAction = null; // set once "apply to all" is checked
-
+    const newlyCreatedIds = []; // for the post-import highlight
     for(let i=0; i<list.length; i++){
       const d = list[i];
       if(importBtn) importBtn.textContent = `Importing ${i+1}/${list.length}…`;
       window.AdminProgress.set(10 + ((i+1) / list.length) * 80);
 
       const willCreateNew = !(d.id && existingIds.has(d.id));
-      let targetExisting = null;
       if(willCreateNew){
         const key = dupKey(d.name, d.brand);
         if(existingKeys.has(key)){
-          dupesSeen++;
-          const remaining = totalDupes - dupesSeen;
-          let action;
-          if(forcedAction){
-            action = forcedAction;
-          } else {
-            const resolved = await resolveDuplicateDevice(existingByKey.get(key), d.name, d.brand, { bulk: true, remaining: remaining });
-            action = resolved.action;
-            if(resolved.applyToAll) forcedAction = action;
-          }
-          if(action === "skip"){
-            dupCount++;
-            skippedNames.push(d.name || "(unnamed)");
-            continue; // admin chose to skip this duplicate
-          }
-          if(action === "update"){
-            targetExisting = existingByKey.get(key);
-          }
-          // action === "duplicate" → fall through and create a new record
+          dupCount++;
+          skippedNames.push(d.name || "(unnamed)");
+          continue; // Duplicate Protection: skip, don't create a copy
         }
         existingKeys.add(key); // reserve so a repeat later in this same file is also caught
-        if(!existingByKey.has(key)) existingByKey.set(key, d);
       }
 
       try{
-        if(targetExisting){
-          await backend.updateDevice(targetExisting.id, d).catch(()=> backend.addDevice(d));
-          updatedCount++;
-          importedIds.push(targetExisting.id);
-        } else if(d.id){
-          await backend.updateDevice(d.id, d).catch(()=> backend.addDevice(d));
-          successCount++;
-          importedIds.push(d.id);
-        } else {
+        if(d.id){
+          await backend.updateDevice(d.id, d).catch(async ()=>{
+            const newId = await backend.addDevice(d);
+            newlyCreatedIds.push(newId);
+          });
+        }else{
           const newId = await backend.addDevice(d);
-          successCount++;
-          importedIds.push(newId);
+          newlyCreatedIds.push(newId);
         }
+        successCount++;
       }catch(itemErr){
         failCount++;
         console.error("Device import: failed on item", i, d, itemErr);
       }
     }
 
-    // Highlight every device this import touched (added or updated) with
-    // a gold glow + "New" badge in the admin table below, for a longer
-    // window than a single Add since there can be many rows to spot.
-    markDevicesRecentlyImported(importedIds, { ms: 40000, skipScroll: importedIds.length > 1 });
+    // Highlight every device this import actually created (not ones that
+    // were merely updated) once the table re-renders below. Also jump the
+    // brand filter to "All Brands" first — otherwise an imported device
+    // from a brand the admin isn't currently viewing would be filtered
+    // out of the list and the highlight/scroll would silently do nothing.
+    if(newlyCreatedIds.length){
+      recentlyAddedDeviceIds = new Set(newlyCreatedIds);
+      adminDeviceBrandFilter = "all";
+    }
+
     await loadDevices();
     renderOverview();
-    window.JX_logAudit("Devices", "", `Bulk imported ${successCount} devices${updatedCount ? `, ${updatedCount} updated existing` : ""}${dupCount ? `, ${dupCount} skipped as duplicates` : ""}${failCount ? `, ${failCount} failed` : ""}`);
+    window.JX_logAudit("Devices", "", `Bulk imported ${successCount} devices${dupCount ? `, ${dupCount} skipped as duplicates` : ""}${failCount ? `, ${failCount} failed` : ""}`);
     if(dupCount) console.info("Device import: skipped as duplicates —", skippedNames);
 
-    if(failCount === 0 && dupCount === 0 && updatedCount === 0){
+    if(failCount === 0 && dupCount === 0){
       showToastSafe("success", `Imported ${successCount} devices.`);
     }else{
       const parts = [`Imported ${successCount} devices`];
-      if(updatedCount) parts.push(`${updatedCount} updated existing`);
       if(dupCount) parts.push(`${dupCount} skipped as duplicates`);
       if(failCount) parts.push(`${failCount} failed`);
       showToastSafe("info", parts.join(", ") + ". Check console for details.");
@@ -20961,6 +20807,7 @@ window.JX_logAudit = function(field, oldVal, newVal){
     }
     renderFavoritesPanel();
     renderHistoryPanel();
+    renderRequestsPanel();
   }
 
   document.getElementById("acctSaveProfileBtn").addEventListener("click", async ()=>{
@@ -21097,6 +20944,66 @@ window.JX_logAudit = function(field, oldVal, newVal){
         </div>
       </div>
     `).join("");
+  }
+
+  /* ---------------- MY REQUESTS PANEL ----------------
+     Shows every request type this account has submitted — device
+     requests, tournament registrations, guild join requests — in one
+     place with a live status pill, instead of the visitor needing to
+     hunt down the single-purpose "Track My Device Request" section
+     elsewhere on the site. */
+  function requestTypeLabel(r){
+    if(r.type === "tournament") return `Tournament: ${r.tournamentName || "—"}`;
+    if(r.type === "guildJoin") return `Guild Join: ${r.guildName || "—"}`;
+    return [r.brand, r.name].filter(Boolean).join(" ") || "Device Request";
+  }
+  function requestStatusLabel(status){
+    if(status === "approved") return "Approved";
+    if(status === "added") return "Added";
+    if(status === "rejected") return "Rejected";
+    return "Pending";
+  }
+  async function renderRequestsPanel(){
+    const panel = document.getElementById("acctRequestsPanel");
+    if(!panel || !currentUser) return;
+    panel.innerHTML = `<div class="drawer-empty">Loading your requests…</div>`;
+    let myRequests = [];
+    try{
+      if(typeof window.getBackend === "function"){
+        const backend = await window.getBackend();
+        if(typeof backend.getMyRequests === "function"){
+          myRequests = await backend.getMyRequests(currentUser.uid).catch(()=> []);
+        } else {
+          const all = await backend.getRequests().catch(()=> []);
+          myRequests = all.filter(r => r.uid === currentUser.uid);
+        }
+      }
+    }catch(err){
+      panel.innerHTML = `<div class="drawer-empty">Could not load your requests: ${escapeHtml(err.message)}</div>`;
+      return;
+    }
+    if(!myRequests.length){
+      panel.innerHTML = `<div class="drawer-empty">No requests submitted yet. Device requests, tournament sign-ups, and guild join requests you submit will show up here.</div>`;
+      return;
+    }
+    myRequests.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    panel.innerHTML = myRequests.map(r => {
+      const statusClass = r.status === "approved" || r.status === "added" ? "status-approved"
+        : r.status === "rejected" ? "status-rejected" : "status-pending";
+      const reason = (r.status === "rejected" && r.rejectReason)
+        ? `<div class="ahi-meta" style="color:var(--red); margin-top:2px;">Reason: ${escapeHtml(r.rejectReason)}</div>`
+        : "";
+      return `
+      <div class="acct-hist-item">
+        <div class="ahi-main">
+          <div class="ahi-device">${escapeHtml(requestTypeLabel(r))}</div>
+          <div class="ahi-meta">${escapeHtml(formatRelativeTime(r.date))}</div>
+          ${reason}
+        </div>
+        <span class="status-pill ${statusClass}" style="flex-shrink:0;">${requestStatusLabel(r.status)}</span>
+      </div>
+    `;
+    }).join("");
   }
 
   /* ---------------- PUBLIC HOOKS (used by the rest of the site) ----------------
