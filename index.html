@@ -17889,6 +17889,10 @@ async function waitForServiceGlobal(name, timeoutMs = 4000){
 }
 
 async function resolveBackend(){
+  if(ACTIVE_BACKEND === "demo"){
+    console.info("[JUTTFHX] Running in local demo mode — all data (accounts, combos, HUDs, tournaments, guilds, team finder, requests, reviews, admin settings) is stored in this browser's localStorage.");
+    return window.DemoService;
+  }
   const globalName = {
     firebase: "FirebaseService",
     supabase: "SupabaseService",
@@ -18173,8 +18177,8 @@ window.AdminProgress = (function(){
     const note = document.getElementById("adminBackendNote");
     if(backend.name === "demo"){
       pill.classList.add("demo");
-      label.textContent = "Demo Mode (Local Only)";
-      note.textContent = "No backend is configured yet, so changes here are saved only in this browser. Add your Firebase config in firebase-config.js to go live.";
+      label.textContent = "Local Storage Mode";
+      note.textContent = "Running fully on this browser's local storage — everything you add, edit, or approve here is saved and reloads persist it. To move to a shared cloud backend later, configure Firebase in firebase-config.js and set ACTIVE_BACKEND to \"firebase\".";
     } else {
       pill.classList.remove("demo");
       label.textContent = backend.name === "firebase" ? "Firebase Connected" : backend.name === "supabase" ? "Supabase Connected" : "Google Sheets Connected";
