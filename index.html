@@ -21653,14 +21653,33 @@ window.JX_logAudit = function(field, oldVal, newVal){
     return backendReadyPromise;
   }
 
+  // BUG FIX: onAuthChanged (below) fires the instant Firebase reports a
+  // user as signed in — which, right after signup(), can be BEFORE that
+  // same signup() call finishes writing the users/{uid} Firestore doc
+  // (ensureUserProfileDoc runs after createUserWithEmailAndPassword
+  // resolves, and onAuthStateChanged doesn't wait for it). A single
+  // getUserProfile() read at that moment returns null, and because every
+  // "signed in" check in this file requires currentProfile to be truthy
+  // too (not just currentUser), the UI was rendering as signed-out right
+  // after a successful signup — even though the account really was
+  // created — which is why it looked like sign-up/sign-in "failed" and
+  // sent the user back to the auth modal. Retry briefly so we pick up
+  // the doc once it lands instead of giving up on the first empty read.
+  async function fetchUserProfileWithRetry(uid, attempts = 6, delayMs = 400){
+    for(let i = 0; i < attempts; i++){
+      try{
+        const profile = await backend.getUserProfile(uid);
+        if(profile) return profile;
+      }catch(e){ /* keep retrying — could be a transient read error */ }
+      if(i < attempts - 1) await new Promise(r => setTimeout(r, delayMs));
+    }
+    return null; // gave up — caller still treats currentUser as signed in
+  }
+
   async function onAuthChanged(user){
     currentUser = user;
     if(user){
-      try{
-        currentProfile = await backend.getUserProfile(user.uid);
-      }catch(e){
-        currentProfile = null;
-      }
+      currentProfile = await fetchUserProfileWithRetry(user.uid);
       renderAccountButton();
       closeUserAuthModal();
       // Mirror cloud favorites into the existing favorites drawer/heart
@@ -21682,12 +21701,18 @@ window.JX_logAudit = function(field, oldVal, newVal){
   }
 
   function renderAccountButton(){
-    if(currentUser && currentProfile){
+    // currentUser (Firebase Auth) is the source of truth for "signed in".
+    // currentProfile (the Firestore users/{uid} doc) may briefly lag
+    // behind it — fall back to the auth user's own email/name rather than
+    // rendering signed-out just because the profile doc hasn't loaded.
+    if(currentUser){
+      const displayName = (currentProfile && currentProfile.username) || currentUser.displayName || (currentUser.email ? currentUser.email.split("@")[0] : "Account");
+      const avatarUrl = (currentProfile && currentProfile.avatarUrl) || currentUser.photoURL || "";
       accountBtn.classList.remove("signed-out");
-      const initial = (currentProfile.username || currentProfile.email || "U").trim().charAt(0).toUpperCase();
-      accountBtn.innerHTML = currentProfile.avatarUrl
-        ? `<span class="acct-avatar"><img src="${escapeHtml(currentProfile.avatarUrl)}" alt=""></span><span class="acct-name">${escapeHtml(currentProfile.username || "Account")}</span>`
-        : `<span class="acct-avatar">${escapeHtml(initial)}</span><span class="acct-name">${escapeHtml(currentProfile.username || "Account")}</span>`;
+      const initial = (displayName || currentUser.email || "U").trim().charAt(0).toUpperCase();
+      accountBtn.innerHTML = avatarUrl
+        ? `<span class="acct-avatar"><img src="${escapeHtml(avatarUrl)}" alt=""></span><span class="acct-name">${escapeHtml(displayName)}</span>`
+        : `<span class="acct-avatar">${escapeHtml(initial)}</span><span class="acct-name">${escapeHtml(displayName)}</span>`;
       accountBtn.title = "My Account";
     } else {
       accountBtn.classList.add("signed-out");
@@ -21780,7 +21805,7 @@ window.JX_logAudit = function(field, oldVal, newVal){
   forgotPasswordLink.addEventListener("click", ()=> setAuthMode("reset"));
 
   accountBtn.addEventListener("click", ()=>{
-    if(currentUser && currentProfile){
+    if(currentUser){
       openAccountDrawer();
     } else {
       setAuthMode("login");
@@ -22191,12 +22216,17 @@ window.JX_logAudit = function(field, oldVal, newVal){
      favorites heart buttons) can call into the account system without
      this script needing to know about them, and vice versa. */
   window.JX_Account = {
-    isSignedIn(){ return !!(currentUser && currentProfile); },
+    // currentUser (Firebase Auth) is the source of truth — currentProfile
+    // (the Firestore users/{uid} doc) can briefly lag behind it right
+    // after signup, and requiring both here made every "submit your
+    // own..." feature site-wide wrongly report "not signed in" during
+    // that window.
+    isSignedIn(){ return !!currentUser; },
 
     // True only once Firebase confirms the address was verified. Backends
     // with no account support (Sheets/Supabase) never populate currentUser
     // via email/password, so this is naturally false for them too.
-    isVerified(){ return !!(currentUser && currentProfile && currentUser.emailVerified !== false); },
+    isVerified(){ return !!(currentUser && currentUser.emailVerified !== false); },
 
     // Single shared gate for every "submit your own..." form on the site
     // (Guild Hub, Find a Team, Tournaments, Character Combos, Reviews,
