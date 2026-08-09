@@ -6054,28 +6054,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   </div>
 </section>
 
-<!-- ============ VERIFIED SENSITIVITY PROFILE (Performance Optimizer, Phase 4) ============
-     This is the manually-tested database profile (device.sensOverride) for the
-     device analyzed above — NOT the free-text calculator further down the page
-     (id="verified-sensitivity" / #genForm). Kept as its own section/id so it
-     never collides with that existing section, its Section Manager entry, or
-     its maintenance-mode toggle. -->
-<section class="section" id="device-verified-sensitivity">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Final Step · From Our Verified Database</div>
-      <h2 class="section-title">Verified Sensitivity Profile</h2>
-      <p class="section-sub">Real, manually tested sensitivity settings for your exact device — pulled straight from our database, never calculated or estimated.</p>
-    </div>
-
-    <div id="verifiedSensProfileWrap">
-      <div class="glass" style="padding:16px 18px; text-align:center;">
-        <p style="margin:0; font-size:13.5px; opacity:0.7;">Select a device to view its verified sensitivity profile.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ============ VERIFIED SENSITIVITY PROFILE ============ -->
 <section class="section" id="verified-sensitivity">
   <div class="wrap">
@@ -10982,50 +10960,6 @@ function buildOptimizationPlan(rawDevice, analysis){
 window.JX_buildOptimizationPlan = buildOptimizationPlan;
 window.JX_buildGraphicsRecommendation = buildGraphicsRecommendation;
 
-// ============================================================
-// VERIFIED SENSITIVITY PROFILE — PHASE 4
-// ------------------------------------------------------------
-// Reads ONLY the manually stored device.sensOverride.Headshot for the
-// exact selected device. This is deliberately separate from
-// getDeviceSensitivity() below (which seeds/generates values via
-// STYLE_PROFILES + rangePick when no override exists) and from the
-// free-text computeOptimizedSensitivity() generator elsewhere on the
-// page — neither of those is a valid source for a "Verified" result.
-// No value here is ever generated, seeded, randomized, or migrated;
-// missing data is reported as unavailable/"Unknown", never replaced.
-// ============================================================
-const VERIFIED_SENS_STYLE = "Headshot";
-const VERIFIED_SENS_REQUIRED_KEYS = ["general", "red", "scope2", "scope4", "sniper", "free"];
-
-function getVerifiedSensitivityProfile(device){
-  if(!device) return { available: false, reason: "no-device" };
-
-  const override = device.sensOverride && device.sensOverride[VERIFIED_SENS_STYLE];
-  if(!override) return { available: false, reason: "no-profile", device };
-
-  const hasAllRequired = VERIFIED_SENS_REQUIRED_KEYS.every(key =>
-    override[key] !== undefined && override[key] !== null && override[key] !== ""
-  );
-  if(!hasAllRequired) return { available: false, reason: "incomplete", device };
-
-  const orUnknown = (v) => (v === undefined || v === null || v === "") ? "Unknown" : v;
-
-  return {
-    available: true,
-    device,
-    style: VERIFIED_SENS_STYLE,
-    dpi: orUnknown(override.dpi ?? device.dpi),
-    general: override.general,
-    red: override.red,
-    scope2: override.scope2,
-    scope4: override.scope4,
-    sniper: override.sniper,
-    free: override.free,
-    fireBtnSize: orUnknown(override.fireBtnSize)
-  };
-}
-window.JX_getVerifiedSensitivityProfile = getVerifiedSensitivityProfile;
-
 function getDeviceSensitivity(device, style){
   const profile = STYLE_PROFILES[style] || STYLE_PROFILES.Headshot;
   const rnd = seededRand((device.rnd || hashStr(device.name || "device")) + style.length);
@@ -11517,7 +11451,6 @@ let nextTeamFinderId = 1;
       renderPerformanceAnalysisDetail(analysis, d);
       renderOptimizationCenter(d, analysis);
       renderGraphicsRecommendationDetail(analysis);
-      renderVerifiedSensitivityProfile(d);
     }, 350);
 
     const hwSection = document.getElementById("hardware-analysis");
@@ -11702,110 +11635,6 @@ let nextTeamFinderId = 1;
   }
   window.JX_renderOptimizationCenter = renderOptimizationCenter;
   window.JX_renderGraphicsRecommendationDetail = renderGraphicsRecommendationDetail;
-
-  /* ------------------------------------------------------------
-     VERIFIED SENSITIVITY PROFILE UI — PHASE 4
-     Reads ONLY getVerifiedSensitivityProfile(device) (device.sensOverride).
-     Never calls computeOptimizedSensitivity(), never uses STYLE_PROFILES
-     as a fallback, never invents a value. Reuses the existing
-     openShareModal()/copySensText() safe UI functions for the CTA.
-     ------------------------------------------------------------ */
-  function vsUnavailableCardHTML(device){
-    const name = device && device.name ? escapeHtml(device.name) : "this device";
-    return `
-      <div class="glass jx-empty-state" style="padding:28px 20px;">
-        <div class="jx-empty-title">Verified Sensitivity Unavailable</div>
-        <div class="jx-empty-sub">Manual sensitivity settings have not been added for ${name} yet.</div>
-        <div class="jx-empty-actions">
-          <button class="btn btn-gold" id="vsRequestDeviceBtn" type="button">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-            Request This Device
-          </button>
-        </div>
-      </div>`;
-  }
-
-  function wireVsRequestButton(device){
-    const btn = document.getElementById("vsRequestDeviceBtn");
-    if(!btn) return;
-    btn.addEventListener("click", ()=>{
-      const reqNameEl = document.getElementById("reqDeviceName");
-      const reqBrandEl = document.getElementById("reqBrand");
-      if(reqNameEl && device && device.name) reqNameEl.value = device.name;
-      if(reqBrandEl && device && device.brand){
-        const hasOption = Array.from(reqBrandEl.options).some(o => o.value === device.brand);
-        if(hasOption) reqBrandEl.value = device.brand;
-      }
-      const reqSection = document.getElementById("request");
-      if(reqSection) reqSection.scrollIntoView({ behavior:"smooth", block:"start" });
-      if(window.JX_Analytics) JX_Analytics.deviceRequest(device && device.brand || "Unknown", device && device.name || "");
-    });
-  }
-
-  function verifiedSensDataForShare(profile){
-    return {
-      deviceName: profile.device.name || "Device",
-      style: profile.style,
-      sens: {
-        dpi: profile.dpi, general: profile.general, red: profile.red,
-        scope2: profile.scope2, scope4: profile.scope4, sniper: profile.sniper,
-        free: profile.free, fireBtnSize: profile.fireBtnSize
-      }
-    };
-  }
-
-  function vsAvailableCardHTML(profile){
-    const row = (label, val) => `
-      <div class="sens-item"><span class="sens-label">${escapeHtml(label)}</span><span class="sens-val">${escapeHtml(val)}</span></div>`;
-    return `
-      <div class="glass" style="padding:20px 22px;">
-        <div class="result-meta">
-          <span class="status-pill status-approved">VERIFIED</span>
-        </div>
-        <p style="margin:10px 0 0; font-size:13px; opacity:0.75;">Manually tested sensitivity settings for this device.</p>
-        <div class="sens-dpi">
-          <span class="sens-label">DPI</span>
-          <span class="sens-val">${escapeHtml(profile.dpi)}</span>
-        </div>
-        <div class="sens-grid">
-          ${row("General", profile.general)}
-          ${row("Red Dot", profile.red)}
-          ${row("2X Scope", profile.scope2)}
-          ${row("4X Scope", profile.scope4)}
-          ${row("Sniper", profile.sniper)}
-          ${row("Free Look", profile.free)}
-          ${row("Fire Button Size", profile.fireBtnSize)}
-        </div>
-        <div class="result-actions">
-          <button class="btn btn-gold btn-sm" id="vsCopyBtn" type="button">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy Verified Settings
-          </button>
-          <button class="btn btn-ghost btn-sm" id="vsUseSettingsBtn" type="button">
-            Use These Settings
-          </button>
-        </div>
-      </div>`;
-  }
-
-  function renderVerifiedSensitivityProfile(device){
-    const wrap = document.getElementById("verifiedSensProfileWrap");
-    if(!wrap) return;
-
-    const profile = getVerifiedSensitivityProfile(device);
-
-    if(!profile.available){
-      wrap.innerHTML = vsUnavailableCardHTML(device);
-      wireVsRequestButton(device);
-      return;
-    }
-
-    wrap.innerHTML = vsAvailableCardHTML(profile);
-    const shareData = verifiedSensDataForShare(profile);
-    document.getElementById("vsCopyBtn")?.addEventListener("click", ()=> copySensText(shareData));
-    document.getElementById("vsUseSettingsBtn")?.addEventListener("click", ()=> openShareModal(shareData));
-  }
-  window.JX_renderVerifiedSensitivityProfile = renderVerifiedSensitivityProfile;
 
   function deviceCardHTML(d){
     const isFav = store.favorites.includes(d.id);
