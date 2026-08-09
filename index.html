@@ -16030,6 +16030,8 @@ async function loginWithGoogle(){
 async function checkGoogleRedirectResult(){
   try{
     const result = await getRedirectResult(auth);
+    // TEMP DIAGNOSTIC — remove once the Google sign-in UI bug is confirmed fixed.
+    console.log("[JUTTFHX][DIAG] getRedirectResult() returned:", result, "| auth.currentUser:", auth.currentUser);
     if(result && result.user){
       // NON-FATAL: by this point Google Sign-In has already succeeded —
       // the Auth user exists and onAuthStateChanged has already fired (or
@@ -21669,6 +21671,8 @@ window.JX_logAudit = function(field, oldVal, newVal){
           showToast("info", "Couldn't connect to the backend. Check your connection and try again.");
           throw err;
         }
+        // TEMP DIAGNOSTIC — remove once the Google sign-in UI bug is confirmed fixed.
+        console.log("[JUTTFHX][DIAG] account-controller ensureBackend resolved, backend:", backend && backend.name, "| registering watchSiteAuth now");
         if(typeof backend.watchSiteAuth === "function"){
           backend.watchSiteAuth(onAuthChanged);
         }
@@ -21701,6 +21705,8 @@ window.JX_logAudit = function(field, oldVal, newVal){
   }
 
   async function onAuthChanged(user){
+    // TEMP DIAGNOSTIC — remove once the Google sign-in UI bug is confirmed fixed.
+    console.log("[JUTTFHX][DIAG] onAuthChanged fired with user:", user);
     currentUser = user;
     if(user){
       currentProfile = await fetchUserProfileWithRetry(user.uid);
