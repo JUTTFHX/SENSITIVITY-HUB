@@ -15972,7 +15972,19 @@ async function signup(email, password, username){
   if(username){
     try{ await updateProfile(cred.user, { displayName: username }); }catch(e){ /* non-fatal */ }
   }
-  await ensureUserProfileDoc(cred.user, username);
+  // NON-FATAL: the Auth account already exists at this point (that's the
+  // real "sign up"). If the users/{uid} Firestore doc write fails — wrong
+  // security rules, a transient permission error, offline, etc. — we must
+  // NOT throw here, or this whole function rejects and the caller (the
+  // auth modal's submit handler) reports "sign up failed" even though the
+  // account was actually created. That produced exactly the bug where a
+  // Firebase Auth entry appears but the site never visually signs the
+  // user in. onAuthChanged's fetchUserProfileWithRetry will keep trying
+  // to pick up the doc afterwards; renderAccountButton() already falls
+  // back to the raw Auth user's email/displayName if the profile doc
+  // isn't there yet.
+  try{ await ensureUserProfileDoc(cred.user, username); }
+  catch(e){ console.error("[JUTTFHX] Signed up, but failed to create users/{uid} profile doc — check Firestore rules:", e); }
   try{ await sendEmailVerification(cred.user); }catch(e){ /* non-fatal — user can resend later */ }
   return cred;
 }
@@ -16019,7 +16031,19 @@ async function checkGoogleRedirectResult(){
   try{
     const result = await getRedirectResult(auth);
     if(result && result.user){
-      await ensureUserProfileDoc(result.user);
+      // NON-FATAL: by this point Google Sign-In has already succeeded —
+      // the Auth user exists and onAuthStateChanged has already fired (or
+      // is about to) independently of this function. Previously, if the
+      // users/{uid} Firestore write below failed (bad security rules,
+      // transient error, etc.), the catch block below caught it and
+      // dispatched ok:false — which made the UI reopen the sign-in modal
+      // and show an error EVEN THOUGH the person was actually signed in.
+      // That's exactly the "entry created in Firebase but not visually
+      // signed in" bug. The profile-doc write is now isolated so a
+      // failure here can never downgrade a real sign-in into a reported
+      // failure.
+      try{ await ensureUserProfileDoc(result.user); }
+      catch(e){ console.error("[JUTTFHX] Signed in with Google, but failed to create users/{uid} profile doc — check Firestore rules:", e); }
       window.dispatchEvent(new CustomEvent("jx:google-redirect-result", { detail: { ok: true } }));
     }
   }catch(err){
@@ -21899,6 +21923,12 @@ window.JX_logAudit = function(field, oldVal, newVal){
     if(e.detail.ok){
       showToast("success", "Signed in with Google");
     } else if(e.detail.error){
+      // DEFENSE IN DEPTH: onAuthStateChanged (onAuthChanged above) is the
+      // single source of truth for sign-in state and runs independently
+      // of this event. If it already picked up a signed-in user by the
+      // time this fires, don't contradict it by popping the error modal
+      // back open on top of a real, successful sign-in.
+      if(currentUser) return;
       openUserAuthModal();
       userAuthError.textContent = friendlyAccountError(e.detail.error);
       userAuthError.classList.add("show");
