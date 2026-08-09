@@ -15883,7 +15883,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  GoogleAuthProvider, signInWithRedirect, getRedirectResult,
+  GoogleAuthProvider, signInWithPopup,
   updateProfile, signOut, onAuthStateChanged,
   getIdTokenResult, sendPasswordResetEmail, sendEmailVerification
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -15902,12 +15902,6 @@ function initFirebase(){
     storage = getStorage(app);
     auth = getAuth(app);
     firebaseReady = true;
-    // Fire-and-forget: picks up the result of a Google sign-in that
-    // finished via signInWithRedirect (see loginWithGoogle below) after
-    // the browser navigates back to this page. Errors are surfaced to
-    // the UI via a window event rather than thrown here, since nothing
-    // is awaiting this call.
-    checkGoogleRedirectResult();
     return true;
   }catch(err){
     console.error("[JUTTFHX] Firebase failed to initialize:", err);
@@ -15995,61 +15989,35 @@ function resendVerificationEmail(){
   if(!auth.currentUser) return Promise.reject(new Error("Not signed in."));
   return sendEmailVerification(auth.currentUser);
 }
-/* GOOGLE SIGN-IN — REDIRECT FLOW, NOT POPUP
+/* GOOGLE SIGN-IN — POPUP FLOW
    ------------------------------------------------------------
-   signInWithPopup opens a second window at
-   {authDomain}/__/auth/handler and depends on that window being able
-   to freely read/close itself and on third-party cookies working
-   between the popup and the opener. Modern Chrome increasingly blocks
-   both by default (Cross-Origin-Opener-Policy + third-party storage
-   partitioning), which shows up exactly as: a blank popup opens then
-   auto-closes a moment later with no sign-in completing. Redirect
-   avoids all of that — it's a normal full-page navigation to Google
-   and back, so nothing needs to be shared between two open windows.
-   The trade-off is that the result isn't available synchronously in
-   the click handler; it's picked up by checkGoogleRedirectResult()
-   below, once the page reloads after the redirect back. */
+   Previously this used signInWithRedirect (a full-page navigation to
+   Google and back). That flow depends on the browser sharing storage
+   between this site's origin (juttfhx.github.io) and the Firebase
+   authDomain (juttfhx.firebaseapp.com) so getRedirectResult() can pick
+   up the pending sign-in after the redirect back. Third-party storage
+   partitioning in modern Chrome/Edge/Safari increasingly blocks that
+   cross-domain handoff, which showed up as: sign in with Google
+   successfully, get redirected back, and the site still shows
+   "not signed in" — i.e. an infinite sign-in loop.
+   signInWithPopup avoids this because the popup talks back to this
+   same window directly (no cross-domain storage read required) and
+   the result is available synchronously right here, in the click
+   handler, instead of on a later page load. The earlier concern
+   about popups being blocked by Cross-Origin-Opener-Policy only
+   applies when the *hosting site itself* sends a restrictive COOP
+   header — GitHub Pages doesn't, so popup works fine here. */
 async function loginWithGoogle(){
   const provider = new GoogleAuthProvider();
-  await signInWithRedirect(auth, provider);
-  // Execution normally doesn't reach here — the line above navigates
-  // the whole page to Google. If it does return, the browser deferred
-  // the navigation; checkGoogleRedirectResult() will still catch the
-  // result once the redirect completes.
-}
-
-/* Completes the sign-in started by loginWithGoogle() above. Called
-   automatically once on every page load (see initFirebase). If the
-   user didn't just come back from a Google redirect, this resolves to
-   null and does nothing. If they did, onAuthStateChanged (via
-   watchAuth) fires with the signed-in user and the existing UI logic
-   (closing the modal, rendering the account button, etc.) handles the
-   rest exactly as it would after a successful popup sign-in — this
-   function only needs to create the Firestore profile doc and report
-   errors, since it has no click-handler around it to catch them. */
-async function checkGoogleRedirectResult(){
-  try{
-    const result = await getRedirectResult(auth);
-    if(result && result.user){
-      // NON-FATAL: by this point Google Sign-In has already succeeded —
-      // the Auth user exists and onAuthStateChanged has already fired (or
-      // is about to) independently of this function. Previously, if the
-      // users/{uid} Firestore write below failed (bad security rules,
-      // transient error, etc.), the catch block below caught it and
-      // dispatched ok:false — which made the UI reopen the sign-in modal
-      // and show an error EVEN THOUGH the person was actually signed in.
-      // That's exactly the "entry created in Firebase but not visually
-      // signed in" bug. The profile-doc write is now isolated so a
-      // failure here can never downgrade a real sign-in into a reported
-      // failure.
-      try{ await ensureUserProfileDoc(result.user); }
-      catch(e){ console.error("[JUTTFHX] Signed in with Google, but failed to create users/{uid} profile doc — check Firestore rules:", e); }
-      window.dispatchEvent(new CustomEvent("jx:google-redirect-result", { detail: { ok: true } }));
-    }
-  }catch(err){
-    console.error("[JUTTFHX] Google redirect sign-in failed:", err);
-    window.dispatchEvent(new CustomEvent("jx:google-redirect-result", { detail: { ok: false, error: err } }));
-  }
+  const result = await signInWithPopup(auth, provider);
+  // NON-FATAL: by this point Google Sign-In has already succeeded — the
+  // Auth user exists and onAuthStateChanged has already fired (or is
+  // about to) independently of this. If the users/{uid} Firestore
+  // write below fails (bad security rules, transient error, etc.) we
+  // must not let that make the caller think sign-in itself failed.
+  try{ await ensureUserProfileDoc(result.user); }
+  catch(e){ console.error("[JUTTFHX] Signed in with Google, but failed to create users/{uid} profile doc — check Firestore rules:", e); }
+  return result;
 }
 function logout(){
   return signOut(auth);
@@ -16498,7 +16466,7 @@ window.FirebaseService = {
   init: initFirebase,
   isReady,
   login, logout, watchAuth, watchSiteAuth: watchAuth, isAdmin, getAdminRole,
-  signup, loginWithGoogle, checkGoogleRedirectResult, resetPassword, resendVerificationEmail,
+  signup, loginWithGoogle, resetPassword, resendVerificationEmail,
   getUserProfile, updateUserProfile, uploadUserAvatar, setUserFavorites, addUserSensitivity,
   getDevices, watchDevices, addDevice, updateDevice, deleteDevice, incrementDeviceSearch,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
@@ -21920,40 +21888,18 @@ window.JX_logAudit = function(field, oldVal, newVal){
     googleSignInBtn.disabled = true;
     try{
       await ensureBackend();
-      // This navigates the whole page to Google and back (redirect
-      // flow, not a popup — see loginWithGoogle in the Firebase
-      // adapter for why). There's usually nothing left to run after
-      // this line; the sign-in itself completes on the next page load
-      // via the jx:google-redirect-result listener below.
+      // Popup flow — the result (or a thrown error, e.g. the user
+      // closing the popup) is available right here, synchronously,
+      // rather than on a later page load. onAuthChanged (via
+      // watchSiteAuth) still handles closing the modal + rendering the
+      // signed-in account button once Firebase reports the new user.
       await backend.loginWithGoogle();
+      showToast("success", "Signed in with Google");
     }catch(err){
       userAuthError.textContent = friendlyAccountError(err);
       userAuthError.classList.add("show");
     }finally{
       googleSignInBtn.disabled = false;
-    }
-  });
-
-  // Fires once per page load, right after the Firebase adapter checks
-  // whether this load is the "return trip" from a Google redirect
-  // sign-in. Success needs no handling here — onAuthChanged (via
-  // watchSiteAuth) already renders the signed-in state. This listener
-  // only needs to surface a failure, since a redirect has no click
-  // handler around it to catch one.
-  window.addEventListener("jx:google-redirect-result", (e)=>{
-    if(!e.detail) return;
-    if(e.detail.ok){
-      showToast("success", "Signed in with Google");
-    } else if(e.detail.error){
-      // DEFENSE IN DEPTH: onAuthStateChanged (onAuthChanged above) is the
-      // single source of truth for sign-in state and runs independently
-      // of this event. If it already picked up a signed-in user by the
-      // time this fires, don't contradict it by popping the error modal
-      // back open on top of a real, successful sign-in.
-      if(currentUser) return;
-      openUserAuthModal();
-      userAuthError.textContent = friendlyAccountError(e.detail.error);
-      userAuthError.classList.add("show");
     }
   });
 
