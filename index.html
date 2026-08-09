@@ -16032,6 +16032,16 @@ async function checkGoogleRedirectResult(){
     const result = await getRedirectResult(auth);
     // TEMP DIAGNOSTIC — remove once the Google sign-in UI bug is confirmed fixed.
     console.log("[JUTTFHX][DIAG] getRedirectResult() returned:", result, "| auth.currentUser:", auth.currentUser);
+    try{
+      localStorage.setItem("juttfhx_google_redirect_debug", JSON.stringify({
+        at: new Date().toISOString(),
+        hadResult: !!result,
+        hadUser: !!(result && result.user),
+        uid: result && result.user ? result.user.uid : null,
+        email: result && result.user ? result.user.email : null,
+        authCurrentUserAtCheck: auth.currentUser ? auth.currentUser.uid : null
+      }));
+    }catch(e){}
     if(result && result.user){
       // NON-FATAL: by this point Google Sign-In has already succeeded —
       // the Auth user exists and onAuthStateChanged has already fired (or
@@ -16050,6 +16060,14 @@ async function checkGoogleRedirectResult(){
     }
   }catch(err){
     console.error("[JUTTFHX] Google redirect sign-in failed:", err);
+    try{
+      localStorage.setItem("juttfhx_google_redirect_debug", JSON.stringify({
+        at: new Date().toISOString(),
+        threw: true,
+        errorCode: err && err.code,
+        errorMessage: err && err.message
+      }));
+    }catch(e){}
     window.dispatchEvent(new CustomEvent("jx:google-redirect-result", { detail: { ok: false, error: err } }));
   }
 }
@@ -21707,6 +21725,12 @@ window.JX_logAudit = function(field, oldVal, newVal){
   async function onAuthChanged(user){
     // TEMP DIAGNOSTIC — remove once the Google sign-in UI bug is confirmed fixed.
     console.log("[JUTTFHX][DIAG] onAuthChanged fired with user:", user);
+    try{
+      const existing = JSON.parse(localStorage.getItem("juttfhx_google_redirect_debug") || "{}");
+      existing.onAuthChangedFiredAt = new Date().toISOString();
+      existing.onAuthChangedUser = user ? { uid: user.uid, email: user.email } : null;
+      localStorage.setItem("juttfhx_google_redirect_debug", JSON.stringify(existing));
+    }catch(e){}
     currentUser = user;
     if(user){
       currentProfile = await fetchUserProfileWithRetry(user.uid);
@@ -23395,6 +23419,29 @@ html.jx-scroll-active *::after{
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('touchmove', onScroll, { passive: true });
+})();
+</script>
+<script>
+/* TEMP DIAGNOSTIC BANNER — remove once the Google sign-in UI bug is
+   confirmed fixed. Reads juttfhx_google_redirect_debug from localStorage
+   (written by checkGoogleRedirectResult / onAuthChanged) and shows it
+   directly on the page, so it survives the cross-origin Google redirect
+   without depending on DevTools console capture. */
+(function(){
+  try{
+    const raw = localStorage.getItem("juttfhx_google_redirect_debug");
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;bottom:12px;left:12px;right:12px;max-width:640px;z-index:999999;background:#111;color:#0f0;font:12px/1.5 monospace;padding:12px 14px;border-radius:8px;border:1px solid #0f0;box-shadow:0 4px 20px rgba(0,0,0,.5);white-space:pre-wrap;word-break:break-all;";
+    box.textContent = "[JUTTFHX DIAG] Google redirect debug:\n" + JSON.stringify(data, null, 2);
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "✕ dismiss";
+    closeBtn.style.cssText = "display:block;margin-top:8px;background:#0f0;color:#000;border:0;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;";
+    closeBtn.onclick = function(){ box.remove(); localStorage.removeItem("juttfhx_google_redirect_debug"); };
+    box.appendChild(closeBtn);
+    document.body.appendChild(box);
+  }catch(e){}
 })();
 </script>
 </body>
