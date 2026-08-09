@@ -16030,18 +16030,6 @@ async function loginWithGoogle(){
 async function checkGoogleRedirectResult(){
   try{
     const result = await getRedirectResult(auth);
-    // TEMP DIAGNOSTIC — remove once the Google sign-in UI bug is confirmed fixed.
-    console.log("[JUTTFHX][DIAG] getRedirectResult() returned:", result, "| auth.currentUser:", auth.currentUser);
-    try{
-      localStorage.setItem("juttfhx_google_redirect_debug", JSON.stringify({
-        at: new Date().toISOString(),
-        hadResult: !!result,
-        hadUser: !!(result && result.user),
-        uid: result && result.user ? result.user.uid : null,
-        email: result && result.user ? result.user.email : null,
-        authCurrentUserAtCheck: auth.currentUser ? auth.currentUser.uid : null
-      }));
-    }catch(e){}
     if(result && result.user){
       // NON-FATAL: by this point Google Sign-In has already succeeded —
       // the Auth user exists and onAuthStateChanged has already fired (or
@@ -16060,14 +16048,6 @@ async function checkGoogleRedirectResult(){
     }
   }catch(err){
     console.error("[JUTTFHX] Google redirect sign-in failed:", err);
-    try{
-      localStorage.setItem("juttfhx_google_redirect_debug", JSON.stringify({
-        at: new Date().toISOString(),
-        threw: true,
-        errorCode: err && err.code,
-        errorMessage: err && err.message
-      }));
-    }catch(e){}
     window.dispatchEvent(new CustomEvent("jx:google-redirect-result", { detail: { ok: false, error: err } }));
   }
 }
@@ -18100,6 +18080,17 @@ window.AdminProgress = (function(){
 
   function exitAdminMode(){
     stopAdminRequestPolling();
+    // FIX: the admin auth watcher (registered in ensureBackend() below via
+    // backend.watchAuth) was never unsubscribed on the way out, so it kept
+    // listening to every future auth-state change for the rest of the
+    // page's life — intercepting and rejecting legitimate public account
+    // sign-ins (see the note in the watchAuth callback above). Tearing it
+    // down here means leaving the admin panel actually leaves it, instead
+    // of leaving a live tripwire behind for the public site.
+    if(typeof unsubscribeAuth === "function"){
+      unsubscribeAuth();
+      unsubscribeAuth = null;
+    }
     adminRoute.classList.remove("active");
     document.body.classList.remove("admin-active");
     document.documentElement.classList.remove("admin-active");
@@ -18181,8 +18172,19 @@ window.AdminProgress = (function(){
               console.error("[JUTTFHX] Admin verification failed:", err);
             }
             if(!adminOk){
+              // FIX: this used to call backend.logout(), which signs the
+              // user out of the ENTIRE site — not just the admin panel.
+              // Because the Firebase Auth pool is shared between the
+              // admin dashboard and the public "My Account" feature, that
+              // global sign-out was destroying real, legitimate public
+              // account sessions (including ones that had just completed
+              // Google sign-in) any time this admin watcher happened to
+              // be active — e.g. left registered from an earlier #admin
+              // visit in the same tab, since it was never unsubscribed
+              // (see exitAdminMode below). Denying the ADMIN UI is enough
+              // to keep the dashboard secure; it must not touch the
+              // person's actual sign-in state on the rest of the site.
               currentUser = null;
-              try{ await backend.logout(); }catch(e){}
               adminLoginError.textContent = "This account doesn't have admin access.";
               adminLoginError.classList.add("show");
               exitAdminMode();
@@ -21689,8 +21691,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
           showToast("info", "Couldn't connect to the backend. Check your connection and try again.");
           throw err;
         }
-        // TEMP DIAGNOSTIC — remove once the Google sign-in UI bug is confirmed fixed.
-        console.log("[JUTTFHX][DIAG] account-controller ensureBackend resolved, backend:", backend && backend.name, "| registering watchSiteAuth now");
         if(typeof backend.watchSiteAuth === "function"){
           backend.watchSiteAuth(onAuthChanged);
         }
@@ -21723,14 +21723,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
   }
 
   async function onAuthChanged(user){
-    // TEMP DIAGNOSTIC — remove once the Google sign-in UI bug is confirmed fixed.
-    console.log("[JUTTFHX][DIAG] onAuthChanged fired with user:", user);
-    try{
-      const existing = JSON.parse(localStorage.getItem("juttfhx_google_redirect_debug") || "{}");
-      existing.onAuthChangedFiredAt = new Date().toISOString();
-      existing.onAuthChangedUser = user ? { uid: user.uid, email: user.email } : null;
-      localStorage.setItem("juttfhx_google_redirect_debug", JSON.stringify(existing));
-    }catch(e){}
     currentUser = user;
     if(user){
       currentProfile = await fetchUserProfileWithRetry(user.uid);
@@ -23419,29 +23411,6 @@ html.jx-scroll-active *::after{
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('touchmove', onScroll, { passive: true });
-})();
-</script>
-<script>
-/* TEMP DIAGNOSTIC BANNER — remove once the Google sign-in UI bug is
-   confirmed fixed. Reads juttfhx_google_redirect_debug from localStorage
-   (written by checkGoogleRedirectResult / onAuthChanged) and shows it
-   directly on the page, so it survives the cross-origin Google redirect
-   without depending on DevTools console capture. */
-(function(){
-  try{
-    const raw = localStorage.getItem("juttfhx_google_redirect_debug");
-    if(!raw) return;
-    const data = JSON.parse(raw);
-    const box = document.createElement("div");
-    box.style.cssText = "position:fixed;bottom:12px;left:12px;right:12px;max-width:640px;z-index:999999;background:#111;color:#0f0;font:12px/1.5 monospace;padding:12px 14px;border-radius:8px;border:1px solid #0f0;box-shadow:0 4px 20px rgba(0,0,0,.5);white-space:pre-wrap;word-break:break-all;";
-    box.textContent = "[JUTTFHX DIAG] Google redirect debug:\n" + JSON.stringify(data, null, 2);
-    const closeBtn = document.createElement("button");
-    closeBtn.textContent = "✕ dismiss";
-    closeBtn.style.cssText = "display:block;margin-top:8px;background:#0f0;color:#000;border:0;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;";
-    closeBtn.onclick = function(){ box.remove(); localStorage.removeItem("juttfhx_google_redirect_debug"); };
-    box.appendChild(closeBtn);
-    document.body.appendChild(box);
-  }catch(e){}
 })();
 </script>
 </body>
