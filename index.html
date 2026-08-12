@@ -12153,14 +12153,40 @@ let nextTeamFinderId = 1;
 
   loadMoreBtn.addEventListener("click", ()=>{
     visibleCount += 9;
-    renderDeviceResults(deviceSearchInput.value);
+    // Phase 7: append only the newly-revealed cards instead of calling
+    // renderDeviceResults() (which would rebuild the entire grid, including
+    // the cards already on screen, just to add 9 more). Isolated to this
+    // one handler only — every other renderDeviceResults() call site
+    // (search, brand filter, clear-search, initial load, realtime sync)
+    // is untouched and still does its normal full rebuild.
+    // Uses the exact same matchDevices() query/results renderDeviceResults()
+    // itself would compute, and the exact same per-card markup
+    // (deviceCardHTML), so the appended cards are identical to what a full
+    // rebuild would have produced — and since deviceResultsGrid's click
+    // handler is delegated (not attached per-card), the newly appended
+    // cards are already covered by it with no extra wiring needed.
+    const results = matchDevices(lastQuery, activeBrand);
+    const newSlice = results.slice(visibleCount - 9, visibleCount);
+    if(newSlice.length){
+      deviceResultsGrid.insertAdjacentHTML("beforeend", newSlice.map(deviceCardHTML).join(""));
+    }
+    loadMoreWrap.style.display = results.length > visibleCount ? "block" : "none";
   });
 
   deviceResultsGrid.addEventListener("click", (e)=>{
     const favBtn = e.target.closest("[data-fav]");
     if(favBtn){
-      toggleFavorite(parseInt(favBtn.dataset.fav));
-      renderDeviceResults(deviceSearchInput.value);
+      const favId = parseInt(favBtn.dataset.fav);
+      toggleFavorite(favId);
+      // Phase 5: update just this one button instead of rebuilding the
+      // whole visible grid (every currently-shown device card's HTML)
+      // for a single favorite toggle. Mirrors the exact same conditional
+      // markup deviceCardHTML() already uses for isFav, so the end state
+      // is identical to what a full re-render would have produced.
+      const isFav = store.favorites.includes(favId);
+      favBtn.classList.toggle("active", isFav);
+      const favSvg = favBtn.querySelector("svg");
+      if(favSvg) favSvg.setAttribute("fill", isFav ? "currentColor" : "none");
       return;
     }
     const analyzeBtn = e.target.closest("[data-analyze]");
@@ -15205,10 +15231,25 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     renderGuildSearch();
 
     // Search/filter live updates
+    let guildSearchInputDebounce;
     ["guildSearchInput","guildFilterRank","guildFilterRegion","guildFilterStatus"].forEach(id => {
       const el = document.getElementById(id);
-      if(el) el.addEventListener("input", renderGuildSearch);
-      if(el) el.addEventListener("change", renderGuildSearch);
+      if(!el) return;
+      if(id === "guildSearchInput"){
+        // Phase 6: debounce the free-text field only, same 260ms pattern
+        // already used for the admin search boxes in Phase 4 — every
+        // keystroke here was rebuilding the whole guild card grid. The
+        // filter dropdowns below are untouched: picking one is a single,
+        // deliberate action, not a rapid keystroke stream, so it still
+        // applies instantly.
+        el.addEventListener("input", ()=>{
+          clearTimeout(guildSearchInputDebounce);
+          guildSearchInputDebounce = setTimeout(renderGuildSearch, 260);
+        });
+      } else {
+        el.addEventListener("input", renderGuildSearch);
+      }
+      el.addEventListener("change", renderGuildSearch);
     });
 
     function guildIdLabel(id){ return "GLD-" + String(id).padStart(6, "0"); }
@@ -15588,10 +15629,23 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     renderTfBrowse();
 
     // Search/filter live updates
+    let tfSearchInputDebounce;
     ["tfSearchInput","tfFilterRole","tfFilterRegion","tfFilterRank"].forEach(id => {
       const el = document.getElementById(id);
-      if(el) el.addEventListener("input", renderTfBrowse);
-      if(el) el.addEventListener("change", renderTfBrowse);
+      if(!el) return;
+      if(id === "tfSearchInput"){
+        // Phase 6: debounce the free-text field only, same pattern as the
+        // guild search above and the Phase 4 admin search boxes — every
+        // keystroke here was rebuilding the whole team-finder card grid.
+        // The filter dropdowns still apply instantly on selection.
+        el.addEventListener("input", ()=>{
+          clearTimeout(tfSearchInputDebounce);
+          tfSearchInputDebounce = setTimeout(renderTfBrowse, 260);
+        });
+      } else {
+        el.addEventListener("input", renderTfBrowse);
+      }
+      el.addEventListener("change", renderTfBrowse);
     });
 
     // Copy-contact click handler
@@ -18862,7 +18916,15 @@ window.AdminProgress = (function(){
     if(!count) return `<span class="status-pill" style="opacity:.5;">Auto</span>`;
     return `<span class="status-pill status-approved">Manual ×${count}</span>`;
   }
-  adminDeviceSearch.addEventListener("input", renderDeviceTable);
+  /* Phase 4: debounced like the public device search, instead of
+     rebuilding the full (potentially large, sorted/grouped) admin table
+     on every single keystroke. Same end result, just collapsed into one
+     render per typing pause. */
+  let adminDeviceSearchDebounce;
+  adminDeviceSearch.addEventListener("input", ()=>{
+    clearTimeout(adminDeviceSearchDebounce);
+    adminDeviceSearchDebounce = setTimeout(renderDeviceTable, 260);
+  });
 
   adminDeviceTable.addEventListener("click", (e)=>{
     const editBtn = e.target.closest("[data-edit-device]");
@@ -21328,7 +21390,13 @@ window.JX_logAudit = function(field, oldVal, newVal){
     }
     window.JX_renderAdminGuildTable = function(){ renderGuildTable(); updateGuildStats(); };
 
-    if(guildSearch) guildSearch.addEventListener("input", renderGuildTable);
+    /* Phase 4: debounced instead of rebuilding the full admin guild table
+       (per-row SVG icon buttons included) on every keystroke. */
+    let guildSearchDebounce;
+    if(guildSearch) guildSearch.addEventListener("input", ()=>{
+      clearTimeout(guildSearchDebounce);
+      guildSearchDebounce = setTimeout(renderGuildTable, 260);
+    });
 
     // Open modal for add
     if(addGuildBtn) addGuildBtn.addEventListener("click", () => {
@@ -21574,7 +21642,13 @@ window.JX_logAudit = function(field, oldVal, newVal){
     }
     window.JX_renderAdminTfTable = function(){ renderTfTable(); updateTfStats(); };
 
-    if(tfSearch) tfSearch.addEventListener("input", renderTfTable);
+    /* Phase 4: debounced instead of rebuilding the full admin team-finder
+       table on every keystroke. */
+    let tfSearchDebounce;
+    if(tfSearch) tfSearch.addEventListener("input", ()=>{
+      clearTimeout(tfSearchDebounce);
+      tfSearchDebounce = setTimeout(renderTfTable, 260);
+    });
 
     // Open modal for add
     if(addTfBtn) addTfBtn.addEventListener("click", () => {
@@ -22650,6 +22724,39 @@ window.JX_logAudit = function(field, oldVal, newVal){
 </script>
 
 <!-- ============================================================
+     PHASE 3 PERF PATCH — Shared MutationObserver dispatcher
+     Several independent enhancement scripts below each used to run their
+     own MutationObserver watching the whole #top subtree for added nodes
+     (ripple init, reveal re-observe, reflection re-init). This collapses
+     those into a single observer + registered-handler list so the browser
+     only tracks one subtree-watching observer instead of several. Each
+     handler keeps its own existing debounce/idle scheduling untouched —
+     this only removes the duplicate observer instances, not the logic.
+     (The animation-scan observer further below intentionally watches
+     document.body directly, a broader root than #top, and is left as its
+     own separate observer — see note at that call site.)
+     ============================================================ -->
+<script>
+(function(){
+  if(window.__jxObserveBodyMutations) return;
+  var handlers = [];
+  var observer = null;
+  window.__jxObserveBodyMutations = function(handler){
+    handlers.push(handler);
+    if(!observer){
+      var root = document.getElementById('top') || document.body;
+      observer = new MutationObserver(function(mutations){
+        for(var i=0; i<handlers.length; i++){
+          try{ handlers[i](mutations); }catch(e){ /* one handler's error must not block the others */ }
+        }
+      });
+      observer.observe(root, { childList: true, subtree: true });
+    }
+  };
+})();
+</script>
+
+<!-- ============================================================
      JUTTFHX ENHANCEMENT LAYER — Performance & Interaction JS
      60 FPS scroll reveals · Touch ripples · Gold glow init
      ============================================================ -->
@@ -22876,9 +22983,12 @@ window.JX_logAudit = function(field, oldVal, newVal){
     initSmoothAnchors();
     initCursorGlow();
 
-    /* Re-run ripple init when modals/drawers open new buttons */
+    /* Re-run ripple init when modals/drawers open new buttons
+       (Phase 3: registered on the shared body-mutation dispatcher above
+       instead of its own MutationObserver — same root, same options,
+       same debounce, just no longer a duplicate observer instance.) */
     var rippleDebounce;
-    const domObserver = new MutationObserver(function(mutations){
+    window.__jxObserveBodyMutations(function(mutations){
       let needsRipple = false;
       mutations.forEach(function(m){
         if(m.addedNodes.length) needsRipple = true;
@@ -22888,7 +22998,6 @@ window.JX_logAudit = function(field, oldVal, newVal){
         rippleDebounce = setTimeout(initRipples, 200);
       }
     });
-    domObserver.observe((document.getElementById('top') || document.body), { childList: true, subtree: true });
   }
 
   if(document.readyState === 'loading'){
@@ -22923,8 +23032,12 @@ window.JX_logAudit = function(field, oldVal, newVal){
     document.querySelectorAll('.jx-reveal').forEach(function(el){ obs.observe(el); });
   }
 
-  /* ── B. RE-OBSERVE injected cards ── */
-  new MutationObserver(function(muts){
+  /* ── B. RE-OBSERVE injected cards ──
+     (Phase 3: registered on the shared body-mutation dispatcher instead of
+     its own MutationObserver. Still called synchronously per mutation
+     batch exactly as before — no debounce/async was added or removed, so
+     reveal timing is unchanged.) ── */
+  window.__jxObserveBodyMutations(function(muts){
     muts.forEach(function(m){
       m.addedNodes.forEach(function(node){
         if(node.nodeType !== 1) return;
@@ -22937,7 +23050,7 @@ window.JX_logAudit = function(field, oldVal, newVal){
         });
       });
     });
-  }).observe((document.getElementById('top') || document.body), { childList: true, subtree: true });
+  });
 
   /* ── C. BUTTON PRESS scale ── */
   var _pressingEl = null;
@@ -23438,12 +23551,15 @@ window.JX_logAudit = function(field, oldVal, newVal){
     // scroll paint work, which is what produced the "buffering" feel.
     if(!liteMode){
       var reflectDebounce;
-      new MutationObserver(function(muts){
+      /* Phase 3: registered on the shared body-mutation dispatcher instead
+         of its own MutationObserver. Still skipped entirely in lite mode,
+         same as before — the liteMode gate is unchanged. */
+      window.__jxObserveBodyMutations(function(muts){
         var hasNew = muts.some(function(m){ return m.addedNodes.length; });
         if(!hasNew) return;
         clearTimeout(reflectDebounce);
         reflectDebounce = setTimeout(initReflections, 150);
-      }).observe((document.getElementById('top') || document.body), { childList: true, subtree: true });
+      });
     }
   }
 
@@ -23512,7 +23628,14 @@ html body [data-jx-off="1"]::after{
   idle(scan);
 
   /* Re-scan when new animated content is injected (device cards, modals,
-     profile-match results) — debounced so bulk DOM updates only trigger one pass. */
+     profile-match results) — debounced so bulk DOM updates only trigger one pass.
+     Phase 3 note: intentionally NOT moved onto the shared #top-rooted
+     dispatcher used by the other three observers. This one watches
+     document.body directly (broader than #top) because elements like the
+     mobile nav panel, the admin progress bar, and the cursor-glow element
+     are appended straight to <body>, outside #top. Consolidating onto the
+     narrower #top root would silently stop catching infinite animations on
+     those elements — a behavior change — so this stays a separate observer. */
   var rescanTimer;
   new MutationObserver(function(){
     clearTimeout(rescanTimer);
