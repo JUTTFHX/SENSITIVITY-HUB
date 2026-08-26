@@ -6056,14 +6056,14 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   </div>
   <div class="wrap hero-grid">
     <div>
-      <div class="hero-eyebrow" data-jx="hero-eyebrow"><span class="pulse-dot"></span> Hardware-based performance analysis for your exact device</div>
-      <h1 class="hero-title" data-jx="hero-title">Free Fire<br><span class="accent">Performance Optimizer</span></h1>
-      <p class="hero-desc" data-jx="hero-desc">Analyze your device, improve gaming performance, reduce lag, optimize FPS, and unlock the best Free Fire experience with hardware-based recommendations and verified sensitivity profiles.</p>
+      <div class="hero-eyebrow" data-jx="hero-eyebrow"><span class="pulse-dot"></span> Hardware-based sensitivity &amp; performance analysis for your exact device</div>
+      <h1 class="hero-title" data-jx="hero-title">Free Fire<br><span class="accent">Sensitivity Generator</span></h1>
+      <p class="hero-desc" data-jx="hero-desc">Generate your personalized sensitivity profile, analyze your device, improve gaming performance, reduce lag, and unlock the best Free Fire experience with hardware-based recommendations and verified sensitivity profiles.</p>
 
       <div class="hero-stats">
-        <div class="hero-stat"><b data-count="0">0</b><span>Devices Analyzed</span></div>
-        <div class="hero-stat"><b data-count="0">0</b><span>Devices Tracked</span></div>
-        <div class="hero-stat"><b data-count="0">0</b><span>Avg. Optimization Score</span></div>
+        <div class="hero-stat"><b data-count="0">0</b><span>Sensitivities Generated</span></div>
+        <div class="hero-stat"><b data-count="0">0</b><span>Devices Available</span></div>
+        <div class="hero-stat"><b data-count="0">0</b><span>Users Online</span></div>
       </div>
 
       <div class="hero-cta-row">
@@ -12221,7 +12221,6 @@ let nextTeamFinderId = 1;
       <div class="device-foot">
         <span class="hs-badge ${hsClass}">${escapeHtml(d.headshot)}% Headshot</span>
         <div style="display:flex; gap:8px;">
-          <button class="btn btn-ghost btn-sm" data-analyze="${d.id}">Analyze Device</button>
           <button class="btn btn-ghost btn-sm" data-view="${d.id}">View Settings</button>
         </div>
       </div>
@@ -12838,6 +12837,16 @@ let nextTeamFinderId = 1;
         window.JX_logLiveActivity({ brand, name: `${brand} ${model}` }, "generated a sensitivity for");
       }
       if(window.JX_Analytics) JX_Analytics.aiGenerate(`${brand} ${model}`, selectedStyle);
+      // Best-effort, non-blocking — powers the "Sensitivities Generated"
+      // hero stat. Same fire-and-forget pattern as trackSearch above;
+      // never lets a logging failure interrupt the generation itself.
+      if(typeof window.getBackend === "function"){
+        window.getBackend().then(backend=>{
+          if(backend && typeof backend.logSensitivityGeneration === "function"){
+            backend.logSensitivityGeneration().catch(()=>{ /* best-effort */ });
+          }
+        }).catch(()=>{ /* best-effort */ });
+      }
       // Additive: every generated sensitivity is auto-saved to the
       // signed-in user's Recent History — silent no-op if logged out,
       // so generation behaves identically either way.
@@ -14927,11 +14936,14 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
           : (await backend.getRequests().catch(()=> null))?.length;
         const totalUsers = stats && typeof stats.totalUsers === "number" ? stats.totalUsers : null;
         const totalSearches = stats && typeof stats.totalSearches === "number" ? stats.totalSearches : null;
+        const totalSensitivitiesGenerated = stats && typeof stats.totalSensitivitiesGenerated === "number" ? stats.totalSensitivitiesGenerated : null;
+        const onlineNow = stats && typeof stats.onlineNow === "number" ? stats.onlineNow : null;
 
         // Avg. Match Score = average headshot % across every device currently
         // tracked (real per-device data, either backend-synced or seeded
-        // fallback) — not a random or placeholder number. Falls back to null
-        // (leaves the stat untouched) only if there are genuinely zero devices.
+        // fallback) — not a random or placeholder number. No longer shown
+        // in the hero stats (that slot is now Users Online), kept computed
+        // here in case another surface wants it later.
         const devicesWithHeadshot = DEVICES.filter(d => typeof d.headshot === "number" && d.headshot > 0);
         const avgMatchScore = devicesWithHeadshot.length
           ? Math.round(devicesWithHeadshot.reduce((sum, d) => sum + d.headshot, 0) / devicesWithHeadshot.length)
@@ -14945,11 +14957,11 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
           if(typeof totalRequests === "number") communityNums[3].dataset.count = totalRequests;
         }
 
-        // Hero Stats: [0] Total Searches, [1] Devices Tracked, [2] Avg. Match Score
+        // Hero Stats: [0] Sensitivities Generated, [1] Devices Available, [2] Users Online
         if(heroNums.length >= 2){
-          if(totalSearches !== null) heroNums[0].dataset.count = totalSearches;
+          if(totalSensitivitiesGenerated !== null) heroNums[0].dataset.count = totalSensitivitiesGenerated;
           heroNums[1].dataset.count = totalDevices;
-          if(heroNums.length >= 3 && avgMatchScore !== null) heroNums[2].dataset.count = avgMatchScore;
+          if(heroNums.length >= 3 && onlineNow !== null) heroNums[2].dataset.count = onlineNow;
         }
 
         // Re-trigger the count-up animation for any stat already on screen
@@ -14982,6 +14994,41 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       }).catch(()=>{ /* best-effort */ });
     }catch(e){ /* best-effort */ }
   }
+
+  /* ---------- "Users Online" presence heartbeat ----------
+     Powers the hero stat of the same name. Light cadence by design
+     (~5 min) — see the Firebase adapter's getOnlineCount() comment for
+     why: this app has already been burned once by a too-frequent
+     per-tab interval driving reads sky-high under real traffic, so the
+     same caution applies here to writes. Pauses while the tab is
+     hidden, same as refreshLiveStats below. Firebase/Supabase actually
+     track presence; Sheets/Demo no-op and just report a static 1. */
+  const PRESENCE_HEARTBEAT_INTERVAL_MS = 300000; // 5 min
+  async function sendPresenceHeartbeatOnce(){
+    if(document.hidden) return;
+    if(typeof window.getBackend !== "function") return;
+    try{
+      const backend = await window.getBackend();
+      if(!backend || typeof backend.sendPresenceHeartbeat !== "function") return;
+      await backend.sendPresenceHeartbeat(VISITOR_ID);
+    }catch(e){ /* best-effort */ }
+  }
+  function startPresenceHeartbeat(){
+    sendPresenceHeartbeatOnce();
+    setInterval(sendPresenceHeartbeatOnce, PRESENCE_HEARTBEAT_INTERVAL_MS);
+  }
+  waitForGetBackendThenStartPresence();
+  function waitForGetBackendThenStartPresence(timeoutMs = 4000){
+    const start = Date.now();
+    (function poll(){
+      if(typeof window.getBackend === "function"){
+        startPresenceHeartbeat();
+      } else if(Date.now() - start < timeoutMs){
+        setTimeout(poll, 50);
+      }
+    })();
+  }
+
   // backend-selector.js (which defines window.getBackend) is a later
   // <script> tag in the document and hasn't run yet at this point in
   // execution order, so poll briefly for it instead of calling
@@ -15063,8 +15110,9 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
         apply(communityNums[3], stats.totalRequests);
       }
       if(heroNums.length >= 2){
-        apply(heroNums[0], stats.totalSearches);
+        apply(heroNums[0], stats.totalSensitivitiesGenerated);
         apply(heroNums[1], stats.totalDevices);
+        if(heroNums.length >= 3) apply(heroNums[2], stats.onlineNow);
       }
     }catch(e){ /* best-effort, never disrupt the page */ }
   }
@@ -16293,6 +16341,28 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
          allow read: if true;
          allow write: if isAdmin();
        }
+       // "Sensitivities Generated" hero stat — one doc per completed
+       // generation (legacy generator submit, or an Ultimate Generator
+       // EXACT_VERIFIED/VERIFIED_COMPATIBLE result). Same public-write/
+       // public-read/admin-only-mutate shape as /visits and /searches
+       // above, for the same reason: getStats() runs for every regular
+       // visitor, not just the admin dashboard.
+       match /sensitivityGenerations/{docId} {
+         allow create: if true;
+         allow read: if true;
+         allow update, delete: if isAdmin();
+       }
+       // "Users Online" hero stat — one doc per visitorId, upserted every
+       // ~5 min while a tab is open (see sendPresenceHeartbeat). Holds
+       // nothing but a timestamp, so public create/update is an
+       // acceptable trade for a working public "online now" counter,
+       // same as visits/searches. Never deleted client-side — stale docs
+       // just age out of the getOnlineCount() time-window query.
+       match /presence/{visitorId} {
+         allow create, update: if true;
+         allow read: if true;
+         allow delete: if isAdmin();
+       }
      }
    }
 
@@ -16938,6 +17008,33 @@ async function trackSearch(searchQuery, visitorId){
 async function incrementDeviceSearch(id){
   await updateDoc(doc(db, "devices", id), { searchCount: increment(1) });
 }
+// One doc per completed sensitivity generation — powers the
+// "Sensitivities Generated" hero stat. Mirrors trackSearch's shape
+// exactly (an event log, not an aggregate), so it counts via
+// getCountFromServer the same way the other three hero/community
+// counters do.
+async function logSensitivityGeneration(){
+  await addDoc(collection(db, "sensitivityGenerations"), {
+    createdAt: serverTimestamp()
+  });
+}
+/* ---------- "Users Online" presence ----------
+   Light/cheap by design: one upserted doc per visitorId, heartbeat
+   every ~5 min from the client (see startPresenceHeartbeat below),
+   online window ~10 min. This is an approximation (a closed tab
+   doesn't delete its doc, it just ages out of the window on the next
+   heartbeat cycle) — deliberately, since true onDisconnect presence
+   needs Realtime Database, not Firestore, and this app is Firestore-
+   only. Good enough for a public "who's around right now" number
+   without adding a second database. */
+async function sendPresenceHeartbeat(visitorId){
+  await setDoc(doc(db, "presence", visitorId), { lastSeen: serverTimestamp() }, { merge: true });
+}
+async function getOnlineCount(){
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000); // 10 min window
+  const snap = await getCountFromServer(query(collection(db, "presence"), where("lastSeen", ">", cutoff)));
+  return snap.data().count;
+}
 async function getStats(){
   // Uses getCountFromServer() (aggregation query) instead of getDocs() —
   // this counts documents server-side without downloading them, so the
@@ -16956,24 +17053,35 @@ async function getStats(){
   // working: a single rejected count in Promise.all() failed the whole
   // call, and only totalDevices/avgMatchScore had a local fallback to
   // hide it.
-  const [visitsRes, searchesRes, devicesRes, requestsRes] = await Promise.allSettled([
+  const [visitsRes, searchesRes, devicesRes, requestsRes, sensGenRes] = await Promise.allSettled([
     getCountFromServer(collection(db, "visits")),
     getCountFromServer(collection(db, "searches")),
     getCountFromServer(collection(db, "devices")),
-    getCountFromServer(collection(db, "requests"))
+    getCountFromServer(collection(db, "requests")),
+    getCountFromServer(collection(db, "sensitivityGenerations"))
   ]);
   const countOf = (res)=> res.status === "fulfilled" ? res.value.data().count : null;
   const visitsCount = { data: ()=>({ count: countOf(visitsRes) }) };
   const searchesCount = { data: ()=>({ count: countOf(searchesRes) }) };
   const devicesCount = { data: ()=>({ count: countOf(devicesRes) }) };
   const requestsCount = { data: ()=>({ count: countOf(requestsRes) }) };
+  const sensGenCount = { data: ()=>({ count: countOf(sensGenRes) }) };
   if(searchesRes.status === "rejected") console.warn("[JUTTFHX] Total Searches count failed — check that Firestore rules allow public read on 'searches':", searchesRes.reason && searchesRes.reason.message);
   if(visitsRes.status === "rejected") console.warn("[JUTTFHX] Total Users count failed — check that Firestore rules allow public read on 'visits':", visitsRes.reason && visitsRes.reason.message);
+  if(sensGenRes.status === "rejected") console.warn("[JUTTFHX] Sensitivities Generated count failed — check that Firestore rules allow public read on 'sensitivityGenerations':", sensGenRes.reason && sensGenRes.reason.message);
+  // Best-effort, separate try/catch: an "online" query failing (e.g.
+  // rules not deployed yet for /presence) must not take down the other
+  // four counts the way a single Promise.all() rejection used to.
+  let onlineNow = null;
+  try{ onlineNow = await getOnlineCount(); }
+  catch(e){ console.warn("[JUTTFHX] Users Online count failed — check that Firestore rules allow public read on 'presence':", e.message); }
   return {
     totalUsers: visitsCount.data().count,
     totalSearches: searchesCount.data().count,
     totalDevices: devicesCount.data().count,
-    totalRequests: requestsCount.data().count
+    totalRequests: requestsCount.data().count,
+    totalSensitivitiesGenerated: sensGenCount.data().count,
+    onlineNow
   };
 }
 
@@ -17047,7 +17155,7 @@ window.FirebaseService = {
   getRequests, getMyRequests, submitRequest, deleteRequest, updateRequestStatus,
   getGuilds, addGuild, updateGuild, deleteGuild,
   getTeamFinder, addTeamFinderListing, updateTeamFinderListing, deleteTeamFinderListing,
-  getStats, trackVisit, trackSearch,
+  getStats, trackVisit, trackSearch, logSensitivityGeneration, sendPresenceHeartbeat,
   // Stage 7 Step 7 (corrected) — Ultimate Generator database-first
   // matcher foundation. Targeted single-purpose lookups only, never a
   // full-collection fetch. Guarded with typeof checks at every call
@@ -17408,6 +17516,17 @@ async function deleteRequest(id){
        query text, visitor_id text,
        created_at timestamptz default now()
      );
+
+     create table sensitivity_generations (
+       id uuid primary key default gen_random_uuid(),
+       created_at timestamptz default now()
+     );
+
+   "Users Online" does NOT need a table — it uses Supabase's built-in
+   Realtime Presence feature instead (a websocket channel, not a DB
+   write), which is why Supabase gets true live presence for free
+   where Firebase needed the presence collection above and Sheets/Demo
+   fall back to a static "1". Nothing to create for this one.
    ---------------------------------------------------- */
 async function trackVisit(visitorId){
   const { error } = await supabase.from("visits").insert([{ visitor_id: visitorId }]);
@@ -17428,19 +17547,58 @@ async function incrementDeviceSearch(id){
   const { error: updErr } = await supabase.from("devices").update({ searchCount: next }).eq("id", id);
   if(updErr) throw updErr;
 }
+// One row per completed sensitivity generation — powers the
+// "Sensitivities Generated" hero stat. Same event-log shape as
+// trackSearch above.
+async function logSensitivityGeneration(){
+  const { error } = await supabase.from("sensitivity_generations").insert([{}]);
+  if(error) throw error;
+}
+/* ---------- "Users Online" via Realtime Presence ----------
+   Supabase's presence channel tracks connected clients itself — no
+   per-visitor DB writes/reads needed, so this is the cheapest of the
+   four adapters' approaches. sendPresenceHeartbeat() just (re)tracks
+   this client on the shared channel; app.js still calls it on the
+   same ~5 min interval as the other backends for consistency, but
+   here it's mostly just refreshing the payload timestamp — the
+   connection itself is what keeps this client "present". */
+let presenceChannel = null;
+let presenceChannelReady = null;
+function ensurePresenceChannel(visitorId){
+  if(presenceChannel) return presenceChannelReady;
+  presenceChannel = supabase.channel("site-presence", { config: { presence: { key: visitorId } } });
+  presenceChannelReady = new Promise(resolve=>{
+    presenceChannel.subscribe(status=>{
+      if(status === "SUBSCRIBED") resolve();
+    });
+  });
+  return presenceChannelReady;
+}
+async function sendPresenceHeartbeat(visitorId){
+  await ensurePresenceChannel(visitorId);
+  await presenceChannel.track({ online_at: new Date().toISOString(), visitorId });
+}
+function getOnlineCount(){
+  if(!presenceChannel) return null;
+  try{ return Object.keys(presenceChannel.presenceState()).length; }
+  catch(e){ return null; }
+}
 async function getStats(){
-  const [visitsRes, searchesRes, devicesRes, requestsRes] = await Promise.all([
+  const [visitsRes, searchesRes, devicesRes, requestsRes, sensGenRes] = await Promise.all([
     supabase.from("visits").select("visitor_id"),
     supabase.from("searches").select("id", { count:"exact", head:true }),
     supabase.from("devices").select("id", { count:"exact", head:true }),
-    supabase.from("requests").select("id", { count:"exact", head:true })
+    supabase.from("requests").select("id", { count:"exact", head:true }),
+    supabase.from("sensitivity_generations").select("id", { count:"exact", head:true })
   ]);
   const uniqueVisitors = new Set((visitsRes.data || []).map(r => r.visitor_id).filter(Boolean));
   return {
     totalUsers: uniqueVisitors.size,
     totalSearches: searchesRes.count || 0,
     totalDevices: devicesRes.count || 0,
-    totalRequests: requestsRes.count || 0
+    totalRequests: requestsRes.count || 0,
+    totalSensitivitiesGenerated: sensGenRes.count || 0,
+    onlineNow: getOnlineCount()
   };
 }
 
@@ -17520,7 +17678,7 @@ window.SupabaseService = {
   getTournaments, addTournament, updateTournament, deleteTournament, incrementTournamentSlot,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
-  trackVisit, trackSearch, incrementDeviceSearch, getStats,
+  trackVisit, trackSearch, incrementDeviceSearch, getStats, logSensitivityGeneration, sendPresenceHeartbeat,
   getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods
 };
 
@@ -17535,8 +17693,8 @@ window.SupabaseService = {
    function names as the other two adapters.
 
    SETUP:
-   1. Create a Google Sheet. Add 8 tabs named exactly:
-      "devices", "players", "reviews", "requests", "visits", "searches", "hudLayouts", "combos"
+   1. Create a Google Sheet. Add 9 tabs named exactly:
+      "devices", "players", "reviews", "requests", "visits", "searches", "hudLayouts", "combos", "sensitivityGenerations"
       Row 1 of each = headers matching the field names used
       below (id, name, brand, ram, refresh, dpi, headshot,
       popularity, searchCount, createdAt for devices; id,
@@ -17547,7 +17705,7 @@ window.SupabaseService = {
       hudCode, desc, imageUrl, createdAt for hudLayouts; id,
       name, filter, badge, tier, stars, desc, chars, tips,
       createdAt for combos (chars/tips can be stored as JSON
-      strings); etc).
+      strings); id, createdAt for sensitivityGenerations; etc).
 
    2. In the Sheet, go to Extensions > Apps Script. Delete the
       default content and paste the APPS_SCRIPT_SOURCE shown
@@ -17693,6 +17851,18 @@ async function trackSearch(searchQuery, visitorId){ return callSheets("trackSear
 // actually opens that device's settings — powers the live "Searches"
 // number on each device card. Needs the matching Apps Script case below.
 async function incrementDeviceSearch(id){ return callSheets("incrementDeviceSearch", { id }); }
+// One row per completed sensitivity generation — powers the
+// "Sensitivities Generated" hero stat. Needs the matching Apps Script
+// case + a "sensitivityGenerations" sheet tab below.
+async function logSensitivityGeneration(){ return callSheets("logSensitivityGeneration", {}); }
+// "Users Online" — deliberately NOT wired to a real presence write here.
+// Apps Script Web Apps have a low per-user write quota, and a
+// heartbeat-per-visitor pattern is exactly the kind of thing that
+// blows through it under real traffic (see the getStats() comment in
+// the Firebase adapter above for the history of that exact problem).
+// getStats() below returns a static, honestly-labeled 1 instead of a
+// fabricated live count.
+async function sendPresenceHeartbeat(){ /* no-op — see comment above */ }
 async function getStats(){ return callSheets("getStats", {}); }
 
 /* ---------------- SITE SETTINGS ----------------
@@ -17750,7 +17920,7 @@ window.SheetsService = {
   getTournaments, addTournament, updateTournament, deleteTournament, incrementTournamentSlot,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
-  trackVisit, trackSearch, incrementDeviceSearch, getStats,
+  trackVisit, trackSearch, incrementDeviceSearch, getStats, logSensitivityGeneration, sendPresenceHeartbeat,
   getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods
 };
 
@@ -17809,6 +17979,7 @@ function handleAction(action, payload) {
     case "trackVisit": return appendRow(ss.getSheetByName("visits"), { visitorId: payload.visitorId });
     case "trackSearch": return appendRow(ss.getSheetByName("searches"), { query: payload.query, visitorId: payload.visitorId });
     case "incrementDeviceSearch": return incrementDeviceSearchCount(ss.getSheetByName("devices"), payload.id);
+    case "logSensitivityGeneration": return appendRow(ss.getSheetByName("sensitivityGenerations"), {});
     case "getStats": return computeStats(ss);
     default: throw new Error("Unknown action: " + action);
   }
@@ -17821,7 +17992,13 @@ function computeStats(ss) {
     totalUsers: uniqueVisitors.size,
     totalSearches: readSheet(ss.getSheetByName("searches")).length,
     totalDevices: readSheet(ss.getSheetByName("devices")).length,
-    totalRequests: readSheet(ss.getSheetByName("requests")).length
+    totalRequests: readSheet(ss.getSheetByName("requests")).length,
+    totalSensitivitiesGenerated: readSheet(ss.getSheetByName("sensitivityGenerations")).length,
+    // Static, honestly-labeled fallback — Apps Script Web Apps can't
+    // afford a real per-visitor presence heartbeat (see the client-side
+    // sendPresenceHeartbeat() comment above for why). Always 1 rather
+    // than a fabricated crowd number.
+    onlineNow: 1
   };
 }
 
@@ -17971,8 +18148,8 @@ function demoUid(prefix){
 function demoLoad(){
   try{
     const raw = localStorage.getItem(DEMO_KEY);
-    return raw ? JSON.parse(raw) : { devices:[], players:[], reviews:[], requests:[], huds:[], hudLayouts:[], combos:[], guilds:[], teamFinder:[], visits:[], searches:[], sensitivityProfiles:[], compatibilityLinks:[] };
-  }catch(e){ return { devices:[], players:[], reviews:[], requests:[], huds:[], hudLayouts:[], combos:[], tournaments:[], guilds:[], teamFinder:[], visits:[], searches:[], sensitivityProfiles:[], compatibilityLinks:[] }; }
+    return raw ? JSON.parse(raw) : { devices:[], players:[], reviews:[], requests:[], huds:[], hudLayouts:[], combos:[], guilds:[], teamFinder:[], visits:[], searches:[], sensitivityProfiles:[], compatibilityLinks:[], sensitivityGenerations:[] };
+  }catch(e){ return { devices:[], players:[], reviews:[], requests:[], huds:[], hudLayouts:[], combos:[], tournaments:[], guilds:[], teamFinder:[], visits:[], searches:[], sensitivityProfiles:[], compatibilityLinks:[], sensitivityGenerations:[] }; }
 }
 function demoSave(d){
   try{ localStorage.setItem(DEMO_KEY, JSON.stringify(d)); }catch(e){}
@@ -18439,6 +18616,20 @@ window.DemoService = {
     if(device) device.searchCount = (device.searchCount || 0) + 1;
     demoSave(d);
   },
+  // One entry per completed sensitivity generation — powers the
+  // "Sensitivities Generated" hero stat, persisted locally same as
+  // everything else in Demo mode.
+  async logSensitivityGeneration(){
+    const d = demoLoad();
+    if(!d.sensitivityGenerations) d.sensitivityGenerations = [];
+    d.sensitivityGenerations.push({ createdAt: new Date().toISOString() });
+    demoSave(d);
+  },
+  // "Users Online" — a single localStorage-backed browser genuinely
+  // can't show real multi-user presence, so this is a deliberate
+  // no-op; getStats() below honestly reports 1 rather than faking a
+  // crowd number for a demo that only ever has one visitor: you.
+  async sendPresenceHeartbeat(){ /* no-op — see comment above */ },
   async getStats(){
     const d = demoLoad();
     const visits = d.visits || [];
@@ -18447,7 +18638,9 @@ window.DemoService = {
       totalUsers: uniqueVisitors.size,
       totalSearches: (d.searches || []).length,
       totalDevices: d.devices.length,
-      totalRequests: d.requests.length
+      totalRequests: d.requests.length,
+      totalSensitivitiesGenerated: (d.sensitivityGenerations || []).length,
+      onlineNow: 1
     };
   },
 
@@ -27058,6 +27251,17 @@ html.jx-scroll-active *::after{
       jxUgRenderMatchResult(result);
       if(jxUgGenerateHadFocusInResult) readyResultEl.focus();
       generateBtn.disabled = !jxUgIsGenerateReady();
+      // "Sensitivities Generated" hero stat — only counts a real
+      // verified/compatible profile actually shown to the user, not a
+      // NO_MATCH/ERROR result. Best-effort, non-blocking, same pattern
+      // as the legacy generator's logging above.
+      if((result.status === 'EXACT_VERIFIED' || result.status === 'VERIFIED_COMPATIBLE') && typeof window.getBackend === "function"){
+        window.getBackend().then(function(backend){
+          if(backend && typeof backend.logSensitivityGeneration === "function"){
+            backend.logSensitivityGeneration().catch(function(){ /* best-effort */ });
+          }
+        }).catch(function(){ /* best-effort */ });
+      }
     }).catch(function(err){
       jxUgState.status = 'ERROR';
       jxUgState.matchResult = { status: 'ERROR', profileId: null, via: null, reasonCode: null };
