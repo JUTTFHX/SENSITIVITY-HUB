@@ -6078,12 +6078,13 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </span>
         </button>
-        <!-- STEP 15a: "Analyze My Device" demoted to SECONDARY ghost CTA.
-             Same href/data-scroll as before — still scrolls to the
-             existing #device-search analysis flow, unchanged behavior. -->
-        <a href="#device-search" class="btn btn-ghost" data-scroll>
-          Analyze My Device
-        </a>
+        <!-- STEP 07 (POST-QA ANALYZER RETIREMENT): the old "Analyze My
+             Device" secondary CTA (previously demoted to ghost in STEP 15a)
+             is now retired from the public hero entirely so it no longer
+             competes with the Ultimate Generator as a second public entry
+             point. No replacement analyzer CTA is added — #device-search
+             (Select Your Device) remains reachable via nav and its own
+             section; only this hero shortcut link is removed. -->
       </div>
     </div>
 
@@ -10120,6 +10121,20 @@ function defaultSectionMeta(){
   // those engines remain fully intact underneath, just no longer
   // publicly reachable through this legacy UI by default.
   meta.verifiedSensitivity.hidden = true;
+  // STEP 07 (POST-QA ANALYZER RETIREMENT): the old "Ready To Analyze Your
+  // Device?" CTA section (#analyze-device, analyzeCtaBtn → #hardware-analysis)
+  // is retired from the public page by the same existing mechanism used
+  // above for the legacy generator — meta.hidden, applied by
+  // applySectionSettings() exactly like every other Section Manager
+  // toggle. Admin can still flip it back on from the existing Section
+  // Manager panel. This does not touch #analyze-device's markup,
+  // #analyzeDeviceBtn, selectDeviceForAnalysis(), runPerformanceAnalysis(),
+  // renderPerformanceAnalysisDetail(), buildOptimizationPlan(),
+  // buildGraphicsRecommendation(), or any other analyzer engine/renderer —
+  // those remain fully intact underneath. Device Intelligence → View Full
+  // Analysis (JX_FullAnalysis, STEP 15c) is now the sole normal public
+  // gateway into that same engine; no second reveal mechanism is created.
+  meta.analyzeDevice.hidden = true;
   return meta;
 }
 
