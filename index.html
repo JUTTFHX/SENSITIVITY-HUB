@@ -10138,6 +10138,40 @@ function defaultSectionMeta(){
   return meta;
 }
 
+// STAGE 07.1 (POST-QA LEGACY UI RETIREMENT — ROOT CAUSE FIX):
+// Changing defaultSectionMeta()'s hidden values (above) only affects a
+// BRAND NEW settings object. deepMergeDefaults() (below) deliberately lets
+// an already-saved value win over a changed code default — that's correct
+// behavior for admin edits in general, but it also means any site that
+// already had a settings blob in localStorage/backend BEFORE this default
+// changed — which includes every real visitor/admin session, and every
+// Section Manager save (it round-trips every SECTION_KEY's current hidden
+// state, live or not, on every save; see secmgrSaveBtn) — kept the OLD
+// value (hidden:false) baked into that saved blob forever, silently
+// shadowing the new default. That is the actual reason the legacy
+// Generator (#verified-sensitivity) and legacy Analyzer CTA
+// (#analyze-device) were still visibly rendering after only changing
+// defaultSectionMeta().
+//
+// Fix: a one-time migration, gated by LEGACY_PUBLIC_UI_MIGRATION_KEY, that
+// forces those two sections' sectionMeta.hidden back to true exactly once
+// per settings source (local + shared backend) — reusing the SAME
+// sectionMeta.hidden field applySectionSettings()/Section Manager already
+// read and write, not a new visibility mechanism. Once migrated, the
+// marker persists in the saved blob, so any explicit admin choice made
+// afterward via the existing Section Manager (including deliberately
+// turning either section back on) is saved together with the marker and
+// is never overwritten again — admin control remains fully intact and
+// permanent going forward. See loadJXSettings()/reconcileRemoteJXSettings().
+const LEGACY_PUBLIC_UI_MIGRATION_KEY = "legacyPublicUiRetiredV1";
+function migrateLegacyPublicDefaults(settings){
+  settings.sectionMeta = { ...settings.sectionMeta };
+  settings.sectionMeta.verifiedSensitivity = { ...settings.sectionMeta.verifiedSensitivity, hidden: true };
+  settings.sectionMeta.analyzeDevice = { ...settings.sectionMeta.analyzeDevice, hidden: true };
+  settings[LEGACY_PUBLIC_UI_MIGRATION_KEY] = true;
+  return settings;
+}
+
 // Default FAQ + legal policy copy, kept as named constants (rather than
 // buried in DEFAULT_JX_SETTINGS) so both the public page's fallback
 // rendering AND the admin panel's "pre-filled" textareas read from one
@@ -10174,6 +10208,12 @@ const DEFAULT_JX_SETTINGS = {
   },
   sectionOrder: SECTION_KEYS.slice(),
   sectionMeta: defaultSectionMeta(),
+  // Fresh settings objects (no prior saved blob) already reflect the
+  // current defaultSectionMeta() defaults, so they're "migrated" from
+  // birth — this just keeps the marker present so it round-trips through
+  // every future save the same way any other settings field does. See
+  // migrateLegacyPublicDefaults() above.
+  [LEGACY_PUBLIC_UI_MIGRATION_KEY]: true,
   seo: {
     metaTitle: "", metaDescription: "", metaKeywords: "", canonicalUrl: "",
     ogImage: "", twitterTitle: "", twitterDescription: "", twitterImage: "",
@@ -10234,7 +10274,18 @@ function deepMergeDefaults(defaults, saved){
 function loadJXSettings(){
   try{
     const raw = localStorage.getItem(JX_SETTINGS_KEY);
-    if(raw) return deepMergeDefaults(DEFAULT_JX_SETTINGS, JSON.parse(raw));
+    if(raw){
+      const parsedSaved = JSON.parse(raw);
+      let merged = deepMergeDefaults(DEFAULT_JX_SETTINGS, parsedSaved);
+      // Saved blobs from before STAGE 07 never had this marker — migrate
+      // them once (see migrateLegacyPublicDefaults() above), then persist
+      // so this only runs a single time for this browser.
+      if(!parsedSaved[LEGACY_PUBLIC_UI_MIGRATION_KEY]){
+        merged = migrateLegacyPublicDefaults(merged);
+        try{ localStorage.setItem(JX_SETTINGS_KEY, JSON.stringify(merged)); }catch(e){ /* storage unavailable */ }
+      }
+      return merged;
+    }
   }catch(e){ /* fall through to defaults */ }
   return JSON.parse(JSON.stringify(DEFAULT_JX_SETTINGS));
 }
@@ -10274,10 +10325,19 @@ window.JX_Settings = loadJXSettings();
 // window.getBackend.
 function reconcileRemoteJXSettings(remote){
   if(!remote) return;
-  const merged = deepMergeDefaults(DEFAULT_JX_SETTINGS, remote);
+  let merged = deepMergeDefaults(DEFAULT_JX_SETTINGS, remote);
+  // Same one-time migration as loadJXSettings(), applied to the SHARED
+  // backend doc — a site's Firestore/Sheets settings can predate STAGE 07
+  // even if this particular browser's localStorage was already migrated
+  // (e.g. a different visitor, or a cleared cache). When migration runs
+  // here, also push the migrated doc back to the backend once so every
+  // future visitor's fetched settings already carry the marker.
+  const remoteNeedsMigration = !remote[LEGACY_PUBLIC_UI_MIGRATION_KEY];
+  if(remoteNeedsMigration) merged = migrateLegacyPublicDefaults(merged);
   window.JX_Settings = merged;
   try{ localStorage.setItem(JX_SETTINGS_KEY, JSON.stringify(merged)); }catch(e){ /* storage unavailable */ }
   applyJXSettingsToPage();
+  if(remoteNeedsMigration) saveJXSettings(merged);
 }
 function initRemoteJXSettingsSync(){
   if(typeof window.getBackend !== "function") return;
