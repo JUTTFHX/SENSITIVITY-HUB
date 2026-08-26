@@ -1780,6 +1780,24 @@ select.field-input{ appearance:none; -webkit-appearance:none; cursor:pointer; }
 body.admin-active .site-header, body.admin-active .to-top{ display:none; }
 html.admin-active{ overflow:hidden; }
 
+/* STEP 15c.6 — Full Analysis consolidation hide. The four detailed analysis
+   sections (and their in-nav links) are kept out of the normal public
+   presentation until JX_FullAnalysis reveals them by adding body.jx-fa-open
+   (see the JX_FullAnalysis module). Presentation-only gate, fully independent
+   of admin "Fully Hidden" (meta.hidden → inline display:none, which still wins
+   even when revealed). Nav targeting is scoped to #navLinks so the hero CTA
+   #analyzeDeviceBtn (which shares the same href) is never affected. */
+body:not(.jx-fa-open) #hardware-analysis,
+body:not(.jx-fa-open) #performance-report,
+body:not(.jx-fa-open) #optimization-center,
+body:not(.jx-fa-open) #graphics-recommendation,
+body:not(.jx-fa-open) #navLinks a[href="#hardware-analysis"],
+body:not(.jx-fa-open) #navLinks a[href="#performance-report"],
+body:not(.jx-fa-open) #navLinks a[href="#optimization-center"],
+body:not(.jx-fa-open) #navLinks a[href="#graphics-recommendation"]{
+  display:none;
+}
+
 /* ---- Login screen ---- */
 .admin-login-shell{
   min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
@@ -6049,12 +6067,22 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       </div>
 
       <div class="hero-cta-row">
-        <a href="#device-search" class="btn btn-gold" data-scroll>
+        <!-- STEP 15a: Ultimate Generator promoted to PRIMARY gold CTA.
+             Same id/handler as before (jxUgOpenBtn) — presentation-only
+             change, opens the same existing generator modal shell. -->
+        <button type="button" class="btn btn-gold" id="jxUgOpenBtn">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
-          Analyze My Device
+          Try the Ultimate Generator
+          <span class="jx-ug-beta-tag">Beta</span>
           <span class="btn-arrow">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </span>
+        </button>
+        <!-- STEP 15a: "Analyze My Device" demoted to SECONDARY ghost CTA.
+             Same href/data-scroll as before — still scrolls to the
+             existing #device-search analysis flow, unchanged behavior. -->
+        <a href="#device-search" class="btn btn-ghost" data-scroll>
+          Analyze My Device
         </a>
       </div>
     </div>
@@ -10077,6 +10105,21 @@ const SECTION_DOM_SEL = {
 function defaultSectionMeta(){
   const meta = {};
   SECTION_KEYS.forEach(k=>{ meta[k] = { hidden:false, eyebrow:"", title:"", subtitle:"", bg:"", anim:"fade-up" }; });
+  // STEP 15b — Legacy Generator UI Consolidation: the free-text legacy
+  // sensitivity generator (#verified-sensitivity / #genForm) is retired
+  // from the public-facing site by default now that the Ultimate
+  // Generator (jxUgOpenBtn / #jxUgModal) is the primary, promoted flow
+  // (see STEP 15a). This uses the SAME hide mechanism the Section
+  // Manager already applies to every other section (applySectionSettings
+  // sets section.style.display + hides the matching nav link), so the
+  // toggle, defaults, and admin override path are all unchanged —
+  // Admin can still flip this back on from the existing Section Manager
+  // panel at any time. Nothing about #genForm, STYLE_PROFILES,
+  // seededRand(), rangePick(), computeOptimizedSensitivity(),
+  // getDeviceSensitivity(), sensOverride, or device.dpi is touched —
+  // those engines remain fully intact underneath, just no longer
+  // publicly reachable through this legacy UI by default.
+  meta.verifiedSensitivity.hidden = true;
   return meta;
 }
 
@@ -10402,14 +10445,25 @@ function jxApplyAnimPlaybackRate(rate){
   // applyThemeSettings runs on every panel switch, every settings save, and
   // (debounced) during live color preview — skip the sweep + interval
   // reset entirely when the rate hasn't actually changed since last time;
-  // the existing interval already keeps new animations in sync.
-  if(rate === jxLastAnimRate && jxAnimSpeedTimer) return;
+  // the existing interval already keeps new animations in sync. At the
+  // default rate (1) no keep-alive timer is created, so "rate unchanged at 1"
+  // is a no-op too (nothing left to re-enforce).
+  if(rate === jxLastAnimRate && (jxAnimSpeedTimer || rate === 1)) return;
   jxLastAnimRate = rate;
   sweep();
-  if(jxAnimSpeedTimer) clearInterval(jxAnimSpeedTimer);
-  // New CSS animations (hover states, dynamically-added cards) start at
-  // playbackRate 1 by default — keep sweeping so speed/off stays in effect.
-  jxAnimSpeedTimer = setInterval(sweep, 1500);
+  if(jxAnimSpeedTimer){ clearInterval(jxAnimSpeedTimer); jxAnimSpeedTimer = null; }
+  // STEP 16C (perf): playbackRate 1 is the browser default for every new CSS
+  // animation, so at rate 1 the periodic sweep can only ever set 1 -> 1: a
+  // guaranteed no-op. Only non-default rates (a custom speed, or 0 when
+  // animations are disabled) need the forever keep-in-sync interval, because
+  // dynamically-added animations start at 1 and must be pulled to that rate.
+  // This removes a document.getAnimations() sweep that previously ran every
+  // 1.5s for the whole session even at default settings. Behavior at every
+  // rate is unchanged: rate 1 still gets one immediate sweep (restoring any
+  // paused/off animations), and non-1 rates keep the interval exactly as before.
+  if(rate !== 1){
+    jxAnimSpeedTimer = setInterval(sweep, 1500);
+  }
 }
 function applyThemeBackground(cfg){
   const gradEl = document.querySelector(".bg-gradient");
@@ -11290,6 +11344,74 @@ function buildOptimizationPlan(rawDevice, analysis){
 window.JX_buildOptimizationPlan = buildOptimizationPlan;
 window.JX_buildGraphicsRecommendation = buildGraphicsRecommendation;
 
+/* STEP 15c — Full Analysis reveal module (wired to the "View Full Analysis" gateway).
+   State container + DOM behavior governing whether the four existing detailed
+   analysis sections — Hardware Analysis (#hardware-analysis), Performance
+   Report (#performance-report), Optimization Center (#optimization-center),
+   Graphics Recommendation (#graphics-recommendation) — are exposed to the
+   visitor. reveal() is invoked by the Device Intelligence gateway button; it
+   does NOT touch sectionMeta, applySectionSettings(), Device Intelligence, the
+   matcher, Save/Share/Tune, Smart/Pro/Advanced, the legacy sensitivity
+   engines, or any analysis engine/renderer. Self-contained and reversible. */
+window.JX_FullAnalysis = (function(){
+  // Identity of the four detailed analysis sections this module governs.
+  var KEYS = ["hardwareAnalysis","performanceReport","optimizationCenter","graphicsRecommendation"];
+  var IDS  = ["hardware-analysis","performance-report","optimization-center","graphics-recommendation"];
+  // Minimal state: are those four sections currently exposed? Default false.
+  var revealed = false;
+
+  /* STEP 15c — DOM reveal capability (runs on reveal()).
+     revealDom() exposes the four detailed analysis sections by clearing the
+     inline display:none that applySectionSettings() applies, plus their nav
+     links — but ONLY for sections the administrator has NOT explicitly set to
+     "Fully Hidden". Admin "Fully Hidden" is the existing Section Manager state
+     meta.hidden===true (see applySectionSettings' section.style.display and
+     renderSectionManager status==="hidden"); those sections are skipped so
+     admin intent always wins. This reuses the existing sectionMeta / section
+     visibility mechanism (reads window.JX_Settings) and does NOT modify
+     applySectionSettings(), defaultSectionMeta(), or the normal default public
+     state. */
+  function isAdminFullyHidden(key){
+    var s = window.JX_Settings;
+    var meta = s && s.sectionMeta && s.sectionMeta[key];
+    return !!(meta && meta.hidden);
+  }
+  function revealDom(){
+    var navLinksEl = document.getElementById("navLinks");
+    for(var i=0; i<IDS.length; i++){
+      var key = KEYS[i], id = IDS[i], sel = "#" + id;
+      if(isAdminFullyHidden(key)) continue; // respect admin "Fully Hidden" — never override
+      var section = document.getElementById(id);
+      if(section && section.style.display === "none") section.style.display = "";
+      var navA = navLinksEl && navLinksEl.querySelector('a[href="' + sel + '"]');
+      if(navA && navA.style.display === "none") navA.style.display = "";
+    }
+  }
+  /* STEP 15c — mirror the reveal state onto a body-level class that the
+     consolidation CSS (body:not(.jx-fa-open) …{display:none}) and the gateway
+     key off. This ONLY toggles the class in sync with `revealed`. Mirrors the
+     app's existing body-state pattern (body.admin-active, body.jx-fx-off-reveal).
+     It does NOT touch sectionMeta, admin "Fully Hidden" semantics, or
+     section/nav visibility on its own. */
+  function syncBodyState(){
+    if(document.body) document.body.classList.toggle("jx-fa-open", revealed);
+  }
+  function reveal(){ revealed = true; revealDom(); syncBodyState(); }
+  function reapply(){ if(revealed){ revealDom(); syncBodyState(); } }
+
+  return {
+    keys: function(){ return KEYS.slice(); },
+    ids: function(){ return IDS.slice(); },
+    isRevealed: function(){ return revealed; },
+    setRevealed: function(v){ revealed = !!v; }, // pure state flag; no DOM, no side effects
+    isSectionId: function(id){ return IDS.indexOf(id) !== -1; },
+    isSectionKey: function(key){ return KEYS.indexOf(key) !== -1; },
+    revealDom: revealDom,   // un-hide the four sections' DOM + nav, skipping admin "Fully Hidden"
+    reveal: reveal,         // set revealed=true, then revealDom()
+    reapply: reapply        // re-run revealDom() only if already revealed (e.g. after a settings re-apply)
+  };
+})();
+
 function getDeviceSensitivity(device, style){
   const profile = STYLE_PROFILES[style] || STYLE_PROFILES.Headshot;
   const rnd = seededRand((device.rnd || hashStr(device.name || "device")) + style.length);
@@ -11545,6 +11667,36 @@ let nextTeamFinderId = 1;
     if(window.innerWidth > 880 && navLinks.classList.contains("open")) closeNav();
   });
 
+  /* ---------- Step 16A — "Analyze My Device" CTA → Full Analysis ----------
+     Step 15c consolidated the four detailed analysis sections behind the
+     JX_FullAnalysis reveal gate, so this public CTA (href="#hardware-analysis")
+     could otherwise "scroll" to a section that is display:none — i.e. do
+     nothing. We reveal the Full Analysis layer first (JX_FullAnalysis.reveal()
+     itself skips any admin "Fully Hidden" section, so admin intent is kept),
+     then — when a device has already been chosen for analysis — re-render it
+     through the SAME existing analyzer (window.JX_selectDeviceForAnalysis),
+     which also scrolls it into view. No new analyzer and no new reveal path
+     are created, and the markup (id/text/design/href/data-scroll) is
+     unchanged. Because reveal() runs first and the existing smooth-scroll
+     handler targets the same (now-revealed) #hardware-analysis, click-listener
+     order is irrelevant — both paths agree on the destination. */
+  const analyzeCtaBtn = document.getElementById("analyzeDeviceBtn");
+  if(analyzeCtaBtn){
+    analyzeCtaBtn.addEventListener("click", (e)=>{
+      e.preventDefault();
+      if(window.JX_FullAnalysis && typeof window.JX_FullAnalysis.reveal === "function"){
+        window.JX_FullAnalysis.reveal();
+      }
+      const selected = window.JX_SelectedDeviceForAnalysis;
+      if(selected && typeof window.JX_selectDeviceForAnalysis === "function"){
+        window.JX_selectDeviceForAnalysis(selected);
+      } else {
+        const hw = document.getElementById("hardware-analysis");
+        if(hw) hw.scrollIntoView({ behavior:"smooth", block:"start" });
+      }
+    });
+  }
+
   /* ---------- Dynamic footer year ---------- */
   const footerYear = document.getElementById("footerYear");
   if(footerYear) footerYear.textContent = new Date().getFullYear();
@@ -11602,6 +11754,10 @@ let nextTeamFinderId = 1;
       return brandOk && textOk;
     });
   }
+  // Exposed so the Ultimate Generator's Device step (added in Stage 7) can
+  // reuse the exact same matching logic instead of duplicating it. Behavior
+  // of matchDevices itself is unchanged.
+  window.JX_matchDevices = matchDevices;
 
   function addHistory(deviceName){
     store.history = [deviceName, ...store.history.filter(h=>h!==deviceName)].slice(0,12);
@@ -11786,6 +11942,7 @@ let nextTeamFinderId = 1;
     const hwSection = document.getElementById("hardware-analysis");
     if(hwSection) hwSection.scrollIntoView({ behavior:"smooth", block:"start" });
   }
+  window.JX_selectDeviceForAnalysis = selectDeviceForAnalysis;
 
   /* ------------------------------------------------------------
      OPTIMIZATION CENTER UI — PHASE 3
@@ -12193,7 +12350,17 @@ let nextTeamFinderId = 1;
     if(analyzeBtn){
       const id = parseInt(analyzeBtn.dataset.analyze);
       const device = DEVICES.find(d=>d.id===id);
-      if(device) selectDeviceForAnalysis(device);
+      if(device){
+        // Step 16B — reveal the consolidated Full Analysis layer (added in 15c)
+        // before rendering, so this per-card button no longer targets sections
+        // that are display:none. Reuses the existing reveal + analyzer (same as
+        // the hero CTA and the DI gateway); no new reveal mechanism is created,
+        // and reveal() itself still respects admin "Fully Hidden" sections.
+        if(window.JX_FullAnalysis && typeof window.JX_FullAnalysis.reveal === "function"){
+          window.JX_FullAnalysis.reveal();
+        }
+        selectDeviceForAnalysis(device);
+      }
       return;
     }
     const viewBtn = e.target.closest("[data-view]");
@@ -16028,6 +16195,29 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
          allow read: if true;
          allow write: if isSuperAdmin();
        }
+       // Ultimate Generator — Verified Sensitivity Database (Stage 7,
+       // Step 7, corrected for targeted queries). Public read is
+       // required: findExactSensitivityProfile()/findCompatibilityLink()/
+       // getSensitivityProfileById() in firebase-service.js run from
+       // every visitor's browser, not just the admin dashboard. Fields:
+       // sensitivityProfiles{deviceId, playstyle, sensitivityFeel,
+       // dpiMode, dpiValue, verificationStatus, isPublished, ...};
+       // compatibilityLinks{targetDeviceId, playstyle, sensitivityFeel,
+       // dpiMode, dpiValue, sourceProfileId}. The exact-match and
+       // compatibility-link queries each combine multiple equality
+       // filters, so the Firestore console will prompt for (one-time)
+       // composite indexes on each collection the first time these run
+       // against a real project. Admin create/edit/delete tooling for
+       // these two collections is a later stage — write stays
+       // admin-only in the meantime.
+       match /sensitivityProfiles/{docId} {
+         allow read: if true;
+         allow write: if isAdmin();
+       }
+       match /compatibilityLinks/{docId} {
+         allow read: if true;
+         allow write: if isAdmin();
+       }
      }
    }
 
@@ -16106,7 +16296,7 @@ window.FIREBASE_CONFIGURED = FIREBASE_CONFIGURED;
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, doc, getDoc, setDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp, onSnapshot, increment, getCountFromServer
+  query, where, orderBy, limit, serverTimestamp, onSnapshot, increment, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getStorage, ref, uploadBytes, uploadString, getDownloadURL, deleteObject
@@ -16580,6 +16770,70 @@ async function deleteRequest(id){
   await deleteDoc(doc(db, "requests", id));
 }
 
+/* ---------------- ULTIMATE GENERATOR — VERIFIED SENSITIVITY DATABASE
+   (Stage 7, Step 7 — CORRECTED: targeted queries, not fetch-all)
+   ------------------------------------------------------------
+   Two collections, read via targeted, indexed lookups only — never a
+   full-collection fetch. Each call reads at most 1 document.
+
+   - sensitivityProfiles: one doc per verified device+playstyle+feel+DPI
+     combination. Fields: deviceId, playstyle, sensitivityFeel, dpiMode,
+     dpiValue (only meaningful when dpiMode === "CustomDpi"),
+     verificationStatus ("Verified" | anything else), isPublished
+     (bool), plus admin-entered sensitivity numbers this matcher
+     foundation never reads.
+   - compatibilityLinks: admin-curated links from a device+playstyle+
+     feel+DPI combination that has NO exact profile yet to an existing
+     verified sensitivityProfiles doc, via sourceProfileId. Fields:
+     targetDeviceId, playstyle, sensitivityFeel, dpiMode, dpiValue,
+     sourceProfileId.
+
+   NOTE: findExactSensitivityProfile()'s query below combines 5-6
+   equality filters (deviceId/playstyle/sensitivityFeel/dpiMode/
+   verificationStatus/isPublished, +dpiValue for CustomDpi) — this
+   requires a composite index in the Firestore console. The first time
+   this runs against a real Firestore project, the console error will
+   contain a direct "create index" link; findCompatibilityLink() below
+   needs a similar composite index on compatibilityLinks. Both indexes
+   only need to be created once. */
+async function findExactSensitivityProfile(key){
+  const clauses = [
+    where("deviceId", "==", key.deviceId),
+    where("playstyle", "==", key.playstyle),
+    where("sensitivityFeel", "==", key.feel),
+    where("dpiMode", "==", key.dpiMode),
+    where("verificationStatus", "==", "Verified"),
+    where("isPublished", "==", true)
+  ];
+  if(key.dpiMode === "CustomDpi") clauses.push(where("dpiValue", "==", key.dpiValue));
+  const q = query(collection(db, "sensitivityProfiles"), ...clauses, limit(1));
+  const snap = await getDocs(q);
+  if(snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() };
+}
+async function findCompatibilityLink(key){
+  const clauses = [
+    where("targetDeviceId", "==", key.deviceId),
+    where("playstyle", "==", key.playstyle),
+    where("sensitivityFeel", "==", key.feel),
+    where("dpiMode", "==", key.dpiMode)
+  ];
+  if(key.dpiMode === "CustomDpi") clauses.push(where("dpiValue", "==", key.dpiValue));
+  const q = query(collection(db, "compatibilityLinks"), ...clauses, limit(1));
+  const snap = await getDocs(q);
+  if(snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() };
+}
+// Single targeted doc read (not a query) — used to resolve a
+// compatibilityLinks match's sourceProfileId to its actual profile.
+async function getSensitivityProfileById(id){
+  if(!id) return null;
+  const snap = await getDoc(doc(db, "sensitivityProfiles", id));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
 /* ---------------- REAL-TIME ANALYTICS ----------------
    Two lightweight collections power the "By The Numbers" /
    hero counters with genuine activity instead of placeholders:
@@ -16718,7 +16972,15 @@ window.FirebaseService = {
   getRequests, getMyRequests, submitRequest, deleteRequest, updateRequestStatus,
   getGuilds, addGuild, updateGuild, deleteGuild,
   getTeamFinder, addTeamFinderListing, updateTeamFinderListing, deleteTeamFinderListing,
-  getStats, trackVisit, trackSearch
+  getStats, trackVisit, trackSearch,
+  // Stage 7 Step 7 (corrected) — Ultimate Generator database-first
+  // matcher foundation. Targeted single-purpose lookups only, never a
+  // full-collection fetch. Guarded with typeof checks at every call
+  // site (same convention as getGuilds/getTeamFinder above) since
+  // Supabase/Sheets don't implement these yet — that capability gap is
+  // surfaced by the matcher as BACKEND_CAPABILITY_UNAVAILABLE, distinct
+  // from a genuine NO_MATCH.
+  findExactSensitivityProfile, findCompatibilityLink, getSensitivityProfileById
 };
 
 </script>
@@ -17634,8 +17896,8 @@ function demoUid(prefix){
 function demoLoad(){
   try{
     const raw = localStorage.getItem(DEMO_KEY);
-    return raw ? JSON.parse(raw) : { devices:[], players:[], reviews:[], requests:[], huds:[], hudLayouts:[], combos:[], guilds:[], teamFinder:[], visits:[], searches:[] };
-  }catch(e){ return { devices:[], players:[], reviews:[], requests:[], huds:[], hudLayouts:[], combos:[], tournaments:[], guilds:[], teamFinder:[], visits:[], searches:[] }; }
+    return raw ? JSON.parse(raw) : { devices:[], players:[], reviews:[], requests:[], huds:[], hudLayouts:[], combos:[], guilds:[], teamFinder:[], visits:[], searches:[], sensitivityProfiles:[], compatibilityLinks:[] };
+  }catch(e){ return { devices:[], players:[], reviews:[], requests:[], huds:[], hudLayouts:[], combos:[], tournaments:[], guilds:[], teamFinder:[], visits:[], searches:[], sensitivityProfiles:[], compatibilityLinks:[] }; }
 }
 function demoSave(d){
   try{ localStorage.setItem(DEMO_KEY, JSON.stringify(d)); }catch(e){}
@@ -18036,6 +18298,44 @@ window.DemoService = {
     const d = demoLoad();
     d.requests = d.requests.filter(x => x.id !== id);
     demoSave(d);
+  },
+
+  /* ---------------- ULTIMATE GENERATOR — VERIFIED SENSITIVITY DATABASE
+     (Stage 7, Step 7 — corrected: same targeted-lookup function names
+     as firebase-service.js, so the matcher's capability check and call
+     sites are identical across adapters). Demo mode has no real query
+     engine — localStorage is already fully in memory — so "targeted"
+     here means each function does exactly one lookup and returns at
+     most one record, not that it exposes a bulk getAll(). Empty by
+     default (no seed/placeholder data invented here): an admin has to
+     actually add Verified + isPublished profiles before the matcher can
+     ever return EXACT_VERIFIED or VERIFIED_COMPATIBLE in Demo mode. */
+  async findExactSensitivityProfile(key){
+    const list = demoLoad().sensitivityProfiles || [];
+    return list.find(p =>
+      p.deviceId === key.deviceId &&
+      p.playstyle === key.playstyle &&
+      p.sensitivityFeel === key.feel &&
+      p.dpiMode === key.dpiMode &&
+      (key.dpiMode !== "CustomDpi" || p.dpiValue === key.dpiValue) &&
+      p.verificationStatus === "Verified" &&
+      p.isPublished === true
+    ) || null;
+  },
+  async findCompatibilityLink(key){
+    const list = demoLoad().compatibilityLinks || [];
+    return list.find(l =>
+      l.targetDeviceId === key.deviceId &&
+      l.playstyle === key.playstyle &&
+      l.sensitivityFeel === key.feel &&
+      l.dpiMode === key.dpiMode &&
+      (key.dpiMode !== "CustomDpi" || l.dpiValue === key.dpiValue)
+    ) || null;
+  },
+  async getSensitivityProfileById(id){
+    if(!id) return null;
+    const list = demoLoad().sensitivityProfiles || [];
+    return list.find(p => p.id === id) || null;
   },
 
   /* ---------------- REAL-TIME ANALYTICS (localStorage-backed) ----------------
@@ -22628,6 +22928,53 @@ window.JX_logAudit = function(field, oldVal, newVal){
         // by a cloud sync hiccup.
         console.warn("[JUTTFHX] Could not sync favorites to account:", err);
       }
+    },
+
+    // STAGE 07 — STEP 9: Ultimate Generator save integration. Takes an
+    // already-fully-formed record (the locked generation-record contract
+    // — deviceId/deviceSnapshot/playstyle/sensitivityFeel/dpiMode/
+    // dpiValue/matchedProfileId/profileVersion/matchType/resultOrigin/
+    // generatedAt — plus deviceName/sens so it renders correctly in the
+    // existing Recent History panel) rather than saveSensitivity()'s
+    // fixed {deviceName,style,sens,age} shape, since the Ultimate
+    // Generator's contract has more fields than the legacy Analyzer ever
+    // needed. Still goes through the exact same users/{uid}.
+    // sensitivityHistory array via the same backend.addUserSensitivity —
+    // no second history collection. Resolves { ok:true } on success, or
+    // { ok:false, reason } on failure ('auth'|'backend'|'save') so the
+    // caller (the generator's Save button) can decide how to reset its
+    // own UI without this method reaching into that button directly.
+    async saveGenerationRecord(entry){
+      try{
+        await ensureBackend();
+      }catch(err){
+        showToast("info", "Could not save this profile. Try again.");
+        return { ok: false, reason: "backend" };
+      }
+      if(!currentUser){
+        showToast("info", "Sign in to save this sensitivity to your history.");
+        setAuthMode("login");
+        openUserAuthModal();
+        return { ok: false, reason: "auth" };
+      }
+      try{
+        const record = { ...entry, savedAt: entry.savedAt || new Date().toISOString() };
+        const updated = await backend.addUserSensitivity(currentUser.uid, record);
+        currentProfile = { ...currentProfile, sensitivityHistory: updated };
+        // Live-refresh the drawer's history tab if it happens to be open
+        // already, matching autoSaveSensitivity()'s behavior above.
+        if(accountDrawer.classList.contains("open")){
+          renderHistoryPanel();
+        }
+        showToast("success", "Saved to your history");
+        return { ok: true };
+      }catch(err){
+        // Deliberately the fixed copy Step 9 specifies, not
+        // friendlyAccountError()'s message — the result itself stays
+        // visible/unchanged on the caller's side either way.
+        showToast("info", "Could not save this profile. Try again.");
+        return { ok: false, reason: "save", error: err };
+      }
     }
   };
 
@@ -23688,6 +24035,3035 @@ html.jx-scroll-active *::after{
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('touchmove', onScroll, { passive: true });
+})();
+</script>
+
+<!-- ============================================================
+     ULTIMATE GENERATOR — Stage 7, smallest safe implementation step
+     ============================================================
+     Scope of THIS step only:
+       - modal shell (header, mode selector, static step placeholder)
+       - open/close wiring (mirrors the existing .modal-overlay pattern
+         used elsewhere in this file, e.g. comboModal)
+       - mode selector tab switching (visual state only)
+     Explicitly OUT of scope for this step (per Stage 6 architecture,
+     not implemented here):
+       - Device/Playstyle/Feel/DPI step logic
+       - the matcher / any Firestore reads or writes
+       - result rendering, tuning, saved results, advanced setup
+     All classes/ids are prefixed jx-ug-/jxUg to avoid any collision
+     with existing site styles, scripts, or the legacy generator
+     (#genForm) and legacy analyzer, which are untouched by this step.
+     ============================================================ -->
+<style>
+.jx-ug-beta-tag{
+  display:inline-block; margin-left:8px; padding:2px 7px; border-radius:20px;
+  background: rgba(244,196,48,.16); border:1px solid var(--hairline-strong);
+  color: var(--gold); font-family: var(--f-mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+  vertical-align:middle;
+}
+
+/* Generic step-visibility utility for the modal. Added in Stage 7 Step 3
+   because the existing .jx-ug-hidden usages (selected-chip / search-area
+   toggle) had no matching base rule outside .jx-ug-brandrow — scoping this
+   to #jxUgModal fixes that silently and also drives the new step switcher
+   below, without touching any class name used outside this modal. */
+#jxUgModal .jx-ug-hidden{ display:none; }
+
+#jxUgModal.modal-overlay{ z-index:600; } /* above existing modals (550) since it can be opened from anywhere on the page */
+#jxUgModal .modal-box{
+  max-width:520px; width:100%; max-height:88vh; display:flex; flex-direction:column; padding:0;
+}
+
+/* ---- Device Intelligence modal (Stage 7, Step 14) ----
+   Opens ON TOP of #jxUgModal, so it needs a higher z-index. Reuses
+   the exact same .modal-overlay/.modal-box/.jx-ug-header/.jx-ug-close
+   shell as #jxUgModal for visual consistency — only the body layout
+   below is new. */
+#jxUgDiModal.modal-overlay{ z-index:650; display:none; }
+#jxUgDiModal.modal-overlay.open{ display:flex; }
+#jxUgDiModal .modal-box{
+  max-width:560px; width:100%; max-height:88vh; display:flex; flex-direction:column; padding:0;
+}
+.jx-ug-di-body{ padding:18px 20px 22px; overflow-y:auto; flex:1 1 auto; }
+.jx-ug-di-stat-row{ display:flex; flex-wrap:wrap; gap:20px; align-items:center; }
+.jx-ug-di-stat{ min-width:90px; }
+.jx-ug-di-stat-label{ font-size:11px; opacity:.65; }
+.jx-ug-di-stat-value{ font-size:19px; font-weight:700; margin-top:2px; }
+.jx-ug-di-rating-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+@media (max-width:480px){ .jx-ug-di-rating-grid{ grid-template-columns:1fr; } }
+.jx-ug-di-rating-card{ padding:12px 14px; }
+.jx-ug-di-rating-head{ display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; }
+.jx-ug-di-rating-head b{ font-size:13.5px; }
+.jx-ug-di-section{ margin-top:20px; }
+.jx-ug-di-section h4{ margin:0 0 10px; font-size:14px; }
+.jx-ug-di-list{ margin:0; padding-left:18px; font-size:12.5px; line-height:1.8; opacity:.85; }
+.jx-ug-di-empty{ font-size:12.5px; opacity:.6; }
+.jx-ug-di-priority-list{ margin:0; padding-left:18px; font-size:13px; line-height:2; }
+.jx-ug-di-gfx-row{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--hairline); font-size:13px; }
+.jx-ug-di-gfx-row:last-child{ border-bottom:none; }
+.jx-ug-di-gfx-row span{ opacity:.65; }
+.jx-ug-di-note{ margin-top:14px; font-size:11.5px; opacity:.55; line-height:1.6; }
+.jx-ug-di-empty-state{ padding:30px 10px; text-align:center; font-size:13px; opacity:.65; }
+
+/* ---- Step 15d — Device Intelligence footer (Full Analysis entry point) ----
+   The footer markup was added in 15c but had no CSS rule, so the "View Full
+   Analysis" button sat unstyled directly below the scrollable DI body. This
+   pins it below the body with a hairline separator + flex-shrink:0, matching
+   the existing .jx-ug-footer / .jx-ug-header conventions (same 14px/20px
+   padding scale). Presentational only — no logic, no markup, no taxonomy
+   change. Mobile behavior is gated behind max-width:520px so desktop and
+   tablet layouts are untouched by construction. */
+.jx-ug-di-footer{
+  display:flex; justify-content:flex-end; gap:10px;
+  padding:14px 20px; border-top:1px solid var(--hairline); flex-shrink:0;
+}
+.jx-ug-di-footer .btn{ padding:12px 22px; font-size:13px; }
+@media (max-width:520px){
+  #jxUgDiModal .modal-box{ max-height:92vh; }
+  .jx-ug-di-footer{ padding:12px 16px; }
+  .jx-ug-di-footer .btn{ width:100%; }
+}
+
+.jx-ug-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px; border-bottom:1px solid var(--hairline); flex-shrink:0;
+}
+.jx-ug-header-title{ display:flex; flex-direction:column; gap:2px; }
+.jx-ug-header-title h3{ font-family: var(--f-display); font-size:15px; color: var(--ink); text-transform:uppercase; letter-spacing:.02em; }
+.jx-ug-header-step{ font-family: var(--f-mono); font-size:11px; color: var(--ink-faint); text-transform:uppercase; letter-spacing:.05em; }
+.jx-ug-close{
+  background:none; border:none; color: var(--ink-faint); width:40px; height:40px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; transition: color .2s, background .2s;
+}
+.jx-ug-close:hover{ color: var(--ink); background: rgba(255,255,255,.05); }
+.jx-ug-close svg{ width:18px; height:18px; }
+
+.jx-ug-modes{
+  display:flex; gap:6px; padding:12px 20px; border-bottom:1px solid var(--hairline); flex-shrink:0;
+}
+.jx-ug-mode-btn{
+  flex:1; padding:9px 6px; border-radius:8px; border:1px solid var(--hairline);
+  background: rgba(255,255,255,.02); color: var(--ink-dim);
+  font-family: var(--f-display); font-size:12px; letter-spacing:.04em; text-transform:uppercase;
+  transition: all .2s;
+}
+.jx-ug-mode-btn:hover:not(.active){ border-color: var(--gold); color: var(--gold); }
+.jx-ug-mode-btn.active{
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep)); color:#1A1305; border-color:transparent;
+}
+
+.jx-ug-body{ padding:22px 20px; overflow-y:auto; flex:1; }
+.jx-ug-placeholder{
+  border:1px dashed var(--hairline-strong); border-radius: var(--radius-m);
+  padding:28px 18px; text-align:center; color: var(--ink-dim); font-size:13.5px; line-height:1.6;
+}
+.jx-ug-placeholder b{ display:block; color: var(--ink); font-family: var(--f-display); font-size:14px; letter-spacing:.02em; text-transform:uppercase; margin-bottom:8px; }
+
+/* ---- Device step ---- */
+.jx-ug-step-title{
+  font-family: var(--f-display); font-size:13px; color: var(--ink); text-transform:uppercase;
+  letter-spacing:.04em; margin-bottom:12px;
+}
+.jx-ug-selected-chip{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:14px;
+  border:1px solid var(--hairline-strong); border-radius: var(--radius-m);
+  background: linear-gradient(160deg, rgba(244,196,48,.10), rgba(244,196,48,.02));
+}
+.jx-ug-selected-chip .jx-ug-sc-icon{
+  width:32px; height:32px; border-radius:8px; background: var(--panel); border:1px solid var(--hairline);
+  display:flex; align-items:center; justify-content:center; font-family: var(--f-mono); font-size:11px; color: var(--gold); flex-shrink:0;
+}
+.jx-ug-selected-chip .jx-ug-sc-text{ flex:1; min-width:0; }
+.jx-ug-selected-chip .jx-ug-sc-name{ font-weight:600; font-size:13.5px; color: var(--ink); }
+.jx-ug-selected-chip .jx-ug-sc-brand{ font-size:11.5px; color: var(--ink-faint); margin-top:1px; }
+.jx-ug-selected-chip button{
+  background:none; border:1px solid var(--hairline); border-radius:7px; color: var(--ink-dim);
+  font-size:11.5px; padding:6px 10px; flex-shrink:0; transition: all .2s;
+}
+.jx-ug-selected-chip button:hover{ border-color: var(--gold); color: var(--gold); }
+
+.jx-ug-search-shell{
+  display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius: var(--radius-m);
+  border:1px solid var(--hairline-strong); background: rgba(255,255,255,.02); margin-bottom:12px;
+}
+.jx-ug-search-shell svg{ width:16px; height:16px; color: var(--ink-faint); flex-shrink:0; }
+.jx-ug-search-shell input{
+  flex:1; background:none; border:none; color: var(--ink); font-size:13.5px; outline:none;
+}
+.jx-ug-search-shell input::placeholder{ color: var(--ink-faint); }
+.jx-ug-search-clear{ background:none; border:none; color: var(--ink-faint); flex-shrink:0; }
+.jx-ug-search-clear:hover{ color: var(--gold); }
+.jx-ug-search-clear svg{ width:14px; height:14px; }
+
+.jx-ug-devtabs{ display:flex; gap:6px; margin-bottom:10px; }
+.jx-ug-devtab-btn{
+  padding:7px 14px; border-radius:20px; font-size:12px; font-weight:600; color: var(--ink-dim);
+  border:1px solid var(--hairline); background: rgba(255,255,255,.02); transition: all .2s;
+}
+.jx-ug-devtab-btn:hover:not(.active){ border-color: var(--gold); color: var(--gold); }
+.jx-ug-devtab-btn.active{ background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep)); color:#1A1305; border-color:transparent; }
+
+.jx-ug-brandrow{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.jx-ug-brandrow.jx-ug-hidden{ display:none; }
+.jx-ug-brand-chip{
+  padding:6px 12px; border-radius:20px; font-size:11.5px; color: var(--ink-dim);
+  border:1px solid var(--hairline); background: rgba(255,255,255,.02); transition: all .2s;
+}
+.jx-ug-brand-chip:hover:not(.active){ border-color: var(--gold); color: var(--gold); }
+.jx-ug-brand-chip.active{ background: rgba(244,196,48,.16); border-color: var(--gold); color: var(--gold); }
+
+.jx-ug-devlist{ display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; }
+.jx-ug-devcard{
+  display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius: var(--radius-m);
+  border:1px solid var(--hairline); background: rgba(255,255,255,.02); text-align:left; width:100%;
+  transition: border-color .2s, background .2s;
+}
+.jx-ug-devcard:hover{ border-color: var(--gold); background: rgba(244,196,48,.05); }
+.jx-ug-devcard.selected{ border-color: var(--gold); background: rgba(244,196,48,.10); }
+.jx-ug-devcard-icon{
+  width:34px; height:34px; border-radius:9px; background: var(--panel-2); border:1px solid var(--hairline);
+  display:flex; align-items:center; justify-content:center; font-family: var(--f-mono); font-size:11.5px; color: var(--gold); flex-shrink:0;
+}
+.jx-ug-devcard-text{ flex:1; min-width:0; }
+.jx-ug-devcard-name{ font-weight:600; font-size:13.5px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.jx-ug-devcard-brand{ font-size:11.5px; color: var(--ink-faint); margin-top:1px; }
+.jx-ug-devcard-check{ width:18px; height:18px; color: var(--gold); flex-shrink:0; display:none; }
+.jx-ug-devcard.selected .jx-ug-devcard-check{ display:block; }
+
+.jx-ug-dev-empty{
+  text-align:center; padding:26px 14px; color: var(--ink-dim); font-size:13px;
+}
+.jx-ug-dev-empty b{ display:block; color: var(--ink); font-size:13.5px; margin-bottom:6px; }
+
+/* ---- Playstyle step (Stage 7, Step 3) ---- */
+.jx-ug-playstyle-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.jx-ug-ps-card{
+  position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+  padding:14px 14px; border-radius: var(--radius-m); border:1px solid var(--hairline);
+  background: rgba(255,255,255,.02); text-align:left; width:100%;
+  transition: border-color .2s, background .2s;
+}
+.jx-ug-ps-card:hover{ border-color: var(--gold); background: rgba(244,196,48,.05); }
+.jx-ug-ps-card.selected{ border-color: var(--gold); background: rgba(244,196,48,.10); }
+.jx-ug-ps-icon{
+  width:34px; height:34px; border-radius:9px; background: var(--panel-2); border:1px solid var(--hairline);
+  display:flex; align-items:center; justify-content:center; color: var(--gold); flex-shrink:0; margin-bottom:2px;
+}
+.jx-ug-ps-icon svg{ width:17px; height:17px; }
+.jx-ug-ps-title{ font-weight:600; font-size:13.5px; color: var(--ink); }
+.jx-ug-ps-desc{ font-size:12px; color: var(--ink-dim); line-height:1.5; margin-top:2px; }
+.jx-ug-ps-check{
+  position:absolute; top:12px; right:12px; width:17px; height:17px; color: var(--gold); display:none;
+}
+.jx-ug-ps-card.selected .jx-ug-ps-check{ display:block; }
+
+@media (max-width:420px){
+  .jx-ug-playstyle-grid{ grid-template-columns:1fr; }
+}
+
+/* ---- Feel step (Stage 7, Step 4) ---- */
+.jx-ug-feel-list{ display:flex; flex-direction:column; gap:9px; }
+.jx-ug-feel-card{
+  position:relative; display:flex; align-items:center; gap:13px;
+  padding:14px 16px; border-radius: var(--radius-m); border:1px solid var(--hairline);
+  background: rgba(255,255,255,.02); text-align:left; width:100%;
+  transition: border-color .2s, background .2s;
+}
+.jx-ug-feel-card:hover{ border-color: var(--gold); background: rgba(244,196,48,.05); }
+.jx-ug-feel-card.selected{ border-color: var(--gold); background: rgba(244,196,48,.10); }
+.jx-ug-feel-icon{
+  width:38px; height:38px; border-radius:10px; background: var(--panel-2); border:1px solid var(--hairline);
+  display:flex; align-items:center; justify-content:center; color: var(--gold); flex-shrink:0;
+}
+.jx-ug-feel-icon svg{ width:19px; height:19px; }
+.jx-ug-feel-text{ flex:1; min-width:0; }
+.jx-ug-feel-title{ font-weight:600; font-size:14.5px; color: var(--ink); }
+.jx-ug-feel-tag{ font-size:12px; color: var(--ink-faint); margin-top:1px; }
+.jx-ug-feel-check{
+  width:18px; height:18px; color: var(--gold); flex-shrink:0; display:none;
+}
+.jx-ug-feel-card.selected .jx-ug-feel-check{ display:block; }
+
+.jx-ug-custom-wrap{
+  margin-top:14px; padding-top:14px; border-top:1px solid var(--hairline);
+}
+.jx-ug-custom-head{
+  font-family: var(--f-mono); font-size:11px; color: var(--ink-faint); text-transform:uppercase;
+  letter-spacing:.05em; margin-bottom:10px;
+}
+.jx-ug-custom-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.jx-ug-custom-field label{
+  display:block; font-size:11.5px; color: var(--ink-dim); margin-bottom:5px;
+}
+.jx-ug-custom-field input{
+  width:100%; padding:9px 11px; border-radius:8px; border:1px solid var(--hairline-strong);
+  background: rgba(255,255,255,.02); color: var(--ink); font-size:13px; outline:none;
+  transition: border-color .2s;
+}
+.jx-ug-custom-field input:focus{ border-color: var(--gold); }
+.jx-ug-custom-field input::placeholder{ color: var(--ink-faint); }
+.jx-ug-custom-note{ font-size:11.5px; color: var(--ink-faint); margin-top:10px; line-height:1.5; }
+
+@media (max-width:420px){
+  .jx-ug-custom-grid{ grid-template-columns:1fr; }
+}
+
+/* ---- DPI step (Stage 7, Step 5) ---- */
+.jx-ug-dpi-input-row input{
+  width:100%; padding:11px 12px; border-radius:9px; border:1px solid var(--hairline-strong);
+  background: rgba(255,255,255,.02); color: var(--ink); font-size:15px; outline:none;
+  transition: border-color .2s;
+}
+.jx-ug-dpi-input-row input:focus{ border-color: var(--gold); }
+.jx-ug-dpi-input-row input::placeholder{ color: var(--ink-faint); }
+.jx-ug-dpi-error{ font-size:12px; color:#ef6a6a; margin-top:8px; line-height:1.5; }
+
+/* ---- Ready / Generate screen (Stage 7, Step 6) ---- */
+.jx-ug-summary-list{ display:flex; flex-direction:column; gap:8px; }
+.jx-ug-summary-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:11px 12px; border-radius: var(--radius-m); border:1px solid var(--hairline);
+  background: rgba(255,255,255,.02);
+}
+.jx-ug-summary-label{
+  font-family: var(--f-mono); font-size:10.5px; color: var(--ink-faint); text-transform:uppercase;
+  letter-spacing:.05em; width:76px; flex-shrink:0;
+}
+.jx-ug-summary-value{
+  flex:1; min-width:0; font-size:13.5px; color: var(--ink); font-weight:600;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.jx-ug-summary-change{
+  flex-shrink:0; font-size:11.5px; font-weight:600; color: var(--gold); background:none;
+  border:1px solid var(--hairline-strong); border-radius:7px; padding:6px 10px; cursor:pointer;
+  transition: border-color .2s, background .2s;
+}
+.jx-ug-summary-change:hover{ border-color: var(--gold); background: rgba(244,196,48,.08); }
+
+.jx-ug-custom-summary{ margin-top:14px; padding-top:14px; border-top:1px solid var(--hairline); }
+.jx-ug-custom-summary-head{
+  font-family: var(--f-mono); font-size:11px; color: var(--ink-faint); text-transform:uppercase;
+  letter-spacing:.05em; margin-bottom:10px;
+}
+.jx-ug-custom-summary-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.jx-ug-custom-summary-item{
+  display:flex; align-items:center; justify-content:space-between; padding:8px 10px;
+  border-radius:8px; background: rgba(255,255,255,.02); border:1px solid var(--hairline); font-size:12.5px;
+}
+.jx-ug-custom-summary-item span{ color: var(--ink-dim); }
+.jx-ug-custom-summary-item b{ color: var(--ink); font-weight:600; }
+.jx-ug-custom-summary-empty{ font-size:12px; color: var(--ink-faint); font-style:italic; }
+
+.jx-ug-generate-btn{
+  width:100%; margin-top:18px; padding:14px 16px; border-radius: var(--radius-m); border:none;
+  background: var(--gold); color:#161200; font-weight:700; font-size:14.5px; cursor:pointer;
+  transition: opacity .2s, transform .15s;
+}
+.jx-ug-generate-btn:disabled{ opacity:.4; cursor:not-allowed; }
+.jx-ug-generate-btn:not(:disabled):hover{ transform: translateY(-1px); }
+
+.jx-ug-ready-result{
+  margin-top:16px; padding:14px; border-radius: var(--radius-m); border:1px solid var(--hairline);
+  background: rgba(244,196,48,.06);
+}
+.jx-ug-ready-result-title{
+  font-weight:700; font-size:12.5px; color: var(--gold); margin-bottom:4px;
+  letter-spacing:.04em; text-transform:uppercase;
+}
+.jx-ug-ready-result-text{ font-size:12.5px; color: var(--ink-dim); line-height:1.55; }
+/* Stage 7 Step 7 — matcher result badge row (EXACT VERIFIED / VERIFIED
+   COMPATIBLE / NO MATCH). Reuses the existing .status-pill/.status-approved/
+   .status-pending/.status-rejected classes already used elsewhere in the
+   admin dashboard — no new badge styling invented. */
+.jx-ug-ready-result-badge-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+
+/* Stage 7 Step 8 — detailed Result UI. New jx-ug-result-* classes only;
+   nothing above (jx-ug-ready-result*) is modified. */
+.jx-ug-result-note{ font-size:12.5px; color: var(--ink-dim); line-height:1.55; margin-bottom:12px; }
+
+.jx-ug-result-devcompare{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.jx-ug-result-devcol{
+  padding:10px; border-radius:8px; background: rgba(255,255,255,.02); border:1px solid var(--hairline);
+}
+.jx-ug-result-devcol-label{
+  font-family: var(--f-mono); font-size:10px; color: var(--ink-faint); text-transform:uppercase;
+  letter-spacing:.05em; margin-bottom:4px;
+}
+.jx-ug-result-devcol-name{ font-weight:600; font-size:13px; color: var(--ink); }
+.jx-ug-result-devcol-brand{ font-size:11.5px; color: var(--ink-faint); margin-top:1px; }
+
+.jx-ug-result-matched-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.jx-ug-result-matched-chip{
+  font-family: var(--f-mono); font-size:10.5px; padding:3px 9px; border-radius:20px;
+  background: rgba(95,215,138,.1); color: var(--green); border:1px solid rgba(95,215,138,.25);
+  text-transform:uppercase; letter-spacing:.03em;
+}
+
+.jx-ug-result-sens-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.jx-ug-result-sens-item{
+  display:flex; align-items:center; justify-content:space-between; padding:9px 11px;
+  border-radius:8px; background: rgba(255,255,255,.02); border:1px solid var(--hairline); font-size:12.5px;
+}
+.jx-ug-result-sens-item span{ color: var(--ink-dim); }
+.jx-ug-result-sens-item b{ color: var(--ink); font-weight:700; font-family: var(--f-mono); }
+
+.jx-ug-result-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+
+/* Stage 7 Step 10 — Tune My Profile. Deliberately compact: a label, three
+   equal-width buttons, and a one-line status message underneath — not a
+   settings panel. Reuses .btn/.btn-ghost sizing rather than inventing a
+   second button style. */
+.jx-ug-tune{ margin-top:14px; padding-top:14px; border-top:1px solid var(--hairline); }
+.jx-ug-tune-label{
+  font-family: var(--f-mono); font-size:10.5px; color: var(--ink-faint); text-transform:uppercase;
+  letter-spacing:.06em; margin-bottom:8px;
+}
+.jx-ug-tune-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.jx-ug-tune-btn{
+  font-family: var(--f-mono); font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+  padding:9px 6px; min-height:44px; border-radius:8px; border:1px solid var(--hairline); background: rgba(255,255,255,.02);
+  color: var(--ink-dim); cursor:pointer; transition: border-color .15s, color .15s, background .15s;
+}
+.jx-ug-tune-btn:hover{ border-color: var(--gold); color: var(--ink); }
+.jx-ug-tune-btn:disabled{ opacity:.5; cursor:default; }
+.jx-ug-tune-status{ font-size:12px; color: var(--ink-dim); line-height:1.5; margin-top:9px; }
+.jx-ug-tune-status.jx-ug-tune-status-ok{ color: var(--green); }
+.jx-ug-tune-status.jx-ug-tune-status-warn{ color: var(--ink-faint); }
+
+@media (max-width:420px){
+  .jx-ug-custom-summary-grid{ grid-template-columns:1fr; }
+  .jx-ug-result-sens-grid{ grid-template-columns:1fr; }
+  .jx-ug-result-devcompare{ grid-template-columns:1fr; }
+}
+
+/* ---- Stage 7 Step 11 — Advanced Setup boundary ----
+   New status-advanced badge color, distinct from status-approved (Exact
+   Verified) / status-pending (Verified Compatible) / status-rejected
+   (No Match) — Advanced must never share a badge color with any verified
+   status. jx-ug-advanced-* classes are additive only; nothing above is
+   modified. */
+.status-advanced{ background: rgba(139,124,255,.14); color:#a78bfa; }
+
+.jx-ug-advanced-summary{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.jx-ug-advanced-summary-row .jx-ug-summary-label{ width:76px; }
+
+.jx-ug-custom-field select{
+  width:100%; padding:9px 11px; border-radius:8px; border:1px solid var(--hairline-strong);
+  background: rgba(255,255,255,.02); color: var(--ink); font-size:13px; outline:none;
+  transition: border-color .2s;
+}
+.jx-ug-custom-field select:focus{ border-color: var(--gold); }
+
+.jx-ug-advanced-run-btn{
+  width:100%; margin-top:16px; padding:14px 16px; border-radius: var(--radius-m); border:none;
+  background: linear-gradient(135deg,#8b7cff,#6f5cff); color:#fff; font-weight:700; font-size:14.5px;
+  cursor:pointer; transition: opacity .2s, transform .15s;
+}
+.jx-ug-advanced-run-btn:not(:disabled):hover{ transform: translateY(-1px); }
+
+.jx-ug-advanced-result{ margin-top:16px; padding:14px; border-radius: var(--radius-m); border:1px solid var(--hairline); background: rgba(139,124,255,.06); }
+.jx-ug-advanced-placeholder-text{ font-size:12.5px; color: var(--ink-dim); line-height:1.55; margin:4px 0 14px; }
+
+.jx-ug-advanced-back-row{ margin-top:18px; padding-top:14px; border-top:1px solid var(--hairline); }
+
+@media (max-width:420px){
+  .jx-ug-advanced-summary-row .jx-ug-summary-label{ width:auto; }
+}
+
+/* ---- Stage 7 Step 12 — Smart Mode friendly layer ----
+   Purely an alternate presentation for the SAME canonical Playstyle/Feel/
+   DPI values already rendered by .jx-ug-playstyle-grid/.jx-ug-feel-list —
+   toggled by mode, never a second set of state or a second matcher input.
+   Large touch targets per Part 14 (accessibility), no reliance on color
+   alone (a checkmark + border, same pattern as the canonical cards). */
+.jx-ug-smart-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.jx-ug-smart-btn{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  width:100%; padding:14px 14px; border-radius: var(--radius-m); border:1px solid var(--hairline-strong);
+  background: rgba(255,255,255,.02); color: var(--ink); font-size:13.5px; font-weight:600;
+  text-align:left; cursor:pointer; transition: border-color .2s, background .2s;
+  min-height:48px;
+}
+.jx-ug-smart-btn:hover{ border-color: var(--gold); }
+.jx-ug-smart-btn:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+.jx-ug-smart-btn.selected{ border-color: var(--gold); background: rgba(244,196,48,.08); }
+.jx-ug-smart-btn-label{ flex:1; line-height:1.3; }
+.jx-ug-smart-btn-check{ width:18px; height:18px; flex-shrink:0; color: var(--gold); display:none; }
+.jx-ug-smart-btn.selected .jx-ug-smart-btn-check{ display:block; }
+
+@media (max-width:420px){
+  .jx-ug-smart-grid{ grid-template-columns:1fr; }
+}
+
+/* ---- Ready placeholder (smallest stub, no Generate screen yet) ---- */
+
+
+.jx-ug-request-row{
+  margin-top:14px; padding-top:14px; border-top:1px solid var(--hairline);
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+}
+.jx-ug-request-row span{ font-size:12.5px; color: var(--ink-faint); }
+
+.jx-ug-footer{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:14px 20px; border-top:1px solid var(--hairline); flex-shrink:0;
+}
+.jx-ug-footer .btn{ padding:10px 20px; font-size:12.5px; }
+.jx-ug-footer .btn[disabled]{ opacity:.4; pointer-events:none; }
+
+@media (max-width:520px){
+  #jxUgModal .modal-box{ max-height:92vh; }
+  .jx-ug-devlist{ max-height:none; }
+}
+
+/* ---- Stage 7 Step 13 — Pro Mode contextual panel ----
+   Sectioned, expandable areas (native <details>/<summary> for built-in
+   keyboard access + focus handling) shown on the Ready screen only when
+   Pro mode is active. Purely presentational — every control inside
+   writes into the SAME jxUgState.currentSens / jxUgState.advancedState
+   fields already used elsewhere on this page; nothing here is a new
+   state object, and layout otherwise reuses .jx-ug-custom-grid/
+   .jx-ug-custom-field/.jx-ug-custom-note/.jx-ug-custom-summary-item. */
+.jx-ug-pro-panel{ margin-top:16px; display:flex; flex-direction:column; gap:10px; }
+.jx-ug-pro-section{
+  border:1px solid var(--hairline-strong); border-radius: var(--radius-m);
+  background: rgba(255,255,255,.02); overflow:hidden;
+}
+.jx-ug-pro-section > summary{
+  list-style:none; cursor:pointer; padding:14px 16px; font-size:13px; font-weight:700;
+  letter-spacing:.04em; text-transform:uppercase; color: var(--ink); display:flex;
+  align-items:center; justify-content:space-between; min-height:48px; user-select:none;
+}
+.jx-ug-pro-section > summary::-webkit-details-marker{ display:none; }
+.jx-ug-pro-section > summary::after{
+  content:'+'; font-size:18px; line-height:1; color: var(--gold); transition: transform .2s; flex-shrink:0;
+}
+.jx-ug-pro-section[open] > summary::after{ transform: rotate(45deg); }
+.jx-ug-pro-section > summary:focus-visible{ outline:2px solid var(--gold); outline-offset:-2px; }
+.jx-ug-pro-section > summary:hover{ color: var(--gold); }
+.jx-ug-pro-section-body{ padding:0 16px 16px; }
+.jx-ug-pro-hw-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.jx-ug-pro-di-btn{ margin-top:10px; min-height:44px; }
+.jx-ug-pro-setup-grid{ margin-top:10px; }
+@media (max-width:420px){
+  .jx-ug-pro-hw-grid{ grid-template-columns:1fr; }
+}
+</style>
+
+<div class="modal-overlay" id="jxUgModal" aria-hidden="true">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="jxUgHeaderTitle">
+    <div class="jx-ug-header">
+      <div class="jx-ug-header-title">
+        <h3 id="jxUgHeaderTitle">Ultimate Generator</h3>
+        <span class="jx-ug-header-step" id="jxUgStepLabel" aria-live="polite">Step 1 of 4 · Device</span>
+      </div>
+      <button type="button" class="jx-ug-close" id="jxUgCloseBtn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="jx-ug-modes" role="tablist" aria-label="Generator mode">
+      <button type="button" class="jx-ug-mode-btn active" id="jxUgModeQuick" role="tab" aria-selected="true" data-jx-ug-mode="quick">Quick</button>
+      <button type="button" class="jx-ug-mode-btn" id="jxUgModeSmart" role="tab" aria-selected="false" data-jx-ug-mode="smart">Smart</button>
+      <button type="button" class="jx-ug-mode-btn" id="jxUgModePro" role="tab" aria-selected="false" data-jx-ug-mode="pro">Pro</button>
+    </div>
+
+    <div class="jx-ug-body">
+      <div id="jxUgDeviceStep">
+        <div class="jx-ug-step-title">Select Your Device</div>
+
+        <!-- Selected-device state: hidden until a device is chosen -->
+        <div class="jx-ug-selected-chip jx-ug-hidden" id="jxUgSelectedChip">
+          <div class="jx-ug-sc-icon" id="jxUgSelectedIcon">--</div>
+          <div class="jx-ug-sc-text">
+            <div class="jx-ug-sc-name" id="jxUgSelectedName"></div>
+            <div class="jx-ug-sc-brand" id="jxUgSelectedBrand"></div>
+          </div>
+          <button type="button" id="jxUgChangeDeviceBtn">Change</button>
+        </div>
+
+        <!-- Search + filters: hidden once a device is selected -->
+        <div id="jxUgDeviceSearchArea">
+          <div class="jx-ug-search-shell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="text" id="jxUgDeviceSearchInput" placeholder="Search device..." autocomplete="off" aria-label="Search for your device">
+            <button type="button" class="jx-ug-search-clear" id="jxUgDeviceSearchClear" style="display:none;" aria-label="Clear search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="jx-ug-devtabs" role="tablist" aria-label="Browse devices">
+            <button type="button" class="jx-ug-devtab-btn active" id="jxUgTabPopular" data-jx-ug-devtab="popular" role="tab" aria-selected="true">Popular</button>
+            <button type="button" class="jx-ug-devtab-btn" id="jxUgTabBrands" data-jx-ug-devtab="brands" role="tab" aria-selected="false">Brands</button>
+          </div>
+
+          <div class="jx-ug-brandrow jx-ug-hidden" id="jxUgBrandRow"></div>
+
+          <div class="jx-ug-devlist" id="jxUgDeviceList"></div>
+
+          <div class="jx-ug-request-row">
+            <span>Don't see your device?</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="jxUgRequestDeviceBtn">Request Device</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Playstyle step (Stage 7, Step 3). Hidden until the step switcher
+           activates it; cards are rendered by JS below using the Ultimate
+           Generator's OWN locked canonical Stage 4 taxonomy — Headshot /
+           OneTap / Rush / AllRound / LongRange / Freestyle. This is
+           intentionally separate from and must never be conflated with the
+           site's existing Combo Submit playstyle filter (#comboSubmitFilter:
+           Aggressive/Marksman/Support/Defensive), which is untouched. -->
+      <div id="jxUgPlaystyleStep" class="jx-ug-hidden">
+        <div class="jx-ug-step-title" id="jxUgPlaystyleStepTitle">Select Your Playstyle</div>
+        <div class="jx-ug-playstyle-grid" id="jxUgPlaystyleGrid" role="group" aria-label="Select your playstyle"></div>
+
+        <!-- Smart Mode friendly layer (Stage 7, Step 12). Same step, same
+             container — just an alternate presentation of the identical
+             canonical playstyle values above. Hidden unless Smart mode is
+             active; writes into jxUgState.playstyle via the exact same
+             jxUgSelectPlaystyle() setter the canonical grid uses, so there
+             is only ever one source of truth and one matcher input. -->
+        <div class="jx-ug-smart-grid jx-ug-hidden" id="jxUgSmartPlaystyleGrid" role="group" aria-label="How do you play?"></div>
+      </div>
+
+      <!-- Feel step (Stage 7, Step 4). Hidden until the step switcher
+           activates it. 5 canonical, independent database profiles —
+           Low / Balanced / High / Extreme / Custom. None is calculated
+           from another; no numeric ranges or sliders are shown here.
+           Custom reveals an optional, informational current-sensitivity
+           section only — it does not generate or calculate anything. -->
+      <div id="jxUgFeelStep" class="jx-ug-hidden">
+        <div class="jx-ug-step-title" id="jxUgFeelStepTitle">How Do You Want It To Feel?</div>
+        <div class="jx-ug-feel-list" id="jxUgFeelList" role="group" aria-label="How do you want it to feel?"></div>
+
+        <!-- Smart Mode friendly layer — same feel values, same setter
+             (jxUgSelectFeel), same Custom current-sensitivity block below
+             (never duplicated). -->
+        <div class="jx-ug-smart-grid jx-ug-hidden" id="jxUgSmartFeelGrid" role="group" aria-label="How fast should it feel?"></div>
+
+
+        <div class="jx-ug-custom-wrap jx-ug-hidden" id="jxUgCustomWrap">
+          <div class="jx-ug-custom-head">Your Current Sensitivity (Optional)</div>
+          <div class="jx-ug-custom-grid">
+            <div class="jx-ug-custom-field">
+              <label for="jxUgCustomGeneral">General</label>
+              <input type="number" id="jxUgCustomGeneral" min="0" max="200" placeholder="e.g. 90">
+            </div>
+            <div class="jx-ug-custom-field">
+              <label for="jxUgCustomRedDot">Red Dot</label>
+              <input type="number" id="jxUgCustomRedDot" min="0" max="200" placeholder="e.g. 95">
+            </div>
+            <div class="jx-ug-custom-field">
+              <label for="jxUgCustomScope2x">2x Scope</label>
+              <input type="number" id="jxUgCustomScope2x" min="0" max="200" placeholder="e.g. 62">
+            </div>
+            <div class="jx-ug-custom-field">
+              <label for="jxUgCustomScope4x">4x Scope</label>
+              <input type="number" id="jxUgCustomScope4x" min="0" max="200" placeholder="e.g. 45">
+            </div>
+            <div class="jx-ug-custom-field">
+              <label for="jxUgCustomSniper">Sniper Scope</label>
+              <input type="number" id="jxUgCustomSniper" min="0" max="200" placeholder="e.g. 30">
+            </div>
+            <div class="jx-ug-custom-field">
+              <label for="jxUgCustomFreeLook">Free Look</label>
+              <input type="number" id="jxUgCustomFreeLook" min="0" max="200" placeholder="e.g. 75">
+            </div>
+          </div>
+          <div class="jx-ug-custom-note">These values are saved for reference only — nothing is generated or calculated on this step.</div>
+        </div>
+      </div>
+
+      <!-- DPI step (Stage 7, Step 5). Hidden until the step switcher
+           activates it. 3 canonical, independent choices — NoDpi /
+           DefaultDpi / CustomDpi. None is pre-selected; the user must
+           explicitly pick one. No DPI number is calculated or invented
+           here — Default stores no value, Custom only stores whatever
+           integer (300–500) the user types. -->
+      <div id="jxUgDpiStep" class="jx-ug-hidden">
+        <div class="jx-ug-step-title" id="jxUgDpiStepTitle">DPI Setting</div>
+        <div class="jx-ug-feel-list" id="jxUgDpiList" role="group" aria-label="DPI setting"></div>
+
+        <!-- Smart Mode friendly layer — same 3 DPI modes, same setter
+             (jxUgSelectDpiMode), same 300–500 Custom DPI input/validator
+             below (never duplicated). -->
+        <div class="jx-ug-smart-grid jx-ug-hidden" id="jxUgSmartDpiGrid" role="group" aria-label="DPI?"></div>
+
+        <div class="jx-ug-custom-wrap jx-ug-hidden" id="jxUgDpiCustomWrap">
+          <div class="jx-ug-custom-head">Your DPI</div>
+          <div class="jx-ug-dpi-input-row">
+            <input type="number" id="jxUgDpiValue" min="300" max="500" placeholder="e.g. 400" inputmode="numeric" aria-describedby="jxUgDpiError">
+          </div>
+          <div class="jx-ug-dpi-error jx-ug-hidden" id="jxUgDpiError" role="alert">Enter a DPI between 300 and 500.</div>
+        </div>
+      </div>
+
+      <!-- Ready / Generate screen (Stage 7, Step 6 summary UI + Step 7
+           database-first matcher). Hidden until the step switcher
+           activates it. Rows and the Custom Feel summary are rendered by
+           jxUgRenderReadyScreen() below. Clicking Generate now calls the
+           read-only matcher (jxUgRunMatcher, defined above in this
+           script) against sensitivityProfiles/compatibilityLinks via the
+           existing window.getBackend() — no Firestore writes happen from
+           this screen, and no legacy generation function is ever called.
+           #jxUgReadyResult's content below is fully replaced at runtime
+           by jxUgRenderMatchLoading()/jxUgRenderMatchResult(); this
+           markup is just its empty initial shell. -->
+      <div id="jxUgReadyStep" class="jx-ug-hidden">
+        <div class="jx-ug-step-title" id="jxUgReadyStepTitle" tabindex="-1">Your Setup</div>
+
+        <div class="jx-ug-summary-list" id="jxUgSummaryList"></div>
+
+        <div class="jx-ug-custom-summary jx-ug-hidden" id="jxUgCustomSummary">
+          <div class="jx-ug-custom-summary-head">Use My Current Setup</div>
+          <div class="jx-ug-custom-summary-grid" id="jxUgCustomSummaryGrid"></div>
+        </div>
+
+        <!-- Pro Mode contextual panel (Stage 7, Step 13). An INPUT/CONTEXT
+             layer only — never a second matcher, generator, database, or
+             state object. Hidden unless Pro mode is active (toggled by
+             jxUgApplyModeVisibility). Lives on the Ready screen because
+             Device/Playstyle/Feel/DPI are already chosen by this point;
+             every field below is optional and never blocks Generate.
+             Device Info reuses the already-selected device (read-only
+             lookup against the existing DEVICES array — no second device
+             database). Current Setup reuses jxUgState.currentSens (same
+             object/keys the Custom Feel step already writes) plus two new
+             purely-contextual numeric inputs stored on
+             jxUgState.advancedState (currentDpi/fireButton — the SAME
+             fields Advanced Setup already defined in Step 11, never
+             duplicated). Performance/Optimization are also contextual-only
+             and stored on that same advancedState object. Nothing here
+             ever overwrites jxUgState.dpiMode/dpiValue, the matched
+             profile's fireButtonSize, or the verified matcher result. -->
+        <div class="jx-ug-pro-panel jx-ug-hidden" id="jxUgProPanel">
+          <details class="jx-ug-pro-section" open>
+            <summary>Device Info</summary>
+            <div class="jx-ug-pro-section-body">
+              <div class="jx-ug-pro-hw-grid jx-ug-custom-summary-grid" id="jxUgProHwGrid"></div>
+              <button type="button" class="btn btn-ghost btn-sm jx-ug-pro-di-btn" id="jxUgProDeviceIntelBtn">View Device Intelligence</button>
+            </div>
+          </details>
+
+          <details class="jx-ug-pro-section">
+            <summary>Current Setup</summary>
+            <div class="jx-ug-pro-section-body">
+              <div class="jx-ug-custom-head">Current Sensitivity (Optional)</div>
+              <div class="jx-ug-custom-grid" id="jxUgProCurrentSensGrid"></div>
+
+              <div class="jx-ug-custom-grid jx-ug-pro-setup-grid">
+                <div class="jx-ug-custom-field">
+                  <label for="jxUgProCurrentDpi">Current DPI</label>
+                  <input type="number" id="jxUgProCurrentDpi" min="1" placeholder="e.g. 400" inputmode="numeric">
+                </div>
+                <div class="jx-ug-custom-field">
+                  <label for="jxUgProFireBtn">Current Fire Button (%)</label>
+                  <input type="number" id="jxUgProFireBtn" min="0" max="200" placeholder="e.g. 50">
+                </div>
+              </div>
+              <div class="jx-ug-custom-note">Contextual only — this does not change your verified sensitivity, DPI, or fire button result.</div>
+            </div>
+          </details>
+
+          <details class="jx-ug-pro-section">
+            <summary>Performance</summary>
+            <div class="jx-ug-pro-section-body">
+              <div class="jx-ug-custom-field">
+                <label for="jxUgProPerfPref">Performance Priority</label>
+                <select id="jxUgProPerfPref">
+                  <option value="">Not set</option>
+                  <option value="smooth">Smooth</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="max_fps">Max FPS</option>
+                </select>
+              </div>
+              <div class="jx-ug-custom-note">Saved for a future optimization engine only — never affects your verified sensitivity match.</div>
+            </div>
+          </details>
+
+          <details class="jx-ug-pro-section">
+            <summary>Optimization</summary>
+            <div class="jx-ug-pro-section-body">
+              <div class="jx-ug-custom-field">
+                <label for="jxUgProOptPref">Optimization</label>
+                <select id="jxUgProOptPref">
+                  <option value="">Not set</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="performance">Performance</option>
+                  <option value="battery">Battery</option>
+                </select>
+              </div>
+              <div class="jx-ug-custom-note">Saved for a future Device Intelligence / Advanced Setup engine only — never affects your verified sensitivity match.</div>
+            </div>
+          </details>
+        </div>
+
+        <button type="button" class="jx-ug-generate-btn" id="jxUgGenerateBtn" disabled>Generate My Sensitivity</button>
+
+        <div class="jx-ug-ready-result jx-ug-hidden" id="jxUgReadyResult" role="status" aria-live="polite" tabindex="-1"></div>
+      </div>
+
+      <!-- Advanced Setup boundary (Stage 7, Step 11). Reached ONLY via the
+           explicit "Advanced Setup" action on a NO_MATCH result — never
+           entered automatically. This is a separation boundary, not the
+           advanced calculation itself: it reuses Device/Playstyle/Feel/DPI
+           already stored on jxUgState (never re-collected, never
+           duplicated here), and only collects additional informational
+           inputs for a future optimization engine. jxUgState.matchResult
+           (the verified result) is never read from or written to by
+           anything below — VERIFIED and ADVANCED stay fully separate,
+           explicit branches with no shared/vague status flag. -->
+      <div id="jxUgAdvancedStep" class="jx-ug-hidden">
+        <div class="jx-ug-step-title" id="jxUgAdvancedStepTitle" tabindex="-1">Advanced Setup</div>
+
+        <div class="jx-ug-ready-result-badge-row">
+          <span class="status-pill status-advanced">Advanced / Experimental</span>
+        </div>
+        <div class="jx-ug-result-note">These settings are estimates, not verified JUTTFHX profiles.</div>
+
+        <div class="jx-ug-advanced-summary" id="jxUgAdvancedSummaryList"></div>
+
+        <div class="jx-ug-advanced-section" id="jxUgAdvancedSensSection"></div>
+
+        <div class="jx-ug-custom-wrap">
+          <div class="jx-ug-custom-head">Advanced Inputs (Optional)</div>
+          <div class="jx-ug-custom-grid">
+            <div class="jx-ug-custom-field">
+              <label for="jxUgAdvCurrentDpi">Current DPI</label>
+              <input type="number" id="jxUgAdvCurrentDpi" min="1" placeholder="e.g. 400" inputmode="numeric">
+            </div>
+            <div class="jx-ug-custom-field">
+              <label for="jxUgAdvFireBtn">Fire Button Size (%)</label>
+              <input type="number" id="jxUgAdvFireBtn" min="0" max="200" placeholder="e.g. 50">
+            </div>
+            <div class="jx-ug-custom-field">
+              <label for="jxUgAdvPerfPref">Performance Preference</label>
+              <select id="jxUgAdvPerfPref">
+                <option value="">Not set</option>
+                <option value="battery">Battery Saver</option>
+                <option value="balanced">Balanced</option>
+                <option value="performance">Max Performance</option>
+              </select>
+            </div>
+            <div class="jx-ug-custom-field">
+              <label for="jxUgAdvOptPref">Optimization Preference</label>
+              <select id="jxUgAdvOptPref">
+                <option value="">Not set</option>
+                <option value="stability">Stability</option>
+                <option value="precision">Precision</option>
+                <option value="speed">Speed</option>
+              </select>
+            </div>
+          </div>
+          <div class="jx-ug-custom-note">Informational only, for a future Advanced optimization engine — this is not sent to or stored in the verified profile database, and nothing is calculated on this step.</div>
+        </div>
+
+        <button type="button" class="jx-ug-advanced-run-btn" id="jxUgAdvancedRunBtn">Run Advanced Setup</button>
+
+        <div class="jx-ug-advanced-result jx-ug-hidden" id="jxUgAdvancedResult" role="status" aria-live="polite"></div>
+
+        <div class="jx-ug-advanced-back-row">
+          <button type="button" class="btn btn-ghost btn-sm" id="jxUgAdvancedBackBtn">Back to Verified Generator</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="jx-ug-footer" id="jxUgFooter">
+      <button type="button" class="btn btn-ghost" id="jxUgBackBtn" disabled>Back</button>
+      <button type="button" class="btn btn-gold" id="jxUgNextBtn" disabled>Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     DEVICE INTELLIGENCE MODAL (Stage 7, Step 14)
+     Opened only from the Pro panel's "View Device Intelligence"
+     button. This is a READ-ONLY presentation layer on top of the
+     REAL, already-existing engines — window.JX_runPerformanceAnalysis,
+     window.JX_buildOptimizationPlan, window.JX_buildGraphicsRecommendation
+     (the exact same functions that power the site's Hardware
+     Analysis / Optimization Center / Graphics Recommendation
+     sections elsewhere on the page). Nothing here recalculates any
+     score, invents any figure, or duplicates those engines — it only
+     formats their output for the device already selected in the
+     generator (jxUgState.device.deviceId, looked up against the SAME
+     DEVICES array every other feature reads from). It never touches
+     jxUgState's verified fields (device/playstyle/feel/dpi/matchResult),
+     never calls the legacy sensitivity generator/seededRand/rangePick,
+     and performs no Firestore reads or writes. Layered above
+     #jxUgModal (z-index 600) since it always opens from within it. -->
+<div class="modal-overlay" id="jxUgDiModal" aria-hidden="true">
+  <div class="modal-box jx-ug-di-box" role="dialog" aria-modal="true" aria-labelledby="jxUgDiTitle">
+    <div class="jx-ug-header">
+      <div class="jx-ug-header-title">
+        <h3 id="jxUgDiTitle">Device Intelligence</h3>
+        <span class="jx-ug-header-step" id="jxUgDiSubtitle">Verified hardware analysis</span>
+      </div>
+      <button type="button" class="jx-ug-close" id="jxUgDiCloseBtn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="jx-ug-di-body" id="jxUgDiBody">
+      <!-- Filled at runtime by jxUgRenderDeviceIntel() -->
+    </div>
+    <div class="jx-ug-di-footer">
+      <button type="button" id="jxUgDiFullAnalysisBtn" class="btn btn-gold">View Full Analysis</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var modal   = document.getElementById('jxUgModal');
+  var openBtn = document.getElementById('jxUgOpenBtn');
+  var closeBtn= document.getElementById('jxUgCloseBtn');
+  if(!modal || !openBtn || !closeBtn) return; // defensive: never throw if markup is missing
+
+  var modeBtns = modal.querySelectorAll('.jx-ug-mode-btn');
+
+  function openUg(){
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.querySelector('html').classList.add('no-scroll');
+    closeBtn.focus();
+  }
+
+  function closeUg(){
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.querySelector('html').classList.remove('no-scroll');
+    openBtn.focus();
+    var diModalEl = document.getElementById('jxUgDiModal');
+    if(diModalEl){ diModalEl.classList.remove('open'); diModalEl.setAttribute('aria-hidden', 'true'); } // close nested Device Intelligence modal too, if open
+  }
+
+  openBtn.addEventListener('click', openUg);
+  closeBtn.addEventListener('click', closeUg);
+  modal.addEventListener('click', function(e){
+    if(e.target === modal) closeUg();
+  });
+  document.addEventListener('keydown', function(e){
+    var diModalEl = document.getElementById('jxUgDiModal');
+    if(diModalEl && diModalEl.classList.contains('open')) return; // Device Intelligence modal handles its own Escape, on top of this one
+    if(e.key === 'Escape' && modal.classList.contains('open')) closeUg();
+  });
+
+  // Mode selector. Stage 7 Step 12 wires this to the Smart Mode friendly
+  // layer: switching modes toggles which UI (canonical vs. friendly) is
+  // shown for the Playstyle/Feel/DPI steps only — Device and Ready/
+  // Generate are identical across modes. Stage 7 Step 13 adds Pro: it
+  // reuses the exact same canonical Playstyle/Feel/DPI UI Quick uses
+  // (Pro is an input/context layer, not a second friendly layer like
+  // Smart) and additionally reveals the Pro contextual panel on the
+  // Ready screen (jxUgProPanel) — see jxUgApplyModeVisibility below.
+  var jxUgActiveMode = 'quick';
+  modeBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      modeBtns.forEach(function(b){
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      jxUgActiveMode = btn.getAttribute('data-jx-ug-mode') || 'quick';
+      jxUgApplyModeVisibility();
+    });
+  });
+
+  /* ============================================================
+     DEVICE STEP (Stage 7, Step 2)
+     Reuses the existing DEVICES array and matchDevices() (exposed as
+     window.JX_matchDevices) — no second device database, no duplicated
+     records, no changes to the existing devices collection/schema.
+     ============================================================ */
+
+  // Generator's own state — separate from any site-wide store. Only
+  // device fields exist at this step; playstyle/feel/dpi are added in
+  // later steps per the Stage 6 COMPONENT_DATA_CONTRACT.
+  // matchResult (Stage 7, Step 7; extended Step 8) is additive-only:
+  // { status, profileId, via, reasonCode } once a matcher run completes.
+  // reasonCode is only ever set on NO_MATCH, for the Step 8 Result UI to
+  // choose which follow-up actions to offer — it does not change matcher
+  // logic. Every other field above is untouched from prior stages.
+  // advancedState (Stage 7, Step 11) is additive-only, on this SAME
+  // jxUgState object — not a second generator state object. It is its
+  // own conceptual input context (currentDpi/fireButton/preferences are
+  // never merged into the verified fields above, and matchResult above
+  // is never read/written by anything Advanced-related).
+  var jxUgState = { device: null, playstyle: null, sensitivityFeel: null, currentSens: null, dpiMode: null, dpiValue: null, status: 'IDLE', matchResult: null, tuningState: 'IDLE',
+    advancedState: { status: 'IDLE', currentDpi: null, fireButton: null, performancePreference: null, optimizationPreference: null, currentSensInput: null, result: null }
+  };
+
+  function jxUgEscapeHtml(str){
+    return String(str == null ? '' : str).replace(/[&<>"']/g, function(c){
+      return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c];
+    });
+  }
+
+  var devSearchArea   = document.getElementById('jxUgDeviceSearchArea');
+  var devSearchInput  = document.getElementById('jxUgDeviceSearchInput');
+  var devSearchClear  = document.getElementById('jxUgDeviceSearchClear');
+  var devList         = document.getElementById('jxUgDeviceList');
+  var devTabPopular    = document.getElementById('jxUgTabPopular');
+  var devTabBrands     = document.getElementById('jxUgTabBrands');
+  var brandRow         = document.getElementById('jxUgBrandRow');
+  var selectedChip     = document.getElementById('jxUgSelectedChip');
+  var selectedIcon     = document.getElementById('jxUgSelectedIcon');
+  var selectedName     = document.getElementById('jxUgSelectedName');
+  var selectedBrand    = document.getElementById('jxUgSelectedBrand');
+  var changeDeviceBtn  = document.getElementById('jxUgChangeDeviceBtn');
+  var requestDeviceBtn = document.getElementById('jxUgRequestDeviceBtn');
+  var backBtn          = document.getElementById('jxUgBackBtn');
+  var nextBtn           = document.getElementById('jxUgNextBtn');
+  var stepLabelEl       = document.getElementById('jxUgStepLabel');
+  var deviceStepEl      = document.getElementById('jxUgDeviceStep');
+  var playstyleStepEl   = document.getElementById('jxUgPlaystyleStep');
+  var psGrid            = document.getElementById('jxUgPlaystyleGrid');
+  var playstyleStepTitleEl = document.getElementById('jxUgPlaystyleStepTitle');
+  var smartPlaystyleGridEl = document.getElementById('jxUgSmartPlaystyleGrid');
+  var feelStepEl        = document.getElementById('jxUgFeelStep');
+  var feelList          = document.getElementById('jxUgFeelList');
+  var feelStepTitleEl   = document.getElementById('jxUgFeelStepTitle');
+  var smartFeelGridEl   = document.getElementById('jxUgSmartFeelGrid');
+  var customWrap        = document.getElementById('jxUgCustomWrap');
+  var dpiStepEl          = document.getElementById('jxUgDpiStep');
+  var dpiList            = document.getElementById('jxUgDpiList');
+  var dpiStepTitleEl     = document.getElementById('jxUgDpiStepTitle');
+  var smartDpiGridEl     = document.getElementById('jxUgSmartDpiGrid');
+  var dpiCustomWrap      = document.getElementById('jxUgDpiCustomWrap');
+  var dpiValueInput      = document.getElementById('jxUgDpiValue');
+  var dpiErrorEl         = document.getElementById('jxUgDpiError');
+  var readyStepEl        = document.getElementById('jxUgReadyStep');
+  var summaryListEl       = document.getElementById('jxUgSummaryList');
+  var customSummaryEl     = document.getElementById('jxUgCustomSummary');
+  var customSummaryGridEl = document.getElementById('jxUgCustomSummaryGrid');
+  var generateBtn         = document.getElementById('jxUgGenerateBtn');
+  // Pro Mode contextual panel (Stage 7, Step 13) — additive DOM refs only.
+  var proPanelEl              = document.getElementById('jxUgProPanel');
+  var proHwGridEl              = document.getElementById('jxUgProHwGrid');
+  var proDeviceIntelBtn        = document.getElementById('jxUgProDeviceIntelBtn');
+  var proCurrentSensGridEl     = document.getElementById('jxUgProCurrentSensGrid');
+  var proCurrentDpiInput       = document.getElementById('jxUgProCurrentDpi');
+  var proFireBtnInput          = document.getElementById('jxUgProFireBtn');
+  var proPerfPrefSel           = document.getElementById('jxUgProPerfPref');
+  var proOptPrefSel            = document.getElementById('jxUgProOptPref');
+  var readyResultEl       = document.getElementById('jxUgReadyResult');
+
+  // Stage 7, Step 11 — Advanced Setup boundary elements.
+  var footerEl               = document.getElementById('jxUgFooter');
+  var advancedStepEl         = document.getElementById('jxUgAdvancedStep');
+  var advancedSummaryListEl  = document.getElementById('jxUgAdvancedSummaryList');
+  var advancedSensSectionEl  = document.getElementById('jxUgAdvancedSensSection');
+  var advancedDpiInput       = document.getElementById('jxUgAdvCurrentDpi');
+  var advancedFireBtnInput   = document.getElementById('jxUgAdvFireBtn');
+  var advancedPerfPrefSel    = document.getElementById('jxUgAdvPerfPref');
+  var advancedOptPrefSel     = document.getElementById('jxUgAdvOptPref');
+  var advancedRunBtn         = document.getElementById('jxUgAdvancedRunBtn');
+  var advancedResultEl       = document.getElementById('jxUgAdvancedResult');
+  var advancedBackBtn        = document.getElementById('jxUgAdvancedBackBtn');
+
+  var devActiveTab   = 'popular';
+  var devActiveBrand = 'all';
+
+  // Same brand list already used by the site's own brand chip row
+  // (#brandChipRow), reused here rather than redefined from scratch.
+  var JX_UG_BRANDS = ['Samsung','Redmi','Poco','Vivo','Oppo','Realme','Infinix','Tecno','iPhone','Google Pixel','Itel','VGO TEL','Huawei','Motorola','Red Magic'];
+
+  function jxUgGetDevices(query, brandFilter){
+    // Prefer the site's real matchDevices() so search behavior stays
+    // identical to the existing Device Selection section; fall back to a
+    // minimal equivalent only if that function isn't available yet for
+    // some reason (defensive, not a second implementation of it).
+    if(typeof window.JX_matchDevices === 'function'){
+      return window.JX_matchDevices(query || '', brandFilter || 'all');
+    }
+    var q = (query || '').trim().toLowerCase();
+    var all = (typeof DEVICES !== 'undefined') ? DEVICES : [];
+    return all.filter(function(d){
+      var brandOk = !brandFilter || brandFilter === 'all' || d.brand === brandFilter;
+      var textOk = !q || (d.name||'').toLowerCase().indexOf(q) !== -1 || (d.brand||'').toLowerCase().indexOf(q) !== -1;
+      return brandOk && textOk;
+    });
+  }
+
+  function jxUgSortPopular(list){
+    // Popular tab: ranked by the same existing popularity/searchCount
+    // fields the site already tracks — no new ranking logic invented.
+    return list.slice().sort(function(a, b){
+      var pa = (a.popularity || 0) * 1 + (a.searchCount || 0) * 0.01;
+      var pb = (b.popularity || 0) * 1 + (b.searchCount || 0) * 0.01;
+      return pb - pa;
+    });
+  }
+
+  function jxUgDeviceCardHTML(d){
+    var isSelected = jxUgState.device && jxUgState.device.deviceId === d.id;
+    var initials = (d.brand || '').slice(0, 2).toUpperCase();
+    return '' +
+      '<button type="button" class="jx-ug-devcard' + (isSelected ? ' selected' : '') + '" aria-pressed="' + (isSelected ? 'true' : 'false') + '" data-jx-ug-device-id="' + jxUgEscapeHtml(d.id) + '">' +
+        '<div class="jx-ug-devcard-icon">' + jxUgEscapeHtml(initials) + '</div>' +
+        '<div class="jx-ug-devcard-text">' +
+          '<div class="jx-ug-devcard-name">' + jxUgEscapeHtml(d.name) + '</div>' +
+          '<div class="jx-ug-devcard-brand">' + jxUgEscapeHtml(d.brand) + '</div>' +
+        '</div>' +
+        '<svg class="jx-ug-devcard-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
+      '</button>';
+    // Intentionally no DPI/headshot/popularity numbers here — Device step
+    // must not surface sensitivity numbers or analyzer content (Stage 6, Part 4).
+  }
+
+  function jxUgRenderDeviceList(){
+    var allDevices = (typeof DEVICES !== 'undefined') ? DEVICES : [];
+    if(allDevices.length === 0){
+      devList.innerHTML = '<div class="jx-ug-dev-empty"><b>No devices available yet</b>Devices added through the Admin Panel will appear here automatically.</div>';
+      return;
+    }
+
+    var query = devSearchInput.value || '';
+    var brandFilter = devActiveTab === 'brands' ? devActiveBrand : 'all';
+    var results = jxUgGetDevices(query, brandFilter);
+
+    if(devActiveTab === 'popular' && !query.trim()){
+      results = jxUgSortPopular(results).slice(0, 12);
+    }
+
+    if(results.length === 0){
+      devList.innerHTML = '<div class="jx-ug-dev-empty"><b>Device Not Found</b>' +
+        (query.trim() ? '"' + jxUgEscapeHtml(query.trim()) + '" isn\'t in our database yet.' : 'No devices in this category yet.') +
+        '</div>';
+      return;
+    }
+
+    devList.innerHTML = results.map(jxUgDeviceCardHTML).join('');
+
+    devList.querySelectorAll('[data-jx-ug-device-id]').forEach(function(card){
+      card.addEventListener('click', function(){
+        var id = card.getAttribute('data-jx-ug-device-id');
+        var device = allDevices.filter(function(d){ return String(d.id) === String(id); })[0];
+        if(device) jxUgSelectDevice(device);
+      });
+    });
+  }
+
+  function jxUgRenderBrandRow(){
+    brandRow.innerHTML = '<button type="button" class="jx-ug-brand-chip' + (devActiveBrand === 'all' ? ' active' : '') + '" data-jx-ug-brand="all">All</button>' +
+      JX_UG_BRANDS.map(function(b){
+        return '<button type="button" class="jx-ug-brand-chip' + (devActiveBrand === b ? ' active' : '') + '" data-jx-ug-brand="' + jxUgEscapeHtml(b) + '">' + jxUgEscapeHtml(b) + '</button>';
+      }).join('');
+
+    brandRow.querySelectorAll('[data-jx-ug-brand]').forEach(function(chip){
+      chip.addEventListener('click', function(){
+        devActiveBrand = chip.getAttribute('data-jx-ug-brand');
+        jxUgRenderBrandRow();
+        jxUgRenderDeviceList();
+      });
+    });
+  }
+
+  function jxUgSelectDevice(device){
+    // Generator's own state only — deviceId/brand/model, per the Stage 6
+    // architecture lock. Does not write to DEVICES, Firestore, or any
+    // other collection.
+    jxUgState.device = {
+      deviceId: device.id,
+      brand: device.brand,
+      model: device.name
+    };
+
+    selectedIcon.textContent = (device.brand || '').slice(0, 2).toUpperCase();
+    selectedName.textContent = device.name;
+    selectedBrand.textContent = device.brand;
+    selectedChip.classList.remove('jx-ug-hidden');
+    devSearchArea.classList.add('jx-ug-hidden');
+
+    jxUgUpdateNextState();
+  }
+
+  function jxUgClearDevice(){
+    jxUgState.device = null;
+    selectedChip.classList.add('jx-ug-hidden');
+    devSearchArea.classList.remove('jx-ug-hidden');
+    jxUgUpdateNextState();
+    jxUgRenderDeviceList();
+  }
+
+  /* ============================================================
+     STEP SWITCHER (Stage 7, Step 3 → extended through Step 5)
+     Generic step toggling, extended with 'dpi' and a minimal 'ready'
+     placeholder. JX_UG_TOTAL_STEPS stays 4 (Device/Playstyle/Feel/DPI —
+     the full numbered flow per the Stage 6 architecture); 'ready' is a
+     landing stub beyond the numbered count, not a 5th counted step, so it
+     gets its own label branch below instead of "Step 5 of 4". Same single
+     state object (jxUgState) and same step machinery as before — nothing
+     duplicated.
+     ============================================================ */
+  var JX_UG_STEPS = ['device', 'playstyle', 'feel', 'dpi', 'ready'];
+  var JX_UG_TOTAL_STEPS = 4;
+  var JX_UG_STEP_LABELS = { device: 'Device', playstyle: 'Playstyle', feel: 'Feel', dpi: 'DPI' };
+  var jxUgStepIndex = 0;
+
+  function jxUgIsCustomDpiValid(){
+    var v = jxUgState.dpiValue;
+    return typeof v === 'number' && Number.isInteger(v) && v >= 300 && v <= 500;
+  }
+
+  function jxUgIsStepComplete(stepName){
+    if(stepName === 'device') return !!jxUgState.device;
+    if(stepName === 'playstyle') return !!jxUgState.playstyle;
+    if(stepName === 'feel') return !!jxUgState.sensitivityFeel;
+    if(stepName === 'dpi'){
+      if(jxUgState.dpiMode === 'NoDpi' || jxUgState.dpiMode === 'DefaultDpi') return true;
+      if(jxUgState.dpiMode === 'CustomDpi') return jxUgIsCustomDpiValid();
+      return false;
+    }
+    if(stepName === 'ready') return jxUgIsGenerateReady();
+    return false;
+  }
+
+  // Reused directly by the Generate button (Stage 7, Step 6) — the exact
+  // same four checks the step machinery already uses, so Generate can
+  // never be enabled by a path the step system itself wouldn't allow.
+  function jxUgIsGenerateReady(){
+    return jxUgIsStepComplete('device') &&
+      jxUgIsStepComplete('playstyle') &&
+      jxUgIsStepComplete('feel') &&
+      jxUgIsStepComplete('dpi');
+  }
+
+  function jxUgShowStep(index){
+    jxUgStepIndex = index;
+    var stepName = JX_UG_STEPS[index];
+    deviceStepEl.classList.toggle('jx-ug-hidden', stepName !== 'device');
+    playstyleStepEl.classList.toggle('jx-ug-hidden', stepName !== 'playstyle');
+    feelStepEl.classList.toggle('jx-ug-hidden', stepName !== 'feel');
+    dpiStepEl.classList.toggle('jx-ug-hidden', stepName !== 'dpi');
+    readyStepEl.classList.toggle('jx-ug-hidden', stepName !== 'ready');
+    stepLabelEl.textContent = (stepName === 'ready')
+      ? 'Ready'
+      : 'Step ' + (index + 1) + ' of ' + JX_UG_TOTAL_STEPS + ' \u00B7 ' + JX_UG_STEP_LABELS[stepName];
+    backBtn.disabled = (index === 0);
+    // Ready's CTA is Generate, not the generic footer Next — hide Next
+    // entirely here rather than creating a second navigation mechanism.
+    nextBtn.classList.toggle('jx-ug-hidden', stepName === 'ready');
+    if(stepName === 'ready') jxUgRenderReadyScreen();
+    jxUgUpdateNextState();
+  }
+
+  function jxUgUpdateNextState(){
+    var stepName = JX_UG_STEPS[jxUgStepIndex];
+    nextBtn.disabled = !jxUgIsStepComplete(stepName);
+  }
+
+  /* ============================================================
+     PLAYSTYLE STEP (Stage 7, Step 3 — CORRECTED)
+     Uses the Ultimate Generator's OWN locked canonical Stage 4 taxonomy.
+     These 6 values are what feed the Stage 4 matcher enums later and must
+     NEVER be swapped for the site's unrelated Combo Submit taxonomy
+     (Aggressive/Marksman/Support/Defensive), which stays untouched
+     elsewhere on the page. No Feel/DPI fields, no matcher call, no
+     Firestore read/write happen here.
+     ============================================================ */
+  var JX_UG_PLAYSTYLES = [
+    {
+      id: 'Headshot', title: 'Headshot',
+      desc: 'Fast drag + precision',
+      icon: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none"/>'
+    },
+    {
+      id: 'OneTap', title: 'OneTap',
+      desc: 'Quick single-shot control',
+      icon: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.1 5.1l2.1 2.1M16.8 16.8l2.1 2.1M18.9 5.1l-2.1 2.1M7.2 16.8l-2.1 2.1"/>'
+    },
+    {
+      id: 'Rush', title: 'Rush',
+      desc: 'Fast close-range fights',
+      icon: '<path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/>'
+    },
+    {
+      id: 'AllRound', title: 'AllRound',
+      desc: 'Balanced for every fight',
+      icon: '<circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>'
+    },
+    {
+      id: 'LongRange', title: 'LongRange',
+      desc: 'Steady long-distance aim',
+      icon: '<path d="M2 12S6 5 12 5s10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>'
+    },
+    {
+      id: 'Freestyle', title: 'Freestyle',
+      desc: 'Creative movement + aim',
+      icon: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/>'
+    }
+  ];
+
+  function jxUgPlaystyleCardHTML(p){
+    var isSelected = jxUgState.playstyle === p.id;
+    return '' +
+      '<button type="button" class="jx-ug-ps-card' + (isSelected ? ' selected' : '') + '" aria-pressed="' + (isSelected ? 'true' : 'false') + '" data-jx-ug-playstyle="' + jxUgEscapeHtml(p.id) + '">' +
+        '<svg class="jx-ug-ps-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
+        '<div class="jx-ug-ps-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p.icon + '</svg></div>' +
+        '<div class="jx-ug-ps-title">' + jxUgEscapeHtml(p.title) + '</div>' +
+        '<div class="jx-ug-ps-desc">' + jxUgEscapeHtml(p.desc) + '</div>' +
+      '</button>';
+  }
+
+  function jxUgRenderPlaystyles(){
+    psGrid.innerHTML = JX_UG_PLAYSTYLES.map(jxUgPlaystyleCardHTML).join('');
+    psGrid.querySelectorAll('[data-jx-ug-playstyle]').forEach(function(card){
+      card.addEventListener('click', function(){
+        jxUgSelectPlaystyle(card.getAttribute('data-jx-ug-playstyle'));
+      });
+    });
+  }
+
+  function jxUgSelectPlaystyle(id){
+    jxUgState.playstyle = id;
+    jxUgRenderPlaystyles();
+    jxUgUpdateNextState();
+  }
+
+  /* ============================================================
+     FEEL STEP (Stage 7, Step 4)
+     5 independent, canonical database profiles. None is derived from
+     another — Low/Balanced/High/Extreme/Custom are separate options, not
+     points on a calculated scale. No numeric sensitivity ranges or
+     sliders are shown; Custom's inputs below are optional and purely
+     informational for a future Custom/Tune flow — nothing here generates
+     or calculates a sensitivity value.
+     ============================================================ */
+  var JX_UG_FEELS = [
+    {
+      id: 'Low', title: 'Low', tag: 'Controlled',
+      icon: '<path d="M4 16h16"/><path d="M8 16V11M12 16V9M16 16v-3"/>'
+    },
+    {
+      id: 'Balanced', title: 'Balanced', tag: 'Stable',
+      icon: '<path d="M12 3v18"/><path d="M5 8h14M4 8l2.5 6h-5L4 8ZM20 8l2.5 6h-5L20 8Z"/>'
+    },
+    {
+      id: 'High', title: 'High', tag: 'Fast',
+      icon: '<path d="M4 16h16"/><path d="M8 16V9M12 16V5M16 16v-8"/>'
+    },
+    {
+      id: 'Extreme', title: 'Extreme', tag: 'Ultra Fast',
+      icon: '<path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/>'
+    },
+    {
+      id: 'Custom', title: 'Custom', tag: 'Use My Current Setup',
+      icon: '<path d="M12 20V10M12 10 6 4M12 10l6-6"/><circle cx="12" cy="20" r="2"/>'
+    }
+  ];
+
+  function jxUgFeelCardHTML(f){
+    var isSelected = jxUgState.sensitivityFeel === f.id;
+    return '' +
+      '<button type="button" class="jx-ug-feel-card' + (isSelected ? ' selected' : '') + '" aria-pressed="' + (isSelected ? 'true' : 'false') + '" data-jx-ug-feel="' + jxUgEscapeHtml(f.id) + '">' +
+        '<div class="jx-ug-feel-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + f.icon + '</svg></div>' +
+        '<div class="jx-ug-feel-text">' +
+          '<div class="jx-ug-feel-title">' + jxUgEscapeHtml(f.title) + '</div>' +
+          '<div class="jx-ug-feel-tag">' + jxUgEscapeHtml(f.tag) + '</div>' +
+        '</div>' +
+        '<svg class="jx-ug-feel-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
+      '</button>';
+  }
+
+  function jxUgRenderFeels(){
+    feelList.innerHTML = JX_UG_FEELS.map(jxUgFeelCardHTML).join('');
+    feelList.querySelectorAll('[data-jx-ug-feel]').forEach(function(card){
+      card.addEventListener('click', function(){
+        jxUgSelectFeel(card.getAttribute('data-jx-ug-feel'));
+      });
+    });
+  }
+
+  function jxUgSelectFeel(id){
+    jxUgState.sensitivityFeel = id;
+    jxUgRenderFeels();
+    customWrap.classList.toggle('jx-ug-hidden', id !== 'Custom');
+    jxUgUpdateNextState();
+  }
+
+  // Custom feel's current-sensitivity fields: optional, informational only.
+  // Stored on jxUgState.currentSens for a future Custom/Tune flow — no
+  // generation, calculation, or matcher call happens from these inputs.
+  var jxUgCustomFieldMap = {
+    jxUgCustomGeneral: 'general',
+    jxUgCustomRedDot: 'redDot',
+    jxUgCustomScope2x: 'scope2x',
+    jxUgCustomScope4x: 'scope4x',
+    jxUgCustomSniper: 'sniper',
+    jxUgCustomFreeLook: 'freeLook'
+  };
+  Object.keys(jxUgCustomFieldMap).forEach(function(inputId){
+    var el = document.getElementById(inputId);
+    if(!el) return;
+    el.addEventListener('input', function(){
+      if(!jxUgState.currentSens) jxUgState.currentSens = {};
+      var key = jxUgCustomFieldMap[inputId];
+      var val = el.value;
+      jxUgState.currentSens[key] = val === '' ? null : Number(val);
+    });
+  });
+
+  /* ============================================================
+     DPI STEP (Stage 7, Step 5)
+     3 canonical, independent choices — NoDpi / DefaultDpi / CustomDpi.
+     Nothing is pre-selected; jxUgState.dpiMode starts null and only ever
+     becomes one of these three exact strings via an explicit card click.
+     No DPI number is calculated, invented, or read from the legacy
+     computed-DPI formula anywhere in this step — Default and No DPI both
+     store dpiValue = null; Custom stores only the integer the user typed,
+     validated against the LOCKED Ultimate Generator range (300–500),
+     which is intentionally separate from the Admin Device DPI range
+     (50–800) and the FAQ's 400–600 copy — neither of those is touched.
+     ============================================================ */
+  var JX_UG_DPI_OPTIONS = [
+    {
+      id: 'NoDpi', title: 'No DPI', tag: 'No DPI changes needed',
+      icon: '<path d="M4.5 4.5 19.5 19.5"/><circle cx="12" cy="12" r="8"/>'
+    },
+    {
+      id: 'DefaultDpi', title: 'Default', tag: "Keep your phone's normal DPI",
+      icon: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>'
+    },
+    {
+      id: 'CustomDpi', title: 'Custom', tag: 'Use a custom DPI',
+      icon: '<path d="M4 15V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M8 12h8M12 9v6"/>'
+    }
+  ];
+
+  function jxUgDpiCardHTML(d){
+    var isSelected = jxUgState.dpiMode === d.id;
+    return '' +
+      '<button type="button" class="jx-ug-feel-card' + (isSelected ? ' selected' : '') + '" aria-pressed="' + (isSelected ? 'true' : 'false') + '" data-jx-ug-dpi="' + jxUgEscapeHtml(d.id) + '">' +
+        '<div class="jx-ug-feel-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d.icon + '</svg></div>' +
+        '<div class="jx-ug-feel-text">' +
+          '<div class="jx-ug-feel-title">' + jxUgEscapeHtml(d.title) + '</div>' +
+          '<div class="jx-ug-feel-tag">' + jxUgEscapeHtml(d.tag) + '</div>' +
+        '</div>' +
+        '<svg class="jx-ug-feel-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
+      '</button>';
+  }
+
+  function jxUgRenderDpiOptions(){
+    dpiList.innerHTML = JX_UG_DPI_OPTIONS.map(jxUgDpiCardHTML).join('');
+    dpiList.querySelectorAll('[data-jx-ug-dpi]').forEach(function(card){
+      card.addEventListener('click', function(){
+        jxUgSelectDpiMode(card.getAttribute('data-jx-ug-dpi'));
+      });
+    });
+  }
+
+  // Remembers the last value typed into Custom so switching Custom → Default
+  // → Custom can cleanly restore it, without ever letting a stale value leak
+  // into jxUgState.dpiValue while a non-Custom mode is active.
+  var jxUgLastCustomDpiText = '';
+
+  function jxUgValidateDpiInput(){
+    var raw = dpiValueInput.value.trim();
+    if(raw === ''){
+      jxUgState.dpiValue = null;
+      dpiErrorEl.classList.add('jx-ug-hidden');
+      dpiValueInput.removeAttribute('aria-invalid');
+      jxUgUpdateNextState();
+      return;
+    }
+    var n = Number(raw);
+    var isValid = raw !== '' && /^-?\d+$/.test(raw) && Number.isInteger(n) && n >= 300 && n <= 500;
+    if(isValid){
+      jxUgState.dpiValue = n;
+      dpiErrorEl.classList.add('jx-ug-hidden');
+      dpiValueInput.removeAttribute('aria-invalid');
+    } else {
+      jxUgState.dpiValue = null;
+      dpiErrorEl.classList.remove('jx-ug-hidden');
+      dpiValueInput.setAttribute('aria-invalid', 'true');
+    }
+    jxUgUpdateNextState();
+  }
+
+  dpiValueInput.addEventListener('input', function(){
+    jxUgLastCustomDpiText = dpiValueInput.value;
+    jxUgValidateDpiInput();
+  });
+
+  function jxUgSelectDpiMode(id){
+    jxUgState.dpiMode = id;
+
+    if(id === 'CustomDpi'){
+      dpiCustomWrap.classList.remove('jx-ug-hidden');
+      // Restore whatever the user last typed, if anything, then re-validate
+      // rather than assume it's still valid.
+      dpiValueInput.value = jxUgLastCustomDpiText;
+      jxUgValidateDpiInput();
+    } else {
+      // Changing to No DPI or Default always clears dpiValue — no stale
+      // Custom number may carry over into a non-Custom mode.
+      dpiCustomWrap.classList.add('jx-ug-hidden');
+      dpiErrorEl.classList.add('jx-ug-hidden');
+      jxUgState.dpiValue = null;
+    }
+
+    jxUgRenderDpiOptions();
+    jxUgUpdateNextState();
+  }
+
+  /* ============================================================
+     STAGE 07 — STEP 12: SMART MODE MAPPING
+     Smart Mode is ONLY a friendly input layer for the Playstyle/Feel/DPI
+     steps above. It is NOT a second state machine, NOT a second matcher,
+     and NOT a second modal — every Smart button below calls the exact
+     same jxUgSelectPlaystyle/jxUgSelectFeel/jxUgSelectDpiMode setters the
+     canonical grids already use, writing straight into the same
+     jxUgState.playstyle / jxUgState.sensitivityFeel / jxUgState.dpiMode /
+     jxUgState.dpiValue fields. Device and the Ready/Generate screen
+     (and the one matcher behind it) are completely unaffected by mode.
+
+     Every friendly option below maps to exactly one canonical value and
+     every canonical value has exactly one friendly option — a true 1:1
+     mapping, so there is never a silent/ambiguous guess (Part 2's raw
+     "FAST"/"RUSH" example, which would have mapped two different
+     friendly words onto the same canonical Rush with no way to tell them
+     apart later, is intentionally NOT used here; Part 6/9's disambiguated
+     wording — "Fast Close Range" — is used instead so the mapping stays
+     deterministic and reversible for Part 8's mode-switching).
+     ============================================================ */
+
+  var JX_UG_SMART_PLAYSTYLE_OPTIONS = [
+    { canonical: 'Rush',       label: 'Fast Close Range' },
+    { canonical: 'Headshot',   label: 'Precise Aim' },
+    { canonical: 'OneTap',     label: 'One-Tap Shots' },      // Part 3 — kept separate from Headshot
+    { canonical: 'LongRange',  label: 'Long Range' },
+    { canonical: 'AllRound',   label: 'Mixed / All-Round' },
+    { canonical: 'Freestyle',  label: 'Creative Movement' }
+  ];
+
+  var JX_UG_SMART_FEEL_OPTIONS = [
+    { canonical: 'Low',      label: 'Stable' },
+    { canonical: 'Balanced', label: 'Controlled' },
+    { canonical: 'High',     label: 'Fast' },
+    { canonical: 'Extreme',  label: 'Very Fast' },
+    { canonical: 'Custom',   label: 'Use My Current Setup' }
+  ];
+
+  var JX_UG_SMART_DPI_OPTIONS = [
+    { canonical: 'NoDpi',      label: "Don't Change DPI" },
+    { canonical: 'DefaultDpi', label: 'Keep Normal DPI' },
+    { canonical: 'CustomDpi',  label: 'Custom DPI' }
+  ];
+
+  function jxUgSmartBtnHTML(opt, isSelected, dataAttr){
+    return '' +
+      '<button type="button" class="jx-ug-smart-btn' + (isSelected ? ' selected' : '') + '" aria-pressed="' + (isSelected ? 'true' : 'false') + '" data-' + dataAttr + '="' + jxUgEscapeHtml(opt.canonical) + '">' +
+        '<span class="jx-ug-smart-btn-label">' + jxUgEscapeHtml(opt.label) + '</span>' +
+        '<svg class="jx-ug-smart-btn-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
+      '</button>';
+  }
+
+  // Part 8 — reflects whatever is already on jxUgState, whether it was
+  // set via Quick's canonical grid or a prior Smart answer. Nothing is
+  // reset or guessed here; a canonical value with no exact friendly
+  // counterpart simply shows no Smart button highlighted (never happens
+  // in practice since every canonical value above has exactly one
+  // friendly option, but the check is written defensively either way).
+  function jxUgRenderSmartPlaystyleGrid(){
+    smartPlaystyleGridEl.innerHTML = JX_UG_SMART_PLAYSTYLE_OPTIONS.map(function(opt){
+      return jxUgSmartBtnHTML(opt, jxUgState.playstyle === opt.canonical, 'jx-ug-smart-playstyle');
+    }).join('');
+    smartPlaystyleGridEl.querySelectorAll('[data-jx-ug-smart-playstyle]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        jxUgSmartSelectPlaystyle(btn.getAttribute('data-jx-ug-smart-playstyle'));
+      });
+    });
+  }
+
+  function jxUgRenderSmartFeelGrid(){
+    smartFeelGridEl.innerHTML = JX_UG_SMART_FEEL_OPTIONS.map(function(opt){
+      return jxUgSmartBtnHTML(opt, jxUgState.sensitivityFeel === opt.canonical, 'jx-ug-smart-feel');
+    }).join('');
+    smartFeelGridEl.querySelectorAll('[data-jx-ug-smart-feel]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        jxUgSmartSelectFeel(btn.getAttribute('data-jx-ug-smart-feel'));
+      });
+    });
+  }
+
+  function jxUgRenderSmartDpiGrid(){
+    smartDpiGridEl.innerHTML = JX_UG_SMART_DPI_OPTIONS.map(function(opt){
+      return jxUgSmartBtnHTML(opt, jxUgState.dpiMode === opt.canonical, 'jx-ug-smart-dpi');
+    }).join('');
+    smartDpiGridEl.querySelectorAll('[data-jx-ug-smart-dpi]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        jxUgSmartSelectDpi(btn.getAttribute('data-jx-ug-smart-dpi'));
+      });
+    });
+  }
+
+  // Part 10 — auto-advance after a clear, immediately-complete selection.
+  // Playstyle answers never need further input, so every Smart playstyle
+  // pick advances straight to Feel.
+  function jxUgSmartSelectPlaystyle(canonicalId){
+    jxUgSelectPlaystyle(canonicalId); // same setter Quick uses — re-renders the canonical grid too, so the two stay in sync
+    jxUgRenderSmartPlaystyleGrid();
+    jxUgShowStep(jxUgStepIndex + 1);
+  }
+
+  // Every Feel answer except Custom is immediately complete; Custom
+  // reveals the existing optional current-sensitivity fields (Part 12 —
+  // reused, never duplicated) and deliberately does NOT auto-advance, so
+  // the person has a chance to fill them in before pressing Next.
+  function jxUgSmartSelectFeel(canonicalId){
+    jxUgSelectFeel(canonicalId);
+    jxUgRenderSmartFeelGrid();
+    if(canonicalId !== 'Custom'){
+      jxUgShowStep(jxUgStepIndex + 1);
+    }
+  }
+
+  // Same pattern for DPI: No DPI / Default advance immediately; Custom
+  // reveals the existing 300–500 validator and waits for a valid value
+  // before Next becomes enabled (jxUgValidateDpiInput/jxUgUpdateNextState
+  // already handle that — nothing new is validated here).
+  function jxUgSmartSelectDpi(canonicalId){
+    jxUgSelectDpiMode(canonicalId);
+    jxUgRenderSmartDpiGrid();
+    if(canonicalId !== 'CustomDpi'){
+      jxUgShowStep(jxUgStepIndex + 1);
+    }
+  }
+
+  var JX_UG_SMART_STEP_TITLES = {
+    playstyle: 'How Do You Play?',
+    feel: 'How Fast Should It Feel?',
+    dpi: 'DPI?'
+  };
+  var JX_UG_QUICK_STEP_TITLES = {
+    playstyle: 'Select Your Playstyle',
+    feel: 'How Do You Want It To Feel?',
+    dpi: 'DPI Setting'
+  };
+
+  // Toggles canonical vs. friendly UI for Playstyle/Feel/DPI only —
+  // Device and Ready/Generate render identically regardless of mode,
+  // EXCEPT for the Pro contextual panel on Ready (Step 13), which this
+  // function also shows/hides. Safe to call any time (mode switch, or
+  // once at init); step visibility itself is still entirely controlled
+  // by jxUgShowStep().
+  function jxUgApplyModeVisibility(){
+    var isSmart = (jxUgActiveMode === 'smart');
+    var isPro = (jxUgActiveMode === 'pro');
+    psGrid.classList.toggle('jx-ug-hidden', isSmart);
+    smartPlaystyleGridEl.classList.toggle('jx-ug-hidden', !isSmart);
+    feelList.classList.toggle('jx-ug-hidden', isSmart);
+    smartFeelGridEl.classList.toggle('jx-ug-hidden', !isSmart);
+    dpiList.classList.toggle('jx-ug-hidden', isSmart);
+    smartDpiGridEl.classList.toggle('jx-ug-hidden', !isSmart);
+
+    // Pro (Step 13) is NOT Smart's friendly layer — Playstyle/Feel/DPI
+    // stay on the same canonical UI Quick uses, so titles below are only
+    // ever Smart-vs-Quick, never Pro-specific.
+    var titles = isSmart ? JX_UG_SMART_STEP_TITLES : JX_UG_QUICK_STEP_TITLES;
+    playstyleStepTitleEl.textContent = titles.playstyle;
+    feelStepTitleEl.textContent = titles.feel;
+    dpiStepTitleEl.textContent = titles.dpi;
+
+    if(proPanelEl){
+      proPanelEl.classList.toggle('jx-ug-hidden', !isPro);
+      if(isPro) jxUgRenderProPanel();
+    }
+  }
+
+  /* ============================================================
+     STAGE 07 — STEP 13: PRO MODE (advanced input/context layer)
+     Pro Mode is NOT a second matcher, generator, database, or state
+     machine. It is an additional, optional, purely-contextual panel
+     shown on the existing Ready screen (#jxUgReadyStep) only when Pro
+     is the active mode. Every field below writes into fields that
+     already exist on the ONE jxUgState object:
+       - jxUgState.currentSens            (Custom Feel's existing store)
+       - jxUgState.advancedState.currentDpi / .fireButton /
+         .performancePreference / .optimizationPreference
+         (the SAME advancedState fields Step 11's Advanced Setup already
+         defined — reused here, never duplicated into a second object
+         such as a "jxUgProState").
+     Nothing here ever touches jxUgState.dpiMode, jxUgState.dpiValue, the
+     verified matcher (jxUgRunMatcher/jxUgBuildMatchKey), or a matched
+     profile's fireButtonSize — those verified fields are set exclusively
+     by the Device/Playstyle/Feel/DPI steps and the matcher itself. All
+     Pro fields are optional and never gate jxUgIsGenerateReady().
+     ============================================================ */
+
+  // Part 8 — same lazy-init shape Step 11 already uses for advancedState;
+  // duplicated here only as a defensive default (e.g. if Pro is opened
+  // before Advanced Setup ever has been) — the object itself is still the
+  // one and only jxUgState.advancedState, never a second store.
+  function jxUgEnsureAdvancedState(){
+    if(!jxUgState.advancedState){
+      jxUgState.advancedState = { status: 'IDLE', currentDpi: null, fireButton: null, performancePreference: null, optimizationPreference: null, currentSensInput: null, result: null };
+    }
+    return jxUgState.advancedState;
+  }
+
+  // Part 1 — compact, read-only hardware info. Reuses the device already
+  // selected on jxUgState.device (deviceId only) and looks it up against
+  // the SAME DEVICES array every other feature on this page already
+  // reads from — no second device database, no new records, no guessed
+  // values. Any field missing on the record reports "Unknown", matching
+  // DEVICE_HARDWARE_SCHEMA's own convention elsewhere in this file.
+  var JX_UG_PRO_HW_FIELDS = [
+    ['processor', 'Processor'], ['gpu', 'GPU'], ['ram', 'RAM'], ['rom', 'ROM'],
+    ['refresh', 'Refresh Rate'], ['touchSamplingRate', 'Touch Sampling'], ['osVersion', 'OS']
+  ];
+
+  function jxUgGetProDeviceHardware(){
+    if(!jxUgState.device || !jxUgState.device.deviceId) return null;
+    var full = null;
+    try{
+      full = (typeof DEVICES !== 'undefined' && DEVICES) ? DEVICES.find(function(d){ return d.id === jxUgState.device.deviceId; }) : null;
+    }catch(e){ full = null; }
+    if(!full) return null;
+    function orUnknown(v){ return (v === undefined || v === null || v === '') ? 'Unknown' : v; }
+    return {
+      processor: orUnknown(full.processor),
+      gpu: orUnknown(full.gpu),
+      ram: orUnknown(full.ram),
+      rom: orUnknown(full.rom),
+      refresh: orUnknown(full.refresh),
+      touchSamplingRate: orUnknown(full.touchSamplingRate),
+      osVersion: orUnknown(full.osVersion)
+    };
+  }
+
+  function jxUgRenderProDeviceInfo(){
+    if(!proHwGridEl) return;
+    var hw = jxUgGetProDeviceHardware();
+    if(!hw){
+      proHwGridEl.innerHTML = '<div class="jx-ug-custom-summary-empty">Select a device to see hardware info</div>';
+      return;
+    }
+    proHwGridEl.innerHTML = JX_UG_PRO_HW_FIELDS.map(function(f){
+      return '<div class="jx-ug-custom-summary-item"><span>' + jxUgEscapeHtml(f[1]) + '</span><b>' + jxUgEscapeHtml(String(hw[f[0]])) + '</b></div>';
+    }).join('');
+  }
+
+  /* ============================================================
+     DEVICE INTELLIGENCE MODAL (Stage 7, Step 14)
+     Renders the REAL Phase 2/3 engines (window.JX_runPerformanceAnalysis,
+     window.JX_buildOptimizationPlan — which internally also calls
+     window.JX_buildGraphicsRecommendation) for the device already
+     selected in the generator. This block only formats their output;
+     it never recalculates a score, never invents a figure, and never
+     touches jxUgState's verified fields. Fully separate from the
+     legacy sensitivity generator (seededRand/rangePick/STYLE_PROFILES)
+     — those are never referenced here.
+     ============================================================ */
+  var diModal    = document.getElementById('jxUgDiModal');
+  var diCloseBtn = document.getElementById('jxUgDiCloseBtn');
+  var diBody     = document.getElementById('jxUgDiBody');
+  var diSubtitle = document.getElementById('jxUgDiSubtitle');
+
+  // Looks up the FULL raw device record (not just the trimmed hardware
+  // subset jxUgGetProDeviceHardware returns) against the SAME DEVICES
+  // array every other feature on this page reads from — no second
+  // device database, no guessed/fabricated fields.
+  function jxUgGetFullSelectedDevice(){
+    if(!jxUgState.device || !jxUgState.device.deviceId) return null;
+    try{
+      return (typeof DEVICES !== 'undefined' && DEVICES) ? DEVICES.find(function(d){ return d.id === jxUgState.device.deviceId; }) : null;
+    }catch(e){ return null; }
+  }
+
+  function jxUgDiRatingCardHTML(label, rating){
+    var isUnknown = (rating === 'Unknown' || rating == null);
+    var score = isUnknown ? null : rating.score;
+    var explanation = isUnknown ? ('Verified ' + label.toLowerCase() + ' data unavailable.') : rating.explanation;
+    return '' +
+      '<div class="glass-card jx-ug-di-rating-card">' +
+        '<div class="jx-ug-di-rating-head"><span style="opacity:.7;">' + jxUgEscapeHtml(label) + '</span><b>' + (isUnknown ? 'Unknown' : (score + ' / 100')) + '</b></div>' +
+        '<div class="hw-stat-bar"><span style="width:' + (isUnknown ? 0 : score) + '%"></span></div>' +
+        '<p style="margin:8px 0 0; font-size:11.5px; line-height:1.5; opacity:.7;">' + jxUgEscapeHtml(explanation) + '</p>' +
+      '</div>';
+  }
+
+  function jxUgDiListHTML(title, items, isBottleneck){
+    if(!items || items.length === 0){
+      return '<div class="jx-ug-di-section"><h4>' + jxUgEscapeHtml(title) + '</h4><p class="jx-ug-di-empty">None detected from verified data.</p></div>';
+    }
+    var rows = items.map(function(item){
+      var badge = isBottleneck ? '<b>[' + jxUgEscapeHtml(item.severity) + ']</b> ' : '';
+      return '<li>' + badge + '<b>' + jxUgEscapeHtml(item.category) + '</b> — ' + jxUgEscapeHtml(item.explanation) + '</li>';
+    }).join('');
+    return '<div class="jx-ug-di-section"><h4>' + jxUgEscapeHtml(title) + '</h4><ul class="jx-ug-di-list">' + rows + '</ul></div>';
+  }
+
+  function jxUgDiGraphicsHTML(gfx){
+    if(!gfx || !gfx.settings){
+      return '<div class="jx-ug-di-section"><h4>Recommended Graphics</h4><p class="jx-ug-di-empty">' + jxUgEscapeHtml(gfx && gfx.note ? gfx.note : 'Not enough verified data yet.') + '</p></div>';
+    }
+    var rows = [
+      ['Profile', gfx.profileName], ['Graphics', gfx.settings.graphics], ['High FPS', gfx.settings.highFps],
+      ['Shadow', gfx.settings.shadow], ['High Resolution', gfx.settings.highRes],
+      ['Anti-Aliasing', gfx.settings.antiAliasing], ['Auto Scale', gfx.settings.autoScale]
+    ].map(function(r){
+      return '<div class="jx-ug-di-gfx-row"><span>' + jxUgEscapeHtml(r[0]) + '</span><b>' + jxUgEscapeHtml(r[1]) + '</b></div>';
+    }).join('');
+    return '<div class="jx-ug-di-section"><h4>Recommended Graphics</h4>' + rows +
+      (gfx.note ? '<p class="jx-ug-di-note">' + jxUgEscapeHtml(gfx.note) + '</p>' : '') + '</div>';
+  }
+
+  function jxUgDiTopPrioritiesHTML(topPriorities){
+    if(!topPriorities || !topPriorities.length){
+      return '<div class="jx-ug-di-section"><h4>Top Optimization Priorities</h4><p class="jx-ug-di-empty">No high-priority issues detected from verified data.</p></div>';
+    }
+    var rows = topPriorities.map(function(p){ return '<li>' + p.icon + ' ' + jxUgEscapeHtml(p.label) + '</li>'; }).join('');
+    return '<div class="jx-ug-di-section"><h4>Top Optimization Priorities</h4><ol class="jx-ug-di-priority-list">' + rows + '</ol></div>';
+  }
+
+  function jxUgRenderDeviceIntel(){
+    if(!diBody) return;
+    var full = jxUgGetFullSelectedDevice();
+    if(!full || typeof window.JX_runPerformanceAnalysis !== 'function'){
+      diBody.innerHTML = '<div class="jx-ug-di-empty-state">Select a device in Step 1 to view Device Intelligence.</div>';
+      if(diSubtitle) diSubtitle.textContent = 'Verified hardware analysis';
+      return;
+    }
+
+    var analysis = window.JX_runPerformanceAnalysis(full);
+    var plan = (typeof window.JX_buildOptimizationPlan === 'function') ? window.JX_buildOptimizationPlan(full, analysis) : null;
+    var gfx = plan ? plan.graphics : (typeof window.JX_buildGraphicsRecommendation === 'function' ? window.JX_buildGraphicsRecommendation(analysis) : null);
+
+    if(diSubtitle) diSubtitle.textContent = (full.name || 'This device') + (analysis.performanceGrade ? ' · Grade ' + analysis.performanceGrade : '');
+
+    var categories = [
+      ['CPU Performance', analysis.cpuRating], ['GPU Performance', analysis.gpuRating],
+      ['RAM Performance', analysis.ramRating], ['Display Performance', analysis.displayRating],
+      ['Touch Response', analysis.touchRating], ['Thermal Performance', analysis.thermalRating],
+      ['Gaming Stability', analysis.gamingStabilityRating]
+    ];
+
+    diBody.innerHTML = '' +
+      '<div class="jx-ug-di-stat-row">' +
+        '<div class="jx-ug-di-stat"><div class="jx-ug-di-stat-label">Overall Score</div><div class="jx-ug-di-stat-value">' + jxUgEscapeHtml(analysis.overallScore === 'Unknown' ? analysis.performanceGrade : (analysis.overallScore + ' (' + analysis.performanceGrade + ')')) + '</div></div>' +
+        '<div class="jx-ug-di-stat"><div class="jx-ug-di-stat-label">Data Confidence</div><div class="jx-ug-di-stat-value">' + jxUgEscapeHtml(analysis.dataConfidence === 'Unknown' ? 'Unknown' : (analysis.dataConfidence + '%')) + '</div></div>' +
+        '<div class="jx-ug-di-stat"><div class="jx-ug-di-stat-label">Thermal Risk</div><div class="jx-ug-di-stat-value">' + jxUgEscapeHtml(analysis.thermalRisk) + '</div></div>' +
+        '<div class="jx-ug-di-stat"><div class="jx-ug-di-stat-label">Expected FPS</div><div class="jx-ug-di-stat-value">' + jxUgEscapeHtml(analysis.expectedFpsRange) + '</div></div>' +
+      '</div>' +
+      '<div class="jx-ug-di-rating-grid">' + categories.map(function(c){ return jxUgDiRatingCardHTML(c[0], c[1]); }).join('') + '</div>' +
+      jxUgDiTopPrioritiesHTML(plan ? plan.topPriorities : []) +
+      jxUgDiListHTML('Performance Bottlenecks', analysis.bottlenecks, true) +
+      jxUgDiListHTML('Hardware Advantages', analysis.hardwareAdvantages, false) +
+      jxUgDiGraphicsHTML(gfx) +
+      '<p class="jx-ug-di-note">Scores and recommendations are computed from this device\'s verified hardware record. Fields with no verified data show "Unknown" rather than a guessed value.</p>';
+  }
+
+  function openDi(){
+    if(!diModal) return;
+    jxUgRenderDeviceIntel();
+    diModal.classList.add('open');
+    diModal.setAttribute('aria-hidden', 'false');
+    if(diCloseBtn) diCloseBtn.focus();
+  }
+  function closeDi(){
+    if(!diModal) return;
+    diModal.classList.remove('open');
+    diModal.setAttribute('aria-hidden', 'true');
+    if(proDeviceIntelBtn) proDeviceIntelBtn.focus();
+  }
+
+  // Part 13 — entry point. Opens the Device Intelligence modal above
+  // the generator (does NOT close the generator or navigate away);
+  // the Ultimate Generator's own state/step is untouched.
+  if(proDeviceIntelBtn){
+    proDeviceIntelBtn.addEventListener('click', function(){
+      openDi();
+    });
+  }
+  if(diCloseBtn) diCloseBtn.addEventListener('click', closeDi);
+  // STEP 15c — "View Full Analysis" gateway. Takes the visitor from Device
+  // Intelligence into the deeper detailed-analysis layer for the SAME device:
+  //   1. read the generator's currently selected device (bail if none);
+  //   2. reveal the four consolidated sections via JX_FullAnalysis (adds
+  //      body.jx-fa-open; admin "Fully Hidden" sections are still skipped);
+  //   3. close the Device Intelligence + generator modals and release the
+  //      scroll lock via the existing closeUg();
+  //   4. run the existing analyzer, which populates Hardware Analysis /
+  //      Optimization Center / Graphics Recommendation and smooth-scrolls to
+  //      #hardware-analysis.
+  // Reuses the existing analyzer entry — no new analyzer, no duplicate reveal path.
+  var diFullAnalysisBtn = document.getElementById('jxUgDiFullAnalysisBtn');
+  if(diFullAnalysisBtn) diFullAnalysisBtn.addEventListener('click', function(){
+    var full = jxUgGetFullSelectedDevice();
+    if(!full || typeof window.JX_selectDeviceForAnalysis !== 'function') return; // need a selected device + the analyzer
+    window.JX_FullAnalysis.reveal();
+    closeUg();
+    window.JX_selectDeviceForAnalysis(full);
+  });
+  if(diModal){
+    diModal.addEventListener('click', function(e){
+      if(e.target === diModal) closeDi();
+    });
+  }
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && diModal && diModal.classList.contains('open')) closeDi();
+  });
+
+  // Part 2 — Current Sensitivity. Reuses jxUgState.currentSens with the
+  // exact same keys/labels as Custom Feel's inputs (JX_UG_CUSTOM_SUMMARY_
+  // FIELDS, defined later in this file but already assigned by the time
+  // any of this runs at user-interaction time) — never a second
+  // current-sensitivity object. Purely informational: nothing here
+  // modifies a verified profile, alters matcher calculations, or
+  // generates/overwrites a sensitivity value.
+  function jxUgRenderProCurrentSens(){
+    if(!proCurrentSensGridEl) return;
+    var cs = jxUgState.currentSens || {};
+    proCurrentSensGridEl.innerHTML = JX_UG_CUSTOM_SUMMARY_FIELDS.map(function(f){
+      var v = cs[f[0]];
+      return '<div class="jx-ug-custom-field">' +
+        '<label for="jxUgPro_' + f[0] + '">' + jxUgEscapeHtml(f[1]) + '</label>' +
+        '<input type="number" min="0" max="200" placeholder="e.g. 90" id="jxUgPro_' + f[0] + '" data-jx-ug-pro-sens="' + f[0] + '" value="' + (v != null && v !== '' ? jxUgEscapeHtml(String(v)) : '') + '">' +
+        '</div>';
+    }).join('');
+    proCurrentSensGridEl.querySelectorAll('[data-jx-ug-pro-sens]').forEach(function(inputEl){
+      inputEl.addEventListener('input', function(){
+        if(!jxUgState.currentSens) jxUgState.currentSens = {};
+        var key = inputEl.getAttribute('data-jx-ug-pro-sens');
+        var val = inputEl.value;
+        jxUgState.currentSens[key] = val === '' ? null : Number(val);
+      });
+    });
+  }
+
+  // Parts 3–6 — Current DPI / Fire Button / Performance / Optimization.
+  // All four are contextual-only inputs stored on jxUgState.advancedState
+  // (Part 8), reusing the exact fields Step 11 already defined. None of
+  // these ever overwrite jxUgState.dpiMode/dpiValue (the verified DPI
+  // fields) or a matched profile's fireButtonSize, and none alter
+  // matcher behavior in this stage.
+  function jxUgRenderProContextFields(){
+    var as = jxUgEnsureAdvancedState();
+    if(proCurrentDpiInput) proCurrentDpiInput.value = (as.currentDpi !== null && as.currentDpi !== undefined) ? as.currentDpi : '';
+    if(proFireBtnInput) proFireBtnInput.value = (as.fireButton !== null && as.fireButton !== undefined) ? as.fireButton : '';
+    if(proPerfPrefSel) proPerfPrefSel.value = as.performancePreference || '';
+    if(proOptPrefSel) proOptPrefSel.value = as.optimizationPreference || '';
+  }
+
+  if(proCurrentDpiInput){
+    proCurrentDpiInput.addEventListener('input', function(){
+      var val = proCurrentDpiInput.value;
+      jxUgEnsureAdvancedState().currentDpi = val === '' ? null : Number(val);
+    });
+  }
+  if(proFireBtnInput){
+    proFireBtnInput.addEventListener('input', function(){
+      var val = proFireBtnInput.value;
+      jxUgEnsureAdvancedState().fireButton = val === '' ? null : Number(val);
+    });
+  }
+  if(proPerfPrefSel){
+    proPerfPrefSel.addEventListener('change', function(){
+      jxUgEnsureAdvancedState().performancePreference = proPerfPrefSel.value || null;
+    });
+  }
+  if(proOptPrefSel){
+    proOptPrefSel.addEventListener('change', function(){
+      jxUgEnsureAdvancedState().optimizationPreference = proOptPrefSel.value || null;
+    });
+  }
+
+  // Part 7 — single orchestrator for the whole panel, called whenever Pro
+  // becomes the active mode and whenever the Ready screen is (re)entered
+  // while Pro is active (see jxUgApplyModeVisibility above and
+  // jxUgRenderReadyScreen below) — always re-reads current state, never
+  // caches or duplicates it.
+  function jxUgRenderProPanel(){
+    jxUgRenderProDeviceInfo();
+    jxUgRenderProCurrentSens();
+    jxUgRenderProContextFields();
+  }
+
+  /* ============================================================
+     DATABASE-FIRST MATCHER FOUNDATION
+     (Stage 7, Step 7 — CORRECTED: targeted lookups, capability-vs-
+     no-match distinction)
+     Additive only — resolves through the existing window.getBackend()
+     abstraction, the same one every other feature on this page already
+     uses. Never calls, references, or falls back to seededRand,
+     rangePick, computeOptimizedSensitivity, getDeviceSensitivity, or
+     STYLE_PROFILES — those legacy systems are untouched and unrelated.
+     No similarity scoring, no random/fallback generation anywhere below.
+
+     Priority order (locked):
+       1. Exact device + exact playstyle + exact feel + exact DPI, on a
+          doc with verificationStatus === "Verified" AND
+          isPublished === true. Resolved via ONE targeted query
+          (backend.findExactSensitivityProfile) — never a full-collection
+          scan.
+       2. An admin-curated compatibilityLinks entry for the same exact
+          key (backend.findCompatibilityLink — also one targeted query),
+          resolving only its linked sourceProfileId
+          (backend.getSensitivityProfileById — one targeted doc read),
+          which independently has to pass the same Verified+isPublished
+          gate.
+       3. NO_MATCH — nothing generated, nothing invented.
+
+     A backend adapter that hasn't implemented this lookup at all
+     (Supabase/Sheets, currently) is a CAPABILITY GAP, not proof that no
+     verified profile exists — that case resolves to
+     BACKEND_CAPABILITY_UNAVAILABLE, kept distinct from NO_MATCH so a
+     later UI/telemetry layer can treat it as an error rather than
+     quietly reporting "no verified sensitivity available" on a backend
+     that was never asked. Outcomes: EXACT_VERIFIED, VERIFIED_COMPATIBLE,
+     NO_MATCH, BACKEND_CAPABILITY_UNAVAILABLE, or ERROR (a failed read on
+     a backend that DOES support the lookup — a network/availability
+     problem, not a matcher outcome). The detailed result UI (actual
+     sensitivity value breakdown, HUD/share panel, etc.) stays OUT OF
+     SCOPE here — the panel below only reports which outcome was found.
+     ============================================================ */
+
+  // Builds the match key from current generator state. dpiValue is only
+  // meaningful (and only ever compared) when dpiMode === "CustomDpi" —
+  // NoDpi/DefaultDpi both key on dpiValue === null, matching how those
+  // two modes are stored (see jxUgSelectDpiMode). "feel" here maps onto
+  // each backend's "sensitivityFeel" field name.
+  function jxUgMatchKeyFromState(){
+    return {
+      deviceId: jxUgState.device ? jxUgState.device.deviceId : null,
+      playstyle: jxUgState.playstyle,
+      feel: jxUgState.sensitivityFeel,
+      dpiMode: jxUgState.dpiMode,
+      dpiValue: jxUgState.dpiMode === 'CustomDpi' ? jxUgState.dpiValue : null
+    };
+  }
+
+  // The ONLY gate that lets a sensitivityProfiles doc be surfaced to a
+  // public visitor by this matcher — both conditions required, per the
+  // locked rule "Only verificationStatus === 'Verified' AND
+  // isPublished === true may be publicly returned." Re-checked here even
+  // though the Firebase adapter's exact query already filters on these
+  // server-side — this is the shared client-side gate every adapter's
+  // result (Firebase, Demo, or future ones) passes through, so a linked
+  // compatibility profile is always independently verified too.
+  function jxUgIsPubliclyReturnable(profile){
+    return !!profile && profile.verificationStatus === 'Verified' && profile.isPublished === true;
+  }
+
+  // Runs the full priority chain against the live backend using targeted,
+  // single-result lookups only. Resolves to { status, profile, via } —
+  // status is always exactly one of 'EXACT_VERIFIED' | 'VERIFIED_COMPATIBLE'
+  // | 'NO_MATCH' | 'BACKEND_CAPABILITY_UNAVAILABLE' | 'ERROR'.
+  async function jxUgRunMatcher(){
+    var key = jxUgMatchKeyFromState();
+    var backend;
+    try{
+      backend = await window.getBackend();
+    }catch(err){
+      return { status: 'ERROR', profile: null, via: null, error: err };
+    }
+
+    var hasExactLookup = backend && typeof backend.findExactSensitivityProfile === 'function';
+    var hasLinkLookup = backend && typeof backend.findCompatibilityLink === 'function';
+    var hasProfileByIdLookup = backend && typeof backend.getSensitivityProfileById === 'function';
+
+    // This backend adapter hasn't implemented the verified-profile lookup
+    // at all (true today for Supabase/Sheets) — never silently treat that
+    // as "no verified profile exists". Kept as its own status so a later
+    // stage can surface it as an error/unavailable state instead.
+    if(!hasExactLookup || !hasLinkLookup || !hasProfileByIdLookup){
+      return { status: 'BACKEND_CAPABILITY_UNAVAILABLE', profile: null, via: null };
+    }
+
+    try{
+      var exact = await backend.findExactSensitivityProfile(key);
+      if(jxUgIsPubliclyReturnable(exact)) return { status: 'EXACT_VERIFIED', profile: exact, via: null };
+
+      var link = await backend.findCompatibilityLink(key);
+      if(link && link.sourceProfileId){
+        var linked = await backend.getSensitivityProfileById(link.sourceProfileId);
+        if(jxUgIsPubliclyReturnable(linked)) return { status: 'VERIFIED_COMPATIBLE', profile: linked, via: 'compatibilityLinks' };
+      }
+
+      // reasonCode is additive metadata only — every NO_MATCH today comes
+      // from the same place (no exact profile, no compatibility link), so
+      // it is currently always 'NO_VERIFIED_PROFILE'. Kept as its own field
+      // (rather than inferred in the UI) so a future matcher refinement
+      // could add other reasons without the Result UI's rendering logic
+      // having to change.
+      return { status: 'NO_MATCH', profile: null, via: null, reasonCode: 'NO_VERIFIED_PROFILE' };
+    }catch(err){
+      return { status: 'ERROR', profile: null, via: null, error: err };
+    }
+  }
+
+  var JX_UG_MATCH_BADGES = {
+    EXACT_VERIFIED:                { cls: 'status-approved', label: 'Exact Verified' },
+    VERIFIED_COMPATIBLE:           { cls: 'status-pending',  label: 'Verified Compatible' },
+    NO_MATCH:                      { cls: 'status-rejected', label: 'No Match' },
+    BACKEND_CAPABILITY_UNAVAILABLE:{ cls: 'status-rejected', label: 'Unavailable' },
+    ERROR:                         { cls: 'status-rejected', label: 'Search Failed' }
+  };
+
+  function jxUgRenderMatchLoading(){
+    readyResultEl.classList.remove('jx-ug-hidden');
+    readyResultEl.innerHTML =
+      '<div class="jx-ug-ready-result-title">Searching Verified Profiles\u2026</div>' +
+      '<div class="jx-ug-ready-result-text">Checking the database for an exact or admin-approved compatible match. Nothing is generated, estimated, or invented \u2014 only verified data is ever returned.</div>';
+  }
+
+  /* ============================================================
+     STAGE 07 — STEP 8: DETAILED RESULT UI
+     Renders the actual verified sensitivity values for EXACT_VERIFIED /
+     VERIFIED_COMPATIBLE, and distinct no-numbers states for NO_MATCH /
+     BACKEND_CAPABILITY_UNAVAILABLE / ERROR. Never calculates, estimates,
+     or alters any value — only ever displays exactly what the verified
+     profile document already contains (jxUgResultSensGridHTML below shows
+     an em dash for any field the admin left blank, rather than inventing
+     one). Field names (general/redDot/scope2x/scope4x/sniper/freeLook)
+     match the ones already established by the Custom Feel summary above;
+     fireButton is the one addition, for the Fire Button size field this
+     step's spec calls for.
+     ============================================================ */
+
+  var JX_UG_RESULT_SENS_FIELDS = [
+    ['general', 'General'], ['redDot', 'Red Dot'], ['scope2x', '2X'],
+    ['scope4x', '4X'], ['sniper', 'Sniper'], ['freeLook', 'Free Look'],
+    ['fireButton', 'Fire Button']
+  ];
+
+  // Verified-values-only grid. `profile` is the raw doc read straight from
+  // sensitivityProfiles (via findExactSensitivityProfile or
+  // getSensitivityProfileById) — nothing here derives or computes a value.
+  function jxUgResultSensGridHTML(profile){
+    return JX_UG_RESULT_SENS_FIELDS.map(function(f){
+      var v = profile ? profile[f[0]] : undefined;
+      var shown = (v === null || v === undefined || v === '') ? '\u2014' : jxUgEscapeHtml(String(v));
+      return '<div class="jx-ug-result-sens-item"><span>' + jxUgEscapeHtml(f[1]) + '</span><b>' + shown + '</b></div>';
+    }).join('');
+  }
+
+  // Looks up a device's display name/brand from the same DEVICES array the
+  // rest of the generator already reads (no second device source).
+  function jxUgDeviceLabelById(id){
+    var list = (typeof DEVICES !== 'undefined') ? DEVICES : [];
+    var d = list.filter(function(x){ return String(x.id) === String(id); })[0];
+    return d ? (d.brand ? (d.brand + ' ' + d.name) : d.name) : 'Unknown Device';
+  }
+
+  // Bundles a verified profile's values, in the shape the copy/share
+  // helpers below expect, for whichever device label the caller passes in
+  // (the user's own device for EXACT, or the source device for COMPATIBLE
+  // — callers decide, this just maps field names).
+  function jxUgProfileToShareData(profile, deviceLabel){
+    return {
+      deviceName: deviceLabel,
+      sens: {
+        dpi: jxUgHumanDpiLabel(),
+        general: (profile.general != null && profile.general !== '') ? profile.general : '\u2014',
+        red: (profile.redDot != null && profile.redDot !== '') ? profile.redDot : '\u2014',
+        scope2: (profile.scope2x != null && profile.scope2x !== '') ? profile.scope2x : '\u2014',
+        scope4: (profile.scope4x != null && profile.scope4x !== '') ? profile.scope4x : '\u2014',
+        sniper: (profile.sniper != null && profile.sniper !== '') ? profile.sniper : '\u2014',
+        free: (profile.freeLook != null && profile.freeLook !== '') ? profile.freeLook : '\u2014',
+        fireBtnSize: (profile.fireButton != null && profile.fireButton !== '') ? profile.fireButton : null
+      }
+    };
+  }
+
+  /* ============================================================
+     STAGE 07 — STEP 9: SAVE / HISTORY INTEGRATION
+     Builds the locked generation-record contract from current generator
+     state + the matcher result, for handoff to the existing account
+     module's window.JX_Account.saveGenerationRecord(). This function
+     only reads jxUgState/result — it never writes to Firestore itself
+     and never touches jxUgHistory or any second history store (there
+     isn't one).
+     ============================================================ */
+  function jxUgBuildSaveEntry(result){
+    var device = jxUgState.device || {};
+    var entry = {
+      deviceId: device.deviceId || null,
+      deviceSnapshot: { deviceId: device.deviceId || null, brand: device.brand || null, model: device.model || null },
+      deviceName: jxUgHumanDeviceLabel(),
+      playstyle: jxUgState.playstyle,
+      sensitivityFeel: jxUgState.sensitivityFeel,
+      dpiMode: jxUgState.dpiMode,
+      dpiValue: jxUgState.dpiMode === 'CustomDpi' ? jxUgState.dpiValue : null,
+      matchedProfileId: (result.profile && result.profile.id) ? result.profile.id : null,
+      profileVersion: (result.profile && result.profile.version != null) ? result.profile.version : null,
+      matchType: result.status,
+      resultOrigin: result.status === 'EXACT_VERIFIED' ? 'exact' : 'compatibilityLink',
+      generatedAt: new Date().toISOString()
+    };
+    // Extra context (not part of the locked contract, but harmless to
+    // keep alongside it) — which device a Compatible match's verified
+    // values actually came from, for any future history-detail view.
+    if(result.status === 'VERIFIED_COMPATIBLE' && result.profile){
+      entry.sourceDeviceId = result.profile.deviceId || null;
+    }
+    return entry;
+  }
+
+  /* ============================================================
+     STAGE 07 — STEP 10: TUNE MY PROFILE
+     Never changes a sensitivity number mathematically. The only valid
+     operation is CURRENT VERIFIED PROFILE → another VERIFIED PROFILE, by
+     following previousProfileId/nextProfileId on the current profile doc
+     (the Stage 4 approved profile relationships) and re-validating the
+     target through the exact same public/verified gate the Step 7
+     matcher already uses (jxUgIsPubliclyReturnable). No interpolation,
+     no averaging, no arithmetic on Low/Balanced/High/Extreme — ever.
+     ============================================================ */
+
+  function jxUgTuneSectionHTML(){
+    return '' +
+      '<div class="jx-ug-tune">' +
+        '<div class="jx-ug-tune-label">How does it feel?</div>' +
+        '<div class="jx-ug-tune-row">' +
+          '<button type="button" class="jx-ug-tune-btn" data-jx-ug-tune="slow">Too Slow</button>' +
+          '<button type="button" class="jx-ug-tune-btn" data-jx-ug-tune="perfect">Perfect</button>' +
+          '<button type="button" class="jx-ug-tune-btn" data-jx-ug-tune="fast">Too Fast</button>' +
+        '</div>' +
+        '<div class="jx-ug-tune-status jx-ug-hidden" id="jxUgTuneStatus" role="status" aria-live="polite"></div>' +
+      '</div>';
+  }
+
+  function jxUgSetTuneStatus(html, cls){
+    var el = document.getElementById('jxUgTuneStatus');
+    if(!el) return;
+    el.className = 'jx-ug-tune-status' + (cls ? ' ' + cls : '');
+    el.innerHTML = html;
+  }
+
+  // Wires the three Tune buttons for whichever result is currently
+  // rendered. `result` is closed over per-render (jxUgRenderMatchResult
+  // always calls this right after building the current result's markup),
+  // so a tune click always acts on the profile actually on screen.
+  function jxUgWireTuneControls(result){
+    var tuneBtns = readyResultEl.querySelectorAll('[data-jx-ug-tune]');
+    tuneBtns.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        jxUgRunTune(btn.getAttribute('data-jx-ug-tune'), result, tuneBtns);
+      });
+    });
+  }
+
+  function jxUgRunTune(direction, result, tuneBtns){
+    // Guards rapid repeated clicks while a lookup is already in flight —
+    // the buttons are also disabled below for the same reason, this is
+    // just the belt-and-braces check.
+    if(jxUgState.tuningState === 'LOADING') return;
+
+    // Part 9 — captured now, before the buttons below get disabled:
+    // disabling the focused Tune button moves focus to <body>
+    // immediately, so by the time the async lookup resolves it's too
+    // late to detect focus was ever here.
+    var jxUgTuneHadFocusInResult = readyResultEl.contains(document.activeElement);
+
+    if(direction === 'perfect'){
+      jxUgState.tuningState = 'SUCCESS';
+      jxUgSetTuneStatus('Great \u2014 keeping this profile.', 'jx-ug-tune-status-ok');
+      return;
+    }
+
+    var lowerMsg = 'No verified profile available at the lower level.';
+    var higherMsg = 'No verified profile available at the higher level.';
+
+    // Custom feel is not part of the Low/Balanced/High/Extreme stepping
+    // chain — never guess which verified profile is adjacent to it.
+    if(jxUgState.sensitivityFeel === 'Custom'){
+      jxUgState.tuningState = 'UNAVAILABLE';
+      jxUgSetTuneStatus(
+        'Custom profiles cannot be tuned automatically yet. ' +
+        '<button type="button" class="jx-ug-summary-change" id="jxUgTuneChangeFeelBtn" style="margin-left:2px;">Change Feel</button>',
+        'jx-ug-tune-status-warn'
+      );
+      var changeFeelBtn = document.getElementById('jxUgTuneChangeFeelBtn');
+      if(changeFeelBtn){
+        changeFeelBtn.addEventListener('click', function(){
+          var idx = JX_UG_STEPS.indexOf('feel');
+          if(idx > -1) jxUgShowStep(idx);
+        });
+      }
+      return;
+    }
+
+    var profile = result.profile;
+    // previousProfileId/nextProfileId only — never derived, never
+    // computed from the Feel enum itself.
+    var targetId = direction === 'fast'
+      ? (profile ? profile.previousProfileId : null)
+      : (profile ? profile.nextProfileId : null);
+
+    if(!targetId){
+      jxUgState.tuningState = 'UNAVAILABLE';
+      jxUgSetTuneStatus(direction === 'fast' ? lowerMsg : higherMsg, 'jx-ug-tune-status-warn');
+      return;
+    }
+
+    function tuneUnavailable(){
+      jxUgState.tuningState = 'UNAVAILABLE';
+      jxUgSetTuneStatus(direction === 'fast' ? lowerMsg : higherMsg, 'jx-ug-tune-status-warn');
+      if(tuneBtns) tuneBtns.forEach(function(b){ b.disabled = false; });
+      if(jxUgTuneHadFocusInResult) readyResultEl.focus();
+    }
+
+    jxUgState.tuningState = 'LOADING';
+    jxUgSetTuneStatus('Checking verified profile\u2026');
+    if(tuneBtns) tuneBtns.forEach(function(b){ b.disabled = true; });
+
+    // Fetches the referenced profile directly by ID through the existing
+    // targeted lookup (getSensitivityProfileById — the same one the Step
+    // 7 matcher uses to resolve a compatibility link) rather than any new
+    // matching engine, then re-validates it through the same public gate
+    // every matcher result already passes through.
+    window.getBackend().then(function(backend){
+      if(!backend || typeof backend.getSensitivityProfileById !== 'function') return null;
+      return backend.getSensitivityProfileById(targetId);
+    }).then(function(target){
+      if(!jxUgIsPubliclyReturnable(target)){ tuneUnavailable(); return; }
+
+      // Same discriminator the Step 7 matcher itself is built on (an
+      // EXACT profile's deviceId always equals the requested device; a
+      // COMPATIBLE result's underlying profile deliberately belongs to a
+      // different device) — reused as-is here rather than manually
+      // rewriting matchType.
+      var newStatus = (target.deviceId === (jxUgState.device && jxUgState.device.deviceId))
+        ? 'EXACT_VERIFIED' : 'VERIFIED_COMPATIBLE';
+      var newResult = { status: newStatus, profile: target, via: newStatus === 'VERIFIED_COMPATIBLE' ? 'compatibilityLinks' : null };
+
+      // device/playstyle are untouched; feel/DPI/profile identity move to
+      // the newly selected verified profile.
+      jxUgState.status = newStatus;
+      jxUgState.sensitivityFeel = target.sensitivityFeel;
+      jxUgState.dpiMode = target.dpiMode;
+      jxUgState.dpiValue = target.dpiMode === 'CustomDpi' ? target.dpiValue : null;
+      jxUgState.matchResult = {
+        status: newStatus,
+        profileId: target.id,
+        via: newResult.via,
+        reasonCode: null
+      };
+      jxUgState.tuningState = 'SUCCESS';
+
+      // Full re-render against the real newly-fetched verified profile —
+      // rebuilds Copy/Save/Share/Tune from scratch, so nothing downstream
+      // (copy text, share card, a fresh Save) can ever reflect the
+      // pre-tune result, and further tuning can chain from here.
+      jxUgRenderMatchResult(newResult);
+      if(jxUgTuneHadFocusInResult) readyResultEl.focus();
+    }).catch(function(){
+      tuneUnavailable();
+    });
+  }
+
+  // Copy-to-clipboard for a verified result. Deliberately a small, local,
+  // self-contained function rather than reaching into the legacy
+  // Analyzer's private copySensText() (that function isn't exposed outside
+  // its own IIFE, and that IIFE is explicitly out of scope to modify) — it
+  // reuses the same pattern (navigator.clipboard + window.showToast) so the
+  // behavior matches what's already on the page.
+  function jxUgSensToText(data){
+    var s = data.sens;
+    return 'JUTTFHX Sensitivity \u2014 ' + data.deviceName + '\n' +
+      'DPI: ' + s.dpi + '\n' +
+      'General: ' + s.general + '\n' +
+      'Red Dot: ' + s.red + '\n' +
+      '2x Scope: ' + s.scope2 + '\n' +
+      '4x Scope: ' + s.scope4 + '\n' +
+      'Sniper Scope: ' + s.sniper + '\n' +
+      'Free Look: ' + s.free + '\n' +
+      'Fire Button Size: ' + (s.fireBtnSize != null ? s.fireBtnSize + '%' : '\u2014');
+  }
+
+  function jxUgCopySensitivity(data){
+    var text = jxUgSensToText(data);
+    if(!(navigator.clipboard && navigator.clipboard.writeText)){
+      if(typeof window.showToast === 'function'){ try{ window.showToast('Could not copy automatically \u2014 please copy manually.', 'info'); }catch(e){} }
+      return;
+    }
+    navigator.clipboard.writeText(text).then(function(){
+      if(typeof window.showToast === 'function'){ try{ window.showToast('Sensitivity copied to clipboard', 'success'); }catch(e){} }
+    }).catch(function(){
+      if(typeof window.showToast === 'function'){ try{ window.showToast('Could not copy automatically \u2014 please copy manually.', 'info'); }catch(e){} }
+    });
+  }
+
+  // Opens the page's existing share-card modal (#shareModal/#shareCardInner
+  // — the same DOM, CSS, and Escape/backdrop/close-button wiring the
+  // Analyzer's share card already uses) with this result's verified
+  // values. Only the markup that fills the card is generated here; nothing
+  // about the shared modal itself is modified.
+  function jxUgOpenShareCard(data){
+    var shareModal = document.getElementById('shareModal');
+    var shareCardInner = document.getElementById('shareCardInner');
+    if(!shareModal || !shareCardInner) return;
+    var s = data.sens;
+    var rows = [
+      ['DPI', s.dpi], ['General', s.general], ['Red Dot', s.red],
+      ['2x Scope', s.scope2], ['4x Scope', s.scope4], ['Sniper', s.sniper],
+      ['Free Look', s.free], ['Fire Button', s.fireBtnSize != null ? s.fireBtnSize + '%' : '\u2014']
+    ];
+    shareCardInner.innerHTML =
+      '<div class="share-card-head"><div class="brand-mark">JX</div><span class="share-card-title">JUTTFHX SENSITIVITY CARD</span></div>' +
+      '<div style="position:relative;z-index:1;margin-bottom:14px;"><div style="font-family:var(--f-display);font-size:18px;color:var(--ink);text-transform:uppercase;">' + jxUgEscapeHtml(data.deviceName) + '</div></div>' +
+      '<div class="share-rows">' +
+        rows.map(function(r){ return '<div class="share-row"><div class="sl">' + jxUgEscapeHtml(r[0]) + '</div><div class="sv">' + jxUgEscapeHtml(String(r[1])) + '</div></div>'; }).join('') +
+      '</div>' +
+      '<div class="share-card-foot">juttfhx.app \u2014 find your perfect Free Fire sensitivity</div>';
+    shareModal.classList.add('open');
+    document.documentElement.classList.add('no-scroll');
+  }
+
+  // Wires the Copy/Save/Share buttons that appear under an EXACT or
+  // COMPATIBLE result. Kept as one shared function since both outcomes
+  // render the identical action row against a verified profile + a
+  // device label. saveEntry (Step 9) is optional so this still works
+  // unchanged for any future caller that only wants Copy/Share.
+  function jxUgWireResultActions(profile, deviceLabel, saveEntry){
+    var copyBtn = document.getElementById('jxUgResultCopyBtn');
+    var shareBtn = document.getElementById('jxUgResultShareBtn');
+    var saveBtn = document.getElementById('jxUgResultSaveBtn');
+    var data = jxUgProfileToShareData(profile, deviceLabel);
+    if(copyBtn) copyBtn.addEventListener('click', function(){ jxUgCopySensitivity(data); });
+    if(shareBtn) shareBtn.addEventListener('click', function(){ jxUgOpenShareCard(data); });
+
+    if(saveBtn && saveEntry){
+      // Same verified values already shown/copied/shared, folded into
+      // the record so the existing history architecture's rendering
+      // (which reads entry.sens) works for Ultimate Generator saves too.
+      saveEntry.sens = data.sens;
+      var saveBtnDefaultLabel = saveBtn.textContent;
+      saveBtn.addEventListener('click', function(){
+        // Guards against rapid repeated clicks creating duplicate saves
+        // — the button is disabled for the entire round trip, not just
+        // debounced, so a slow connection can't slip a second request in.
+        if(saveBtn.disabled) return;
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving\u2026';
+        if(!window.JX_Account || typeof window.JX_Account.saveGenerationRecord !== 'function'){
+          saveBtn.disabled = false;
+          saveBtn.textContent = saveBtnDefaultLabel;
+          return;
+        }
+        window.JX_Account.saveGenerationRecord(saveEntry).then(function(res){
+          if(res && res.ok){
+            // Left disabled on success — this exact generation record is
+            // now saved; a fresh Generate produces a fresh Save button.
+            saveBtn.textContent = 'Saved to History';
+          } else {
+            // Covers both 'auth' (the account module already opened the
+            // sign-in modal) and genuine save failures (it already
+            // toasted "Could not save this profile. Try again.") — either
+            // way the result stays visible and Save is clickable again.
+            saveBtn.disabled = false;
+            saveBtn.textContent = saveBtnDefaultLabel;
+          }
+        }).catch(function(){
+          saveBtn.disabled = false;
+          saveBtn.textContent = saveBtnDefaultLabel;
+        });
+      });
+    }
+  }
+
+  // Sends the person into the existing Request Device flow (same
+  // #request section / #reqDeviceName field the Device step's "Request"
+  // button already uses) with their device prefilled, since a NO_MATCH
+  // most often means this device+playstyle+feel+DPI combo just hasn't
+  // been added yet.
+  function jxUgGoToRequestFlow(){
+    closeUg();
+    var reqNameEl = document.getElementById('reqDeviceName');
+    if(reqNameEl && jxUgState.device && jxUgState.device.model) reqNameEl.value = jxUgState.device.model;
+    var reqSection = document.getElementById('request');
+    if(reqSection) reqSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // reasonCode → which follow-up action(s) to offer on NO_MATCH. Every
+  // reasonCode the matcher currently produces maps to the same action
+  // today, but this stays a lookup (not an inline assumption) so a future
+  // matcher reasonCode can get its own action without reshaping this
+  // function.
+  // Stage 7, Step 11 adds a second action — 'advanced' — alongside the
+  // existing 'request' action. It never replaces 'request', and it opens
+  // the Advanced Setup boundary below rather than generating anything
+  // itself.
+  var JX_UG_NO_MATCH_ACTIONS = {
+    NO_VERIFIED_PROFILE: [
+      { id: 'request', label: 'Request This Setup' },
+      { id: 'advanced', label: 'Advanced Setup' }
+    ]
+  };
+
+  // Renders one of the locked outcomes. EXACT/COMPATIBLE show the actual
+  // verified values (never calculated or altered); NO_MATCH/
+  // BACKEND_CAPABILITY_UNAVAILABLE/ERROR deliberately show no sensitivity
+  // numbers at all.
+  function jxUgRenderMatchResult(result){
+    readyResultEl.classList.remove('jx-ug-hidden');
+    var badge = JX_UG_MATCH_BADGES[result.status] || JX_UG_MATCH_BADGES.NO_MATCH;
+    var badgeRow = '<div class="jx-ug-ready-result-badge-row"><span class="status-pill ' + badge.cls + '">' + jxUgEscapeHtml(badge.label) + '</span></div>';
+
+    if(result.status === 'EXACT_VERIFIED'){
+      var userLabel = jxUgHumanDeviceLabel();
+      readyResultEl.innerHTML =
+        badgeRow +
+        '<div class="jx-ug-ready-result-title">Verified Match Found</div>' +
+        '<div class="jx-ug-result-note">This is the actual verified sensitivity for your exact device, playstyle, feel, and DPI \u2014 nothing here is calculated or estimated.</div>' +
+        '<div class="jx-ug-result-sens-grid">' + jxUgResultSensGridHTML(result.profile) + '</div>' +
+        '<div class="jx-ug-result-actions">' +
+          '<button type="button" class="btn btn-gold btn-sm" id="jxUgResultCopyBtn">Copy Sensitivity</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="jxUgResultSaveBtn">Save to History</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="jxUgResultShareBtn">Share Card</button>' +
+        '</div>' +
+        jxUgTuneSectionHTML();
+      jxUgWireResultActions(result.profile, userLabel, jxUgBuildSaveEntry(result));
+      jxUgWireTuneControls(result);
+
+    } else if(result.status === 'VERIFIED_COMPATIBLE'){
+      var yourLabel = jxUgHumanDeviceLabel();
+      var sourceLabel = jxUgDeviceLabelById(result.profile ? result.profile.deviceId : null);
+      readyResultEl.innerHTML =
+        badgeRow +
+        '<div class="jx-ug-ready-result-title">Compatible Verified Match</div>' +
+        '<div class="jx-ug-result-note">No exact profile exists yet for your device, so this is an admin-approved verified profile from a compatible setup \u2014 not your exact device. Treat it as a very close starting point, not a guaranteed exact fit.</div>' +
+        '<div class="jx-ug-result-devcompare">' +
+          '<div class="jx-ug-result-devcol"><div class="jx-ug-result-devcol-label">Your Device</div><div class="jx-ug-result-devcol-name">' + jxUgEscapeHtml(yourLabel) + '</div></div>' +
+          '<div class="jx-ug-result-devcol"><div class="jx-ug-result-devcol-label">Profile From</div><div class="jx-ug-result-devcol-name">' + jxUgEscapeHtml(sourceLabel) + '</div></div>' +
+        '</div>' +
+        '<div class="jx-ug-result-matched-row">' +
+          '<span class="jx-ug-result-matched-chip">Playstyle Matched</span>' +
+          '<span class="jx-ug-result-matched-chip">Feel Matched</span>' +
+          '<span class="jx-ug-result-matched-chip">DPI Matched</span>' +
+        '</div>' +
+        '<div class="jx-ug-result-sens-grid">' + jxUgResultSensGridHTML(result.profile) + '</div>' +
+        '<div class="jx-ug-result-actions">' +
+          '<button type="button" class="btn btn-gold btn-sm" id="jxUgResultCopyBtn">Copy Sensitivity</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="jxUgResultSaveBtn">Save to History</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="jxUgResultShareBtn">Share Card</button>' +
+        '</div>' +
+        jxUgTuneSectionHTML();
+      // Compatible values genuinely belong to the source device's verified
+      // profile — the share/copy card is labeled with that source device,
+      // never presented as though it were the user's own exact match.
+      // The saved record itself still uses the visitor's own device as
+      // deviceName/deviceSnapshot (jxUgBuildSaveEntry) — sourceDeviceId
+      // carries which profile it actually came from.
+      jxUgWireResultActions(result.profile, sourceLabel + ' (compatible match)', jxUgBuildSaveEntry(result));
+      jxUgWireTuneControls(result);
+
+    } else if(result.status === 'BACKEND_CAPABILITY_UNAVAILABLE'){
+      // Never labeled "No Verified Profile" — this is a capability gap on
+      // the current backend, not confirmation that nothing exists.
+      readyResultEl.innerHTML =
+        badgeRow +
+        '<div class="jx-ug-ready-result-title">Verified Lookup Unavailable</div>' +
+        '<div class="jx-ug-ready-result-text">The current backend doesn\u2019t support the verified-profile lookup yet, so this couldn\u2019t be checked \u2014 this is not the same as confirming no verified profile exists. Try again once a supported backend is connected.</div>' +
+        '<div class="jx-ug-result-actions"><button type="button" class="btn btn-ghost btn-sm" id="jxUgResultRetryBtn">Try Again</button></div>';
+      var retryBtn1 = document.getElementById('jxUgResultRetryBtn');
+      if(retryBtn1) retryBtn1.addEventListener('click', jxUgRunGenerate);
+
+    } else if(result.status === 'ERROR'){
+      // Never surfaces the raw underlying error (e.g. a Firebase error
+      // object/message) — generic, safe copy only.
+      readyResultEl.innerHTML =
+        badgeRow +
+        '<div class="jx-ug-ready-result-title">Search Failed</div>' +
+        '<div class="jx-ug-ready-result-text">Could not reach the verified profile database. Please check your connection and try again.</div>' +
+        '<div class="jx-ug-result-actions"><button type="button" class="btn btn-ghost btn-sm" id="jxUgResultRetryBtn">Try Again</button></div>';
+      var retryBtn2 = document.getElementById('jxUgResultRetryBtn');
+      if(retryBtn2) retryBtn2.addEventListener('click', jxUgRunGenerate);
+
+    } else {
+      // NO_MATCH — no sensitivity numbers, ever. Offers a reasonCode-driven
+      // action instead (today, always "request this setup").
+      var actions = JX_UG_NO_MATCH_ACTIONS[result.reasonCode] || JX_UG_NO_MATCH_ACTIONS.NO_VERIFIED_PROFILE;
+      readyResultEl.innerHTML =
+        badgeRow +
+        '<div class="jx-ug-ready-result-title">No Verified Match Yet</div>' +
+        '<div class="jx-ug-ready-result-text">No verified profile exists yet for this exact setup, and no admin-approved compatible profile was found either. Nothing is generated automatically for you \u2014 use "Change" above to try different selections, or request this exact combination.</div>' +
+        '<div class="jx-ug-result-actions">' +
+          actions.map(function(a){
+            // 'advanced' is deliberately btn-ghost (secondary) — 'request'
+            // stays the primary gold CTA, since a verified profile request
+            // is the preferred path and Advanced is an explicit opt-in.
+            var cls = a.id === 'advanced' ? 'btn btn-ghost btn-sm' : 'btn btn-gold btn-sm';
+            return '<button type="button" class="' + cls + '" data-jx-ug-nomatch-action="' + jxUgEscapeHtml(a.id) + '">' + jxUgEscapeHtml(a.label) + '</button>';
+          }).join('') +
+        '</div>';
+      readyResultEl.querySelectorAll('[data-jx-ug-nomatch-action]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var action = btn.getAttribute('data-jx-ug-nomatch-action');
+          if(action === 'request') jxUgGoToRequestFlow();
+          if(action === 'advanced') jxUgEnterAdvancedSetup();
+        });
+      });
+    }
+  }
+
+  /* ============================================================
+     STAGE 07 — STEP 11: ADVANCED SETUP BOUNDARY / SEPARATION
+     This section only creates the safe separation between the VERIFIED
+     DATABASE SYSTEM above and a future ADVANCED / EXPERIMENTAL system.
+     It does NOT implement any advanced sensitivity calculation. Hard
+     rules enforced throughout this section:
+       - Never call seededRand / rangePick / computeOptimizedSensitivity /
+         getDeviceSensitivity, and never call the legacy generator.
+       - Never label an Advanced value as Verified / Exact Verified /
+         Verified Compatible / Database Match, and never show a fake
+         confidence percentage.
+       - Never read or write jxUgState.matchResult (the verified result)
+         from here — VERIFIED and ADVANCED are explicit, separate render
+         branches, not one branch behind a vague flag.
+       - Never touch jxUgState.dpiMode / jxUgState.dpiValue (the verified
+         DPI fields) — Advanced's currentDpi lives only under
+         jxUgState.advancedState.
+     ============================================================ */
+
+  // Reused directly by the Result UI below and by the read-only summary
+  // shown before Run — a single source of truth for "does the user
+  // already have Custom Feel sensitivity values on file", so Advanced
+  // Setup never re-asks for something already stored and never invents
+  // a value STYLE_PROFILES might otherwise suggest.
+  function jxUgAdvancedHasStoredCurrentSens(){
+    var cs = jxUgState.currentSens;
+    if(!cs) return false;
+    return JX_UG_CUSTOM_SUMMARY_FIELDS.some(function(f){
+      var v = cs[f[0]];
+      return v !== null && v !== undefined && v !== '' && !Number.isNaN(v);
+    });
+  }
+
+  // Read-only reference of what's already selected on jxUgState — Device/
+  // Playstyle/Feel/DPI are never re-collected or re-editable here (no
+  // "Change" affordance), since Part 3 of this step explicitly forbids
+  // duplicating those four screens inside Advanced Setup.
+  function jxUgRenderAdvancedSummary(){
+    var rows = [
+      ['Device', jxUgHumanDeviceLabel()],
+      ['Playstyle', jxUgHumanPlaystyleLabel(jxUgState.playstyle) || 'Not selected'],
+      ['Feel', jxUgHumanFeelLabel(jxUgState.sensitivityFeel) || 'Not selected'],
+      ['DPI', jxUgHumanDpiLabel()]
+    ];
+    advancedSummaryListEl.innerHTML = rows.map(function(r){
+      return '<div class="jx-ug-summary-row jx-ug-advanced-summary-row">' +
+        '<div class="jx-ug-summary-label">' + jxUgEscapeHtml(r[0].toUpperCase()) + '</div>' +
+        '<div class="jx-ug-summary-value">' + jxUgEscapeHtml(r[1]) + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  // Part 4 — Current Sensitivity. If Custom Feel already stored real
+  // values on jxUgState.currentSens, those are reused (displayed only —
+  // never overwritten). If nothing is stored, optional inputs are shown,
+  // but anything typed here goes into jxUgState.advancedState.currentSensInput
+  // only — Advanced Setup's own input context — never into
+  // jxUgState.currentSens itself.
+  function jxUgRenderAdvancedSensSection(){
+    if(jxUgAdvancedHasStoredCurrentSens()){
+      var cs = jxUgState.currentSens;
+      var items = JX_UG_CUSTOM_SUMMARY_FIELDS.filter(function(f){
+        var v = cs[f[0]];
+        return v !== null && v !== undefined && v !== '' && !Number.isNaN(v);
+      }).map(function(f){
+        return '<div class="jx-ug-custom-summary-item"><span>' + jxUgEscapeHtml(f[1]) + '</span><b>' + jxUgEscapeHtml(String(cs[f[0]])) + '</b></div>';
+      }).join('');
+      advancedSensSectionEl.innerHTML =
+        '<div class="jx-ug-custom-summary-head">Current Sensitivity (from your Custom Feel setup)</div>' +
+        '<div class="jx-ug-custom-summary-grid">' + items + '</div>';
+      return;
+    }
+
+    var input = jxUgState.advancedState.currentSensInput || {};
+    advancedSensSectionEl.innerHTML =
+      '<div class="jx-ug-custom-head">Current Sensitivity (Optional)</div>' +
+      '<div class="jx-ug-custom-grid">' +
+        JX_UG_CUSTOM_SUMMARY_FIELDS.map(function(f){
+          var v = input[f[0]];
+          return '<div class="jx-ug-custom-field">' +
+            '<label>' + jxUgEscapeHtml(f[1]) + '</label>' +
+            '<input type="number" min="0" max="200" placeholder="e.g. 90" data-jx-ug-adv-sens="' + f[0] + '" value="' + (v != null ? jxUgEscapeHtml(String(v)) : '') + '">' +
+            '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="jx-ug-custom-note">Nothing is invented here — leave a field blank if you don\u2019t know it. These values are for the future Advanced engine only.</div>';
+
+    advancedSensSectionEl.querySelectorAll('[data-jx-ug-adv-sens]').forEach(function(inputEl){
+      inputEl.addEventListener('input', function(){
+        if(!jxUgState.advancedState.currentSensInput) jxUgState.advancedState.currentSensInput = {};
+        var key = inputEl.getAttribute('data-jx-ug-adv-sens');
+        var val = inputEl.value;
+        jxUgState.advancedState.currentSensInput[key] = val === '' ? null : Number(val);
+      });
+    });
+  }
+
+  // Part 6 — Future Engine Boundary. This is the single conceptual
+  // boundary a future Advanced optimization engine will be wired in
+  // behind. It intentionally does nothing yet — no seededRand, no
+  // rangePick, no computeOptimizedSensitivity, no legacy generator call.
+  function jxUgRunAdvancedSetup(){
+    jxUgState.advancedState.status = 'ADVANCED_ENGINE_NOT_IMPLEMENTED';
+    // Part 7 — a result state fully separate from EXACT/COMPATIBLE/
+    // NO_MATCH, with its own resultOrigin. jxUgState.matchResult (the
+    // verified result) is never touched by this line.
+    jxUgState.advancedState.result = {
+      status: 'ADVANCED_RESULT',
+      resultOrigin: 'ADVANCED'
+    };
+    return jxUgState.advancedState.result;
+  }
+
+  // Part 8 — placeholder Advanced result presentation. No sensitivity
+  // numbers of any kind, no fake confidence percentage, and never a
+  // verified-sounding label.
+  function jxUgRenderAdvancedResult(){
+    advancedResultEl.classList.remove('jx-ug-hidden');
+    var rows = [
+      ['Device', jxUgHumanDeviceLabel()],
+      ['Playstyle', jxUgHumanPlaystyleLabel(jxUgState.playstyle) || 'Not selected'],
+      ['Feel', jxUgHumanFeelLabel(jxUgState.sensitivityFeel) || 'Not selected'],
+      ['DPI', jxUgHumanDpiLabel()]
+    ];
+    advancedResultEl.innerHTML =
+      '<div class="jx-ug-ready-result-badge-row"><span class="status-pill status-advanced">Advanced / Experimental</span></div>' +
+      '<div class="jx-ug-result-note">These settings are estimates, not verified JUTTFHX profiles.</div>' +
+      '<div class="jx-ug-result-sens-grid">' +
+        rows.map(function(r){ return '<div class="jx-ug-result-sens-item"><span>' + jxUgEscapeHtml(r[0]) + '</span><b>' + jxUgEscapeHtml(r[1]) + '</b></div>'; }).join('') +
+      '</div>' +
+      '<div class="jx-ug-advanced-placeholder-text">Advanced optimization will be connected here. Advanced optimization is not connected yet.</div>' +
+      // Part 9 — Copy/Save/Share are disabled for this placeholder result,
+      // and deliberately not wired to jxUgWireResultActions/saveGenerationRecord
+      // at all, so nothing can be saved into verified sensitivity history.
+      '<div class="jx-ug-result-actions">' +
+        '<button type="button" class="btn btn-ghost btn-sm" disabled>Copy Sensitivity</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" disabled>Save to History</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" disabled>Share Card</button>' +
+      '</div>';
+      // Part 10 — intentionally no jxUgTuneSectionHTML()/jxUgWireTuneControls()
+      // call anywhere in this function. Tuning belongs only to verified
+      // profiles.
+  }
+
+  // Part 1 — explicit entry only, wired to the NO_MATCH "Advanced Setup"
+  // action above. Reuses the existing Ultimate Generator container/state
+  // system (#jxUgModal / jxUgState) rather than creating a second
+  // generator or modal; jxUgState.matchResult and readyResultEl's already-
+  // rendered NO_MATCH content are left completely untouched underneath.
+  function jxUgEnterAdvancedSetup(){
+    deviceStepEl.classList.add('jx-ug-hidden');
+    playstyleStepEl.classList.add('jx-ug-hidden');
+    feelStepEl.classList.add('jx-ug-hidden');
+    dpiStepEl.classList.add('jx-ug-hidden');
+    readyStepEl.classList.add('jx-ug-hidden');
+    advancedStepEl.classList.remove('jx-ug-hidden');
+    footerEl.classList.add('jx-ug-hidden');
+    stepLabelEl.textContent = 'Advanced Setup';
+
+    if(!jxUgState.advancedState){
+      jxUgState.advancedState = { status: 'IDLE', currentDpi: null, fireButton: null, performancePreference: null, optimizationPreference: null, currentSensInput: null, result: null };
+    }
+    advancedResultEl.classList.add('jx-ug-hidden');
+    advancedResultEl.innerHTML = '';
+    jxUgRenderAdvancedSummary();
+    jxUgRenderAdvancedSensSection();
+    // Part 9 — the button that triggered this (inside #jxUgReadyResult) is
+    // now hidden along with the rest of the Ready step, which would
+    // otherwise strand keyboard focus on <body>. Move it to this step's
+    // own heading instead; nothing about the state machine changes.
+    var advTitleEl = document.getElementById('jxUgAdvancedStepTitle');
+    if(advTitleEl) advTitleEl.focus();
+  }
+
+  // Part 11 — returns to the normal Ready state, preserving device/
+  // playstyle/feel/dpi/currentSens and the verified matchResult exactly
+  // as they were. Deliberately does NOT call jxUgShowStep()/
+  // jxUgRenderReadyScreen() — those reset jxUgState.status/matchResult/
+  // readyResultEl on every entry (by design, for the ordinary edit-a-step
+  // flow), which would wipe the verified NO_MATCH result the user is
+  // returning to even though they didn't intentionally change any
+  // configuration.
+  function jxUgReturnToVerifiedGenerator(){
+    advancedStepEl.classList.add('jx-ug-hidden');
+    readyStepEl.classList.remove('jx-ug-hidden');
+    footerEl.classList.remove('jx-ug-hidden');
+    jxUgStepIndex = JX_UG_STEPS.indexOf('ready');
+    stepLabelEl.textContent = 'Ready';
+    backBtn.disabled = false;
+    nextBtn.classList.add('jx-ug-hidden');
+    // Part 9 — mirrors jxUgEnterAdvancedSetup: the "Back to Verified
+    // Generator" button that triggered this is now hidden, so move focus
+    // to the Ready step's heading instead of letting it fall to <body>.
+    var readyTitleEl = document.getElementById('jxUgReadyStepTitle');
+    if(readyTitleEl) readyTitleEl.focus();
+  }
+
+  advancedRunBtn.addEventListener('click', function(){
+    jxUgRunAdvancedSetup();
+    jxUgRenderAdvancedResult();
+  });
+  advancedBackBtn.addEventListener('click', jxUgReturnToVerifiedGenerator);
+
+  // Advanced Inputs (Part 3/5/12) — informational only, stored under
+  // jxUgState.advancedState, never merged into the verified matcher
+  // fields (jxUgState.dpiMode/jxUgState.dpiValue stay untouched here).
+  advancedDpiInput.addEventListener('input', function(){
+    var val = advancedDpiInput.value;
+    jxUgState.advancedState.currentDpi = val === '' ? null : Number(val);
+  });
+  advancedFireBtnInput.addEventListener('input', function(){
+    var val = advancedFireBtnInput.value;
+    jxUgState.advancedState.fireButton = val === '' ? null : Number(val);
+  });
+  advancedPerfPrefSel.addEventListener('change', function(){
+    jxUgState.advancedState.performancePreference = advancedPerfPrefSel.value || null;
+  });
+  advancedOptPrefSel.addEventListener('change', function(){
+    jxUgState.advancedState.optimizationPreference = advancedOptPrefSel.value || null;
+  });
+
+  /* ============================================================
+     READY / GENERATE SCREEN (Stage 7, Step 6 — Generate button wired to
+     the Step 7 matcher above)
+     Pure summary + local validation, unchanged from Step 6. Clicking
+     Generate now calls the database-first matcher instead of only
+     flipping a placeholder status string — but still never calls
+     seededRand/rangePick/computeOptimizedSensitivity/getDeviceSensitivity
+     or STYLE_PROFILES, and never writes to Firestore/Firebase.
+     ============================================================ */
+
+  function jxUgHumanPlaystyleLabel(id){
+    var found = JX_UG_PLAYSTYLES.filter(function(p){ return p.id === id; })[0];
+    return found ? found.title : null;
+  }
+
+  function jxUgHumanFeelLabel(id){
+    var found = JX_UG_FEELS.filter(function(f){ return f.id === id; })[0];
+    return found ? found.title : null;
+  }
+
+  function jxUgHumanDpiLabel(){
+    if(jxUgState.dpiMode === 'NoDpi') return 'No DPI';
+    if(jxUgState.dpiMode === 'DefaultDpi') return 'Default';
+    if(jxUgState.dpiMode === 'CustomDpi'){
+      return jxUgIsCustomDpiValid() ? (jxUgState.dpiValue + ' DPI') : 'Custom (not set)';
+    }
+    return 'Not selected';
+  }
+
+  function jxUgHumanDeviceLabel(){
+    if(!jxUgState.device) return 'Not selected';
+    var brand = jxUgState.device.brand || '';
+    var model = jxUgState.device.model || '';
+    return (brand + ' ' + model).trim() || 'Not selected';
+  }
+
+  function jxUgSummaryRowHTML(row){
+    return '' +
+      '<div class="jx-ug-summary-row">' +
+        '<div class="jx-ug-summary-label">' + jxUgEscapeHtml(row.label) + '</div>' +
+        '<div class="jx-ug-summary-value">' + jxUgEscapeHtml(row.value) + '</div>' +
+        '<button type="button" class="jx-ug-summary-change" data-jx-ug-change="' + row.step + '">Change</button>' +
+      '</div>';
+  }
+
+  function jxUgRenderSummaryRows(){
+    var rows = [
+      { label: 'DEVICE', value: jxUgHumanDeviceLabel(), step: 'device' },
+      { label: 'PLAYSTYLE', value: jxUgHumanPlaystyleLabel(jxUgState.playstyle) || 'Not selected', step: 'playstyle' },
+      { label: 'FEEL', value: jxUgHumanFeelLabel(jxUgState.sensitivityFeel) || 'Not selected', step: 'feel' },
+      { label: 'DPI', value: jxUgHumanDpiLabel(), step: 'dpi' }
+    ];
+    summaryListEl.innerHTML = rows.map(jxUgSummaryRowHTML).join('');
+  }
+
+  // Only ever shows values the user actually typed — never fills in or
+  // calculates a missing field, per the locked Custom Feel rule.
+  var JX_UG_CUSTOM_SUMMARY_FIELDS = [
+    ['general', 'General'], ['redDot', 'Red Dot'], ['scope2x', '2X'],
+    ['scope4x', '4X'], ['sniper', 'Sniper'], ['freeLook', 'Free Look']
+  ];
+
+  function jxUgRenderCustomSummary(){
+    var show = jxUgState.sensitivityFeel === 'Custom';
+    customSummaryEl.classList.toggle('jx-ug-hidden', !show);
+    if(!show) return;
+
+    var cs = jxUgState.currentSens || {};
+    var entered = JX_UG_CUSTOM_SUMMARY_FIELDS.filter(function(f){
+      var v = cs[f[0]];
+      return v !== null && v !== undefined && v !== '' && !Number.isNaN(v);
+    });
+
+    if(entered.length === 0){
+      customSummaryGridEl.innerHTML = '<div class="jx-ug-custom-summary-empty">Current sensitivity not entered</div>';
+      return;
+    }
+
+    customSummaryGridEl.innerHTML = entered.map(function(f){
+      return '<div class="jx-ug-custom-summary-item"><span>' + jxUgEscapeHtml(f[1]) + '</span><b>' + jxUgEscapeHtml(String(cs[f[0]])) + '</b></div>';
+    }).join('');
+  }
+
+  function jxUgRenderReadyScreen(){
+    // Revalidate and reset to a fresh, unconfirmed state every time this
+    // screen is (re)entered — any prior matcher result only applies to
+    // the exact state it was found under, and edits invalidate it.
+    jxUgState.status = 'IDLE';
+    jxUgState.matchResult = null;
+    jxUgState.tuningState = 'IDLE';
+    readyResultEl.classList.add('jx-ug-hidden');
+    readyResultEl.innerHTML = '';
+    jxUgRenderSummaryRows();
+    jxUgRenderCustomSummary();
+    // Step 13 — device/playstyle/feel/dpi may have just been edited via a
+    // "Change" link above, so refresh the Pro panel's device-info/current-
+    // setup snapshot too when Pro is the active mode.
+    if(jxUgActiveMode === 'pro') jxUgRenderProPanel();
+    generateBtn.disabled = !jxUgIsGenerateReady();
+  }
+
+  summaryListEl.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-jx-ug-change]');
+    if(!btn) return;
+    var targetStep = btn.getAttribute('data-jx-ug-change');
+    var idx = JX_UG_STEPS.indexOf(targetStep);
+    if(idx > -1) jxUgShowStep(idx); // preserves every other selection — nothing is cleared here
+  });
+
+  // Shared by the Generate button and Step 8's "Try Again" buttons
+  // (BACKEND_CAPABILITY_UNAVAILABLE/ERROR) — identical revalidate → loading
+  // → matcher → render flow either way.
+  function jxUgRunGenerate(){
+    // Revalidate with the same machinery the button's disabled state
+    // already uses, rather than trusting the DOM alone.
+    if(!jxUgIsGenerateReady()){
+      if(typeof window.showToast === 'function'){
+        try{ window.showToast('Please complete Device, Playstyle, Feel, and DPI first.', 'info'); }catch(e){}
+      }
+      return;
+    }
+    // Part 9 — captured before jxUgRenderMatchLoading() wipes
+    // #jxUgReadyResult below. True when this was triggered by a Retry
+    // button (which lives inside the panel); false for the ordinary
+    // Generate click (generateBtn lives outside it), so this never
+    // forces an unwanted focus jump on the normal path.
+    var jxUgGenerateHadFocusInResult = readyResultEl.contains(document.activeElement);
+    // READY_TO_MATCH is the transient in-flight state while the Step 7
+    // matcher is querying the backend; it always resolves to exactly one
+    // of EXACT_VERIFIED / VERIFIED_COMPATIBLE / NO_MATCH / ERROR below.
+    jxUgState.status = 'READY_TO_MATCH';
+    generateBtn.disabled = true;
+    jxUgRenderMatchLoading();
+
+    jxUgRunMatcher().then(function(result){
+      // STEP 9 CORRECTION — VERIFIED: this Generate flow (and jxUgRunMatcher
+      // above it) never calls window.JX_Account.autoSaveSensitivity() and
+      // never should. autoSaveSensitivity() is wired ONLY to the legacy
+      // generator's genForm submit handler (computeOptimizedSensitivity's
+      // estimated values) — deliberately, since the Ultimate Generator only
+      // ever shows real verified/compatible profiles, and its one and only
+      // save path is the explicit "Save to History" button below
+      // (jxUgWireResultActions → window.JX_Account.saveGenerationRecord()).
+      // Do not add an autoSaveSensitivity() call here — that would create a
+      // second, silent history record for the same generation alongside
+      // whatever the user does or doesn't do with the Save button.
+      jxUgState.status = result.status;
+      jxUgState.matchResult = {
+        status: result.status,
+        profileId: result.profile ? result.profile.id : null,
+        via: result.via || null,
+        reasonCode: result.reasonCode || null
+      };
+      jxUgRenderMatchResult(result);
+      if(jxUgGenerateHadFocusInResult) readyResultEl.focus();
+      generateBtn.disabled = !jxUgIsGenerateReady();
+    }).catch(function(err){
+      jxUgState.status = 'ERROR';
+      jxUgState.matchResult = { status: 'ERROR', profileId: null, via: null, reasonCode: null };
+      jxUgRenderMatchResult({ status: 'ERROR', error: err });
+      if(jxUgGenerateHadFocusInResult) readyResultEl.focus();
+      generateBtn.disabled = !jxUgIsGenerateReady();
+    });
+  }
+
+  generateBtn.addEventListener('click', jxUgRunGenerate);
+
+  // Search input
+  devSearchInput.addEventListener('input', function(){
+    devSearchClear.style.display = devSearchInput.value ? 'flex' : 'none';
+    jxUgRenderDeviceList();
+  });
+  devSearchClear.addEventListener('click', function(){
+    devSearchInput.value = '';
+    devSearchClear.style.display = 'none';
+    jxUgRenderDeviceList();
+    devSearchInput.focus();
+  });
+
+  // Popular / Brands tabs
+  devTabPopular.addEventListener('click', function(){
+    devActiveTab = 'popular';
+    devTabPopular.classList.add('active'); devTabPopular.setAttribute('aria-selected', 'true');
+    devTabBrands.classList.remove('active'); devTabBrands.setAttribute('aria-selected', 'false');
+    brandRow.classList.add('jx-ug-hidden');
+    jxUgRenderDeviceList();
+  });
+  devTabBrands.addEventListener('click', function(){
+    devActiveTab = 'brands';
+    devTabBrands.classList.add('active'); devTabBrands.setAttribute('aria-selected', 'true');
+    devTabPopular.classList.remove('active'); devTabPopular.setAttribute('aria-selected', 'false');
+    brandRow.classList.remove('jx-ug-hidden');
+    jxUgRenderDeviceList();
+  });
+
+  changeDeviceBtn.addEventListener('click', jxUgClearDevice);
+
+  // Reuses the existing Request Device flow (the #request section /
+  // #reqDeviceName field already on the page) instead of building a new one.
+  requestDeviceBtn.addEventListener('click', function(){
+    closeUg();
+    var reqNameEl = document.getElementById('reqDeviceName');
+    if(reqNameEl && devSearchInput.value.trim()) reqNameEl.value = devSearchInput.value.trim();
+    var reqSection = document.getElementById('request');
+    if(reqSection) reqSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // Back: steps back within JX_UG_STEPS (Device → Playstyle → Feel → DPI →
+  // Ready). jxUgShowStep() already disables the button on the first step,
+  // and navigating back always preserves prior selections since nothing is
+  // cleared on step change — only jxUgClearDevice/jxUgSelectDpiMode's
+  // explicit mode-switch clearing ever resets a field.
+  backBtn.addEventListener('click', function(){
+    if(jxUgStepIndex > 0) jxUgShowStep(jxUgStepIndex - 1);
+  });
+
+  // Next: advances within JX_UG_STEPS while a step remains. DPI's Next
+  // only carries the flow into the minimal 'ready' placeholder above —
+  // it does not build, call, or wire up the real Generate screen, which
+  // is a future Stage 7 step, out of scope here per the current instruction.
+  nextBtn.addEventListener('click', function(){
+    if(nextBtn.disabled) return;
+    if(jxUgStepIndex < JX_UG_STEPS.length - 1){
+      jxUgShowStep(jxUgStepIndex + 1);
+    }
+  });
+
+  jxUgRenderBrandRow();
+  jxUgRenderDeviceList();
+  jxUgRenderPlaystyles();
+  jxUgRenderFeels();
+  jxUgRenderDpiOptions();
+  jxUgRenderSmartPlaystyleGrid();
+  jxUgRenderSmartFeelGrid();
+  jxUgRenderSmartDpiGrid();
+  jxUgApplyModeVisibility();
+  jxUgShowStep(0);
 })();
 </script>
 </body>
