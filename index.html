@@ -1918,6 +1918,20 @@ html.admin-active{ overflow:hidden; }
   color: var(--ink-faint);
 }
 
+/* ---- Section sub-tabs (e.g. Devices panel: Devices / Sensitivity Presets) ---- */
+.admin-subtabs{
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  border-bottom:1px solid var(--hairline); margin-bottom:20px; padding-bottom:0;
+}
+.admin-subtab-btn{
+  padding:10px 4px; margin-bottom:-1px; border-bottom:2px solid transparent;
+  background:none; color: var(--ink-faint); font-size:13.5px; font-weight:600;
+  cursor:pointer; transition: color .2s var(--ease-out), border-color .2s var(--ease-out);
+}
+.admin-subtab-btn + .admin-subtab-btn{ margin-left:14px; }
+.admin-subtab-btn:hover{ color: var(--ink); }
+.admin-subtab-btn.active{ color: var(--gold); border-bottom-color: var(--gold); }
+
 /* ---- Brand sub-tabs (Devices panel) ---- */
 .admin-brand-tabs{
   display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -6178,8 +6192,9 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   ];
 
   // ---- Live combo data (Admin-managed) -------------------------------
-  // Values now come from the Admin Panel's "Sensitivity Presets" section
-  // (data-panel="senscombos"), saved via backend.setSensitivityCombo() and
+  // Values now come from the Admin Panel's "Sensitivity Presets" sub-tab
+  // (Devices panel -> data-subtab-panel="senscombos"), saved via
+  // backend.setSensitivityCombo() and
   // read here via backend.getSensitivityCombos(). Each combo is looked up
   // by a deterministic id — comboId() below — so there's exactly one
   // record per playstyle × sensitivity-level (× optional RAM tier)
@@ -8505,10 +8520,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 19h4"/></svg>
           Devices
         </button>
-        <button class="admin-nav-btn" data-panel="senscombos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-11M12 6V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 10h6M17 16h6"/></svg>
-          Sensitivity Presets
-        </button>
         <button class="admin-nav-btn" data-panel="huds">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
           HUD Layouts
@@ -8773,79 +8784,85 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         </div>
       </section>
 
-      <!-- SENSITIVITY PRESETS (Simple Generator) -->
-      <section class="admin-panel-section" data-section="senscombos" style="display:none;">
-        <div class="admin-topbar">
-          <div><div class="admin-page-title">Sensitivity Presets</div><div class="admin-page-sub">Set the values the public Sensitivity Generator hands out for each Playstyle &times; Sensitivity combo. A combo left blank shows visitors "not configured yet" until you save it. Add RAM-specific presets below to tune values for a device's RAM tier — the generator uses those automatically when a visitor selects a matching device, falling back to the default (Any RAM) row otherwise.</div></div>
-        </div>
-        <div class="glass admin-panel" style="margin-bottom:16px;">
-          <div class="admin-panel-head"><h3>Add RAM-Specific Preset</h3></div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; padding:0 20px 20px;">
-            <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-dim);">Playstyle
-              <div class="select-wrap"><select id="scNewPlaystyle" class="field-input" style="min-width:140px;"></select></div>
-            </label>
-            <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-dim);">Sensitivity
-              <div class="select-wrap"><select id="scNewLevel" class="field-input" style="min-width:120px;"></select></div>
-            </label>
-            <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-dim);">RAM Tier
-              <div class="select-wrap"><select id="scNewRamTier" class="field-input" style="min-width:140px;"></select></div>
-            </label>
-            <button type="button" class="btn btn-gold btn-sm" id="addSensComboBtn">+ Add Row</button>
-          </div>
-        </div>
-        <div class="glass admin-panel">
-          <div class="admin-panel-head"><h3>All Combos</h3></div>
-          <div class="admin-table-wrap">
-            <table class="admin-table">
-              <thead><tr>
-                <th>Playstyle</th><th>Sensitivity</th><th style="width:110px;">RAM Tier</th><th style="width:70px;">General</th><th style="width:70px;">Red Dot</th>
-                <th style="width:60px;">2X</th><th style="width:60px;">4X</th><th style="width:65px;">Sniper</th>
-                <th style="width:75px;">Free Look</th><th style="width:110px;">Fire Button</th><th style="width:75px;">DPI</th>
-                <th>Status</th><th>Actions</th>
-              </tr></thead>
-              <tbody id="adminSensComboTable"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- DEVICES -->
+      <!-- DEVICES (+ SENSITIVITY PRESETS sub-tab) -->
       <section class="admin-panel-section" data-section="devices" style="display:none;">
         <div class="admin-topbar">
-          <div><div class="admin-page-title">Devices</div><div class="admin-page-sub">Add, edit, or remove devices from the public database.</div></div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div><div class="admin-page-title">Devices</div><div class="admin-page-sub" id="devicesSubTabSub">Add, edit, or remove devices from the public database.</div></div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;" id="devicesToolbarActions">
             <button class="btn btn-ghost btn-sm" id="exportDevicesBtn">Export JSON</button>
             <button class="btn btn-ghost btn-sm" id="importDevicesBtn">Import JSON</button>
             <input type="file" id="importDevicesInput" accept="application/json" style="display:none;">
             <button class="btn btn-gold btn-sm" id="addDeviceBtn">+ Add Device</button>
           </div>
         </div>
-        <div class="glass admin-panel">
-          <div class="admin-panel-head">
-            <h3>All Devices</h3>
-            <div class="admin-search-mini">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-              <input type="text" id="adminDeviceSearch" placeholder="Search devices...">
+
+        <div class="admin-subtabs" id="devicesSubTabs" role="tablist" aria-label="Devices sub-sections">
+          <button type="button" class="admin-subtab-btn active" data-subtab="devicelist" role="tab" aria-selected="true">Devices</button>
+          <button type="button" class="admin-subtab-btn" data-subtab="senscombos" role="tab" aria-selected="false">Sensitivity Presets</button>
+        </div>
+
+        <!-- Sub-tab: device list -->
+        <div class="admin-subtab-panel" data-subtab-panel="devicelist">
+          <div class="glass admin-panel">
+            <div class="admin-panel-head">
+              <h3>All Devices</h3>
+              <div class="admin-search-mini">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input type="text" id="adminDeviceSearch" placeholder="Search devices...">
+              </div>
+            </div>
+            <div class="admin-brand-tabs" id="adminDeviceBrandTabs" role="tablist" aria-label="Filter devices by brand"></div>
+            <div class="admin-bulkbar" id="deviceBulkBar" style="display:none;">
+              <span id="deviceBulkCount">0 selected</span>
+              <div class="admin-bulkbar-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkVerifyBtn">Mark Verified</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkUnverifyBtn">Mark Unverified</button>
+                <button type="button" class="btn btn-ghost btn-sm danger" id="deviceBulkDeleteBtn">Delete Selected</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkClearBtn">Clear</button>
+              </div>
+            </div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr>
+                  <th style="width:36px;"><input type="checkbox" id="adminDeviceSelectAll" aria-label="Select all devices"></th>
+                  <th>Device</th><th>Brand</th><th>RAM</th><th>Refresh</th><th>Processor</th><th>Classification</th><th>DPI</th><th>Headshot %</th><th>Verified</th><th>Sensitivity</th><th>Actions</th>
+                </tr></thead>
+                <tbody id="adminDeviceTable"></tbody>
+              </table>
             </div>
           </div>
-          <div class="admin-brand-tabs" id="adminDeviceBrandTabs" role="tablist" aria-label="Filter devices by brand"></div>
-          <div class="admin-bulkbar" id="deviceBulkBar" style="display:none;">
-            <span id="deviceBulkCount">0 selected</span>
-            <div class="admin-bulkbar-actions">
-              <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkVerifyBtn">Mark Verified</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkUnverifyBtn">Mark Unverified</button>
-              <button type="button" class="btn btn-ghost btn-sm danger" id="deviceBulkDeleteBtn">Delete Selected</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkClearBtn">Clear</button>
+        </div>
+
+        <!-- Sub-tab: sensitivity presets (the public Sensitivity Generator's data) -->
+        <div class="admin-subtab-panel" data-subtab-panel="senscombos" style="display:none;">
+          <div class="glass admin-panel" style="margin-bottom:16px;">
+            <div class="admin-panel-head"><h3>Add RAM-Specific Preset</h3></div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; padding:0 20px 20px;">
+              <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-dim);">Playstyle
+                <div class="select-wrap"><select id="scNewPlaystyle" class="field-input" style="min-width:140px;"></select></div>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-dim);">Sensitivity
+                <div class="select-wrap"><select id="scNewLevel" class="field-input" style="min-width:120px;"></select></div>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--ink-dim);">RAM Tier
+                <div class="select-wrap"><select id="scNewRamTier" class="field-input" style="min-width:140px;"></select></div>
+              </label>
+              <button type="button" class="btn btn-gold btn-sm" id="addSensComboBtn">+ Add Row</button>
             </div>
           </div>
-          <div class="admin-table-wrap">
-            <table class="admin-table">
-              <thead><tr>
-                <th style="width:36px;"><input type="checkbox" id="adminDeviceSelectAll" aria-label="Select all devices"></th>
-                <th>Device</th><th>Brand</th><th>RAM</th><th>Refresh</th><th>Processor</th><th>Classification</th><th>DPI</th><th>Headshot %</th><th>Verified</th><th>Sensitivity</th><th>Actions</th>
-              </tr></thead>
-              <tbody id="adminDeviceTable"></tbody>
-            </table>
+          <div class="glass admin-panel">
+            <div class="admin-panel-head"><h3>All Combos</h3></div>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead><tr>
+                  <th>Playstyle</th><th>Sensitivity</th><th style="width:110px;">RAM Tier</th><th style="width:70px;">General</th><th style="width:70px;">Red Dot</th>
+                  <th style="width:60px;">2X</th><th style="width:60px;">4X</th><th style="width:65px;">Sniper</th>
+                  <th style="width:75px;">Free Look</th><th style="width:110px;">Fire Button</th><th style="width:75px;">DPI</th>
+                  <th>Status</th><th>Actions</th>
+                </tr></thead>
+                <tbody id="adminSensComboTable"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -17948,6 +17965,38 @@ window.AdminProgress = (function(){
       closeMobileSidebar();
     });
   });
+
+  /* ---------------- DEVICES SUB-TABS (Devices / Sensitivity Presets) ----------------
+     These live inside the single "devices" nav panel now — the old standalone
+     "Sensitivity Presets" nav item was folded in here since presets are just
+     RAM-tier-keyed values for devices. Switching sub-tabs never re-fetches
+     data (loadAllPanelData() already loaded both devices and combos), it
+     just toggles which panel is visible and swaps the toolbar/description
+     since Export/Import/+Add Device only make sense for the device list. */
+  const DEVICES_SUBTAB_COPY = {
+    devicelist: "Add, edit, or remove devices from the public database.",
+    senscombos: "Set the values the public Sensitivity Generator hands out for each Playstyle \u00d7 Sensitivity combo. A combo left blank shows visitors \u201cnot configured yet\u201d until you save it. Add RAM-specific presets below to tune values for a device's RAM tier \u2014 the generator uses those automatically when a visitor selects a matching device, falling back to the default (Any RAM) row otherwise."
+  };
+  (function initDevicesSubTabs(){
+    const subtabBtns = document.querySelectorAll(".admin-subtab-btn");
+    const subtabPanels = document.querySelectorAll(".admin-subtab-panel");
+    const subEl = document.getElementById("devicesSubTabSub");
+    const toolbarEl = document.getElementById("devicesToolbarActions");
+    subtabBtns.forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const target = btn.dataset.subtab;
+        subtabBtns.forEach(b=>{
+          const active = b===btn;
+          b.classList.toggle("active", active);
+          b.setAttribute("aria-selected", active ? "true" : "false");
+        });
+        subtabPanels.forEach(p=> p.style.display = p.dataset.subtabPanel === target ? "block" : "none");
+        if(subEl && DEVICES_SUBTAB_COPY[target]) subEl.textContent = DEVICES_SUBTAB_COPY[target];
+        // The Export/Import/+Add Device toolbar only applies to the device list.
+        if(toolbarEl) toolbarEl.style.display = target === "devicelist" ? "flex" : "none";
+      });
+    });
+  })();
 
   const adminSidebar = document.getElementById("adminSidebar");
   const adminOverlay = document.getElementById("adminOverlay");
