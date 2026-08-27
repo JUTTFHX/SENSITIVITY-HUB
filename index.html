@@ -1896,6 +1896,7 @@ html.admin-active{ overflow:hidden; }
 .admin-icon-btn svg{ width:14px; height:14px; }
 .admin-icon-btn:hover{ border-color: var(--gold); color: var(--gold); }
 .admin-icon-btn.danger:hover{ border-color: var(--red); color: var(--red); }
+.admin-icon-btn.has-override{ border-color: rgba(244,196,48,.5); color: var(--gold); background: rgba(244,196,48,.08); }
 
 .admin-empty-row td{ text-align:center; padding:50px 20px; color: var(--ink-faint); }
 .admin-group-row td{ border-bottom:1px solid var(--hairline); }
@@ -6478,19 +6479,38 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
 
   function currentCombo(){
     if(!combosCache) return null;
-    // Prefer a RAM-tier-specific preset (added via the Admin Panel's
+    // Highest priority: a value the admin manually set for THIS specific
+    // device (Admin -> Devices -> per-row "Sensitivity Presets" button),
+    // stored on the device record itself as device.sensCombo — same id
+    // scheme as combosCache but without a RAM-tier segment, since a
+    // device is already maximally specific. Missing/blank fields on a
+    // partially-filled device override still need to fall through to the
+    // RAM-tier/default combo, so this is a shallow merge, not a straight
+    // return.
+    var deviceOverride = (state.device && state.device.sensCombo)
+      ? state.device.sensCombo[comboId(state.playstyle, state.sensLevel)]
+      : null;
+    // Next: a RAM-tier-specific preset (added via the Admin Panel's
     // "+ Add RAM-Specific Preset") when the visitor picked a device with
     // a known RAM tier; otherwise fall back to the default combo.
+    var tierOrDefault = null;
     if(state.ramTier && state.ramTier !== 'any'){
-      var specific = combosCache[comboId(state.playstyle, state.sensLevel, state.ramTier)];
-      if(specific) return specific;
+      tierOrDefault = combosCache[comboId(state.playstyle, state.sensLevel, state.ramTier)];
     }
-    return combosCache[comboId(state.playstyle, state.sensLevel)] || null;
+    if(!tierOrDefault) tierOrDefault = combosCache[comboId(state.playstyle, state.sensLevel)] || null;
+    if(deviceOverride) return tierOrDefault ? { ...tierOrDefault, ...deviceOverride } : deviceOverride;
+    return tierOrDefault;
+  }
+  function currentComboIsDeviceOverride(){
+    if(!state.device || !state.device.sensCombo) return false;
+    return !!state.device.sensCombo[comboId(state.playstyle, state.sensLevel)];
   }
 
   function resultSubtitle(names){
     var base = names.playstyle + ' \u00b7 ' + names.sens + ' Sensitivity';
-    return names.device ? (names.device + ' \u00b7 ' + base) : base;
+    if(!names.device) return base;
+    var verified = currentComboIsDeviceOverride() ? ' \u00b7 Verified for this device' : '';
+    return names.device + verified + ' \u00b7 ' + base;
   }
 
   function renderResultLoading(){
@@ -10065,6 +10085,30 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
 
       <button type="submit" class="btn btn-gold" style="width:100%; margin-top:18px;" id="deviceFormSubmitBtn">Save Device</button>
     </form>
+  </div>
+</div>
+
+<!-- DEVICE SENSITIVITY PRESETS (per-device override of the Sensitivity Generator's
+     RAM-tier presets). Opened via the "Sensitivity Presets" icon button on a
+     device row in the admin Devices table. -->
+<div class="modal-overlay" id="deviceComboModal">
+  <div class="modal-box" style="max-width:900px;">
+    <div class="modal-head">
+      <h3 id="deviceComboModalTitle">Sensitivity Presets</h3>
+      <button class="btn-icon" id="closeDeviceComboModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <p class="admin-page-sub" style="margin:-6px 0 16px;">Values set here override the site-wide RAM-tier preset, but only when a visitor picks <b id="deviceComboModalDeviceName">this device</b> in the Sensitivity Generator. Leave a field blank to keep falling back to the site-wide preset for that field.</p>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead><tr>
+          <th>Playstyle</th><th>Sensitivity</th><th style="width:70px;">General</th><th style="width:70px;">Red Dot</th>
+          <th style="width:60px;">2X</th><th style="width:60px;">4X</th><th style="width:65px;">Sniper</th>
+          <th style="width:75px;">Free Look</th><th style="width:110px;">Fire Button</th><th style="width:75px;">DPI</th>
+          <th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="deviceComboTable"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -18531,6 +18575,7 @@ window.AdminProgress = (function(){
         <td>${d.verified ? `<span class="status-pill status-approved">Verified</span>` : `<span class="status-pill" style="opacity:.5;">—</span>`}</td>
         <td>${sensOverrideBadge(d)}</td>
         <td class="cell-actions">
+          <button class="admin-icon-btn${deviceComboOverrideCount(d) ? ' has-override' : ''}" data-combo-device="${d.id}" title="Sensitivity Presets${deviceComboOverrideCount(d) ? ` (${deviceComboOverrideCount(d)} override${deviceComboOverrideCount(d)===1?'':'s'})` : ''}" aria-label="Edit sensitivity presets for ${escapeHtml(d.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-11M12 6V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 10h6M17 16h6"/></svg></button>
           <button class="admin-icon-btn" data-edit-device="${d.id}" aria-label="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
           <button class="admin-icon-btn danger" data-delete-device="${d.id}" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>
         </td>
@@ -18552,6 +18597,14 @@ window.AdminProgress = (function(){
     if(!count) return `<span class="status-pill" style="opacity:.5;">Auto</span>`;
     return `<span class="status-pill status-approved">Manual ×${count}</span>`;
   }
+  // Counts saved rows in a device's per-device Sensitivity Generator combo
+  // overrides (device.sensCombo — keyed "<playstyle>_<level>", up to 8).
+  // Distinct from sensOverrideBadge()/d.sensOverride above, which drives
+  // the *Device Analysis* report's single "Headshot" style slider values,
+  // not the public Sensitivity Generator's Playstyle × Sensitivity combos.
+  function deviceComboOverrideCount(d){
+    return d.sensCombo ? Object.keys(d.sensCombo).length : 0;
+  }
   /* Phase 4: debounced like the public device search, instead of
      rebuilding the full (potentially large, sorted/grouped) admin table
      on every single keystroke. Same end result, just collapsed into one
@@ -18567,6 +18620,152 @@ window.AdminProgress = (function(){
     const delBtn = e.target.closest("[data-delete-device]");
     if(editBtn) openDeviceModal(deviceCache.find(d => d.id === editBtn.dataset.editDevice));
     if(delBtn) confirmDeleteDevice(delBtn.dataset.deleteDevice);
+  });
+
+  /* ---------------- PER-DEVICE SENSITIVITY PRESETS (device.sensCombo) ----------------
+     Same 8 fixed Playstyle × Sensitivity rows as the site-wide "Sensitivity
+     Presets" sub-tab above, but scoped to one device and saved onto that
+     device's own record (device.sensCombo, keyed the same way as
+     sensComboCache but WITHOUT a RAM-tier segment — a device is already a
+     single, specific device). The public generator (see comboId()/
+     currentCombo() in the #ultimate-generator script) checks this object
+     first, before falling back to the RAM-tier preset and then the
+     site-wide default — so this is genuinely an override, not a duplicate
+     data source admins have to keep in sync by hand. */
+  const deviceComboModal = document.getElementById("deviceComboModal");
+  const deviceComboTable = document.getElementById("deviceComboTable");
+  let deviceComboTargetId = null;
+
+  function deviceComboRowHTML(device, ps, lvl){
+    const id = sensComboId(ps.id, lvl.id, "any"); // "<playstyle>_<level>", no RAM segment
+    const data = (device.sensCombo && device.sensCombo[id]) || null;
+    const configured = !!data;
+    const val = (field)=> data && data[field] != null ? data[field] : "";
+    return `
+      <tr data-combo-id="${id}">
+        <td>${escapeHtml(ps.name)}</td>
+        <td>${escapeHtml(lvl.name)}</td>
+        <td><input type="number" class="field-input dc-field" data-field="general" value="${val('general')}" style="width:64px;"></td>
+        <td><input type="number" class="field-input dc-field" data-field="redDot" value="${val('redDot')}" style="width:64px;"></td>
+        <td><input type="number" class="field-input dc-field" data-field="scope2x" value="${val('scope2x')}" style="width:56px;"></td>
+        <td><input type="number" class="field-input dc-field" data-field="scope4x" value="${val('scope4x')}" style="width:56px;"></td>
+        <td><input type="number" class="field-input dc-field" data-field="sniper" value="${val('sniper')}" style="width:56px;"></td>
+        <td><input type="number" class="field-input dc-field" data-field="freeLook" value="${val('freeLook')}" style="width:64px;"></td>
+        <td>
+          <div class="select-wrap"><select class="field-input dc-field" data-field="fireButton" style="width:100px;">
+            <option value="" ${!data || !data.fireButton ? "selected" : ""}>\u2014</option>
+            <option value="Small" ${data && data.fireButton === "Small" ? "selected" : ""}>Small</option>
+            <option value="Medium" ${data && data.fireButton === "Medium" ? "selected" : ""}>Medium</option>
+            <option value="Large" ${data && data.fireButton === "Large" ? "selected" : ""}>Large</option>
+          </select></div>
+        </td>
+        <td><input type="number" class="field-input dc-field" data-field="dpi" value="${val('dpi')}" style="width:64px;"></td>
+        <td>${configured ? '<span class="status-pill status-approved">Override set</span>' : '<span class="status-pill" style="opacity:.5;">Site default</span>'}</td>
+        <td style="white-space:nowrap;">
+          <button type="button" class="btn btn-ghost btn-sm dc-save-btn">Save</button>
+          <button type="button" class="btn btn-ghost btn-sm danger dc-clear-btn" ${configured ? "" : "disabled"}>Clear</button>
+        </td>
+      </tr>`;
+  }
+
+  function renderDeviceComboTable(device){
+    if(!deviceComboTable) return;
+    const rows = [];
+    SENS_COMBO_PLAYSTYLES.forEach(ps=>{
+      SENS_COMBO_LEVELS.forEach(lvl=>{
+        rows.push(deviceComboRowHTML(device, ps, lvl));
+      });
+    });
+    deviceComboTable.innerHTML = rows.join("");
+  }
+
+  function openDeviceComboModal(device){
+    if(!device) return;
+    deviceComboTargetId = device.id;
+    document.getElementById("deviceComboModalTitle").textContent = `Sensitivity Presets — ${device.name}`;
+    document.getElementById("deviceComboModalDeviceName").textContent = device.name;
+    renderDeviceComboTable(device);
+    deviceComboModal.classList.add("open");
+    document.documentElement.classList.add("no-scroll");
+  }
+  function closeDeviceComboModal(){
+    deviceComboModal.classList.remove("open");
+    document.documentElement.classList.remove("no-scroll");
+    deviceComboTargetId = null;
+  }
+  document.getElementById("closeDeviceComboModal")?.addEventListener("click", closeDeviceComboModal);
+  deviceComboModal?.addEventListener("click", (e)=>{ if(e.target === deviceComboModal) closeDeviceComboModal(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && deviceComboModal?.classList.contains("open")) closeDeviceComboModal(); });
+
+  // Opened from the "Sensitivity Presets" icon button on a device row
+  // (see renderDeviceTable() -> data-combo-device).
+  adminDeviceTable.addEventListener("click", (e)=>{
+    const btn = e.target.closest("[data-combo-device]");
+    if(!btn) return;
+    const device = deviceCache.find(d => d.id === btn.dataset.comboDevice);
+    if(device) openDeviceComboModal(device);
+  });
+
+  deviceComboTable?.addEventListener("click", async (e)=>{
+    const tr = e.target.closest("tr[data-combo-id]");
+    if(!tr || !deviceComboTargetId) return;
+    const device = deviceCache.find(d => d.id === deviceComboTargetId);
+    if(!device) return;
+    const comboKey = tr.dataset.comboId;
+
+    if(e.target.closest(".dc-save-btn")){
+      const btn = e.target.closest(".dc-save-btn");
+      const entry = {};
+      tr.querySelectorAll(".dc-field").forEach(input=>{
+        const field = input.dataset.field;
+        const raw = input.value;
+        if(field === "fireButton"){
+          if(raw) entry[field] = raw;
+        } else if(raw !== ""){
+          const num = Number(raw);
+          if(!Number.isNaN(num)) entry[field] = num;
+        }
+      });
+      if(Object.keys(entry).length === 0){
+        showToastSafe("info", "Enter at least one value before saving.");
+        return;
+      }
+      btn.disabled = true;
+      try{
+        const nextSensCombo = { ...(device.sensCombo || {}), [comboKey]: entry };
+        await backend.updateDevice(device.id, { sensCombo: nextSensCombo });
+        device.sensCombo = nextSensCombo;
+        showToastSafe("success", "Device override saved");
+        renderDeviceComboTable(device);
+        renderDeviceTable();
+      }catch(err){
+        console.error(err);
+        showToastSafe("info", "Could not save override: " + err.message);
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    if(e.target.closest(".dc-clear-btn")){
+      const btn = e.target.closest(".dc-clear-btn");
+      if(btn.disabled) return;
+      if(!confirm("Clear this device's override? It will fall back to the site-wide RAM-tier preset.")) return;
+      btn.disabled = true;
+      try{
+        const nextSensCombo = { ...(device.sensCombo || {}) };
+        delete nextSensCombo[comboKey];
+        await backend.updateDevice(device.id, { sensCombo: nextSensCombo });
+        device.sensCombo = nextSensCombo;
+        showToastSafe("success", "Override cleared");
+        renderDeviceComboTable(device);
+        renderDeviceTable();
+      }catch(err){
+        console.error(err);
+        showToastSafe("info", "Could not clear override: " + err.message);
+      }
+      btn.disabled = false;
+      return;
+    }
   });
 
   adminDeviceTable.addEventListener("change", (e)=>{
