@@ -10934,7 +10934,7 @@ let nextTeamFinderId = 1;
     // every visitor. This is the natural "real search" event it was
     // designed to log — a visitor actually opening a device's settings.
     if(typeof window.JX_logLiveActivity === "function") window.JX_logLiveActivity(device, "viewed");
-    const style = selectedStyle || "Headshot";
+    const style = "Headshot";
     const sens = getDeviceSensitivity(device, style);
     openShareModal({
       deviceName: device.name,
