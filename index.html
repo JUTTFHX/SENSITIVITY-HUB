@@ -8129,10 +8129,6 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           </div>
         </div>
 
-        <div class="admin-subtabs" id="devicesSubTabs" role="tablist" aria-label="Devices sub-sections">
-          <button type="button" class="admin-subtab-btn active" data-subtab="devicelist" role="tab" aria-selected="true">Devices</button>
-        </div>
-
         <!-- Sub-tab: device list -->
         <div class="admin-subtab-panel" data-subtab-panel="devicelist">
           <div class="glass admin-panel">
@@ -8147,6 +8143,9 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
             <div class="admin-bulkbar" id="deviceBulkBar" style="display:none;">
               <span id="deviceBulkCount">0 selected</span>
               <div class="admin-bulkbar-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkExportBtn">Export Selected</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkImportBtn">Import Selected</button>
+                <input type="file" id="deviceBulkImportInput" accept="application/json" style="display:none;">
                 <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkVerifyBtn">Mark Verified</button>
                 <button type="button" class="btn btn-ghost btn-sm" id="deviceBulkUnverifyBtn">Mark Unverified</button>
                 <button type="button" class="btn btn-ghost btn-sm danger" id="deviceBulkDeleteBtn">Delete Selected</button>
@@ -17206,6 +17205,9 @@ window.AdminProgress = (function(){
   const deviceBulkUnverifyBtn = document.getElementById("deviceBulkUnverifyBtn");
   const deviceBulkDeleteBtn = document.getElementById("deviceBulkDeleteBtn");
   const deviceBulkClearBtn = document.getElementById("deviceBulkClearBtn");
+  const deviceBulkExportBtn = document.getElementById("deviceBulkExportBtn");
+  const deviceBulkImportBtn = document.getElementById("deviceBulkImportBtn");
+  const deviceBulkImportInput = document.getElementById("deviceBulkImportInput");
   let selectedDeviceIds = new Set();
   let adminDeviceBrandFilter = "all";
 
@@ -17817,16 +17819,100 @@ window.AdminProgress = (function(){
 /* ============================================================
    DEVICES — bulk JSON import/export
    ============================================================ */
+function downloadDevicesJson(list, filenamePrefix){
+  const blob = new Blob([JSON.stringify(list, null, 2)], { type:"application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `${filenamePrefix}-${Date.now()}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
 document.getElementById("exportDevicesBtn").addEventListener("click", ()=>{
   window.AdminProgress.start();
   try{
-    const blob = new Blob([JSON.stringify(deviceCache, null, 2)], { type:"application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `juttfhx-devices-${Date.now()}.json`;
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    downloadDevicesJson(deviceCache, "juttfhx-devices");
     showToastSafe("success", "Devices exported.");
   }catch(err){ showToastSafe("info", "Export failed: " + err.message); }
   finally{ window.AdminProgress.done(); }
+});
+
+// ---- Export Selected: same file shape as the bulk export above, but
+// scoped to only the rows currently checked in the table. ----
+deviceBulkExportBtn.addEventListener("click", ()=>{
+  const ids = Array.from(selectedDeviceIds);
+  if(!ids.length) return;
+  window.AdminProgress.start();
+  try{
+    const selected = deviceCache.filter(d => selectedDeviceIds.has(d.id));
+    downloadDevicesJson(selected, "juttfhx-devices-selected");
+    showToastSafe("success", `${selected.length} selected device${selected.length===1?"":"s"} exported.`);
+  }catch(err){ showToastSafe("info", "Export failed: " + err.message); }
+  finally{ window.AdminProgress.done(); }
+});
+
+// ---- Import Selected: unlike the bulk importer (which can create new
+// devices from any file), this only UPDATES devices that are currently
+// selected/checked — any entry in the file whose id isn't in the current
+// selection is skipped. This lets an admin re-import an edited export of
+// just their selected devices without risking touching anything else. ----
+deviceBulkImportBtn.addEventListener("click", ()=>{
+  if(!selectedDeviceIds.size) return;
+  deviceBulkImportInput.click();
+});
+deviceBulkImportInput.addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  // Snapshot the selection now — loadDevices() below clears
+  // selectedDeviceIds once the import finishes, and the admin shouldn't be
+  // able to change the selection mid-import anyway.
+  const scopedIds = new Set(selectedDeviceIds);
+  window.AdminProgress.start();
+  try{
+    showToastSafe("info", `Reading ${file.name}…`);
+    const text = await file.text();
+    let list;
+    try{
+      list = JSON.parse(text);
+    }catch(parseErr){
+      throw new Error("That file isn't valid JSON (" + parseErr.message + ").");
+    }
+    if(!Array.isArray(list)) throw new Error("File must contain a JSON array of devices.");
+    if(list.length === 0) throw new Error("The JSON array is empty — nothing to import.");
+
+    let successCount = 0, failCount = 0, skippedCount = 0;
+    for(let i=0; i<list.length; i++){
+      const d = list[i];
+      window.AdminProgress.set(10 + ((i+1) / list.length) * 80);
+      if(!d.id || !scopedIds.has(d.id)){
+        skippedCount++;
+        continue; // not one of the currently selected devices — leave it untouched
+      }
+      try{
+        await backend.updateDevice(d.id, d);
+        successCount++;
+      }catch(itemErr){
+        failCount++;
+        console.error("Selected device import: failed on item", i, d, itemErr);
+      }
+    }
+
+    await loadDevices();
+    renderOverview();
+    window.JX_logAudit("Devices", "", `Imported ${successCount} selected device${successCount === 1 ? "" : "s"}${skippedCount ? `, ${skippedCount} skipped (not selected)` : ""}${failCount ? `, ${failCount} failed` : ""}`);
+
+    if(failCount === 0 && skippedCount === 0){
+      showToastSafe("success", `Updated ${successCount} selected device${successCount === 1 ? "" : "s"}.`);
+    }else{
+      const parts = [`Updated ${successCount}`];
+      if(skippedCount) parts.push(`${skippedCount} skipped (not selected)`);
+      if(failCount) parts.push(`${failCount} failed`);
+      showToastSafe("info", parts.join(", ") + ".");
+    }
+  }catch(err){
+    console.error("Selected device import failed:", err);
+    showToastSafe("info", "Import failed: " + err.message);
+  }finally{
+    e.target.value = "";
+    window.AdminProgress.done();
+  }
 });
 document.getElementById("importDevicesBtn").addEventListener("click", ()=> document.getElementById("importDevicesInput").click());
 document.getElementById("importDevicesInput").addEventListener("change", async (e)=>{
