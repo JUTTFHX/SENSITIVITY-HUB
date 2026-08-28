@@ -7815,6 +7815,28 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   </div>
 </div>
 
+<!-- ============ POST-COPY REVIEW PROMPT ============
+     Shown once, right after a visitor successfully copies a generated
+     sensitivity profile. Asks whether they'd like to leave a review;
+     "Yes" routes them straight to the Reviews section and focuses the
+     form, "No thanks" simply closes with an appreciative note — no
+     follow-up question, no nagging. -->
+<div class="modal-overlay" id="reviewPromptModal" role="dialog" aria-modal="true" aria-labelledby="reviewPromptTitle">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-head">
+      <h3 id="reviewPromptTitle">Copied!</h3>
+      <button class="btn-icon" id="reviewPromptClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="section-sub" style="margin-bottom:20px;">Glad that was useful! Would you like to share a quick review with the community?</p>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn btn-gold" style="flex:1;" id="reviewPromptYesBtn">Yes, Leave a Review</button>
+        <button type="button" class="btn btn-ghost" style="flex:1;" id="reviewPromptNoBtn">No Thanks</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ============================================================
      ADMIN ROUTE — #admin
      ============================================================ -->
@@ -10964,10 +10986,52 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     navigator.clipboard?.writeText(text).then(()=>{
       showToast("success", "Sensitivity copied to clipboard");
       trackRealCopy();
+      maybeShowReviewPrompt();
     }).catch(()=>{
       showToast("info", "Could not copy automatically — please copy manually.");
     });
   }
+
+  /* ---------- Post-copy review prompt ----------
+     Fires every time a visitor successfully copies a sensitivity
+     profile, shortly after the copy toast so the two never collide.
+     Declining is respected immediately and silently each time — no
+     follow-up question, no guilt-tripping — but the prompt will ask
+     again on the next copy, since each copy is its own moment to
+     invite feedback. */
+  function maybeShowReviewPrompt(){
+    clearTimeout(reviewPromptTimer);
+    reviewPromptTimer = setTimeout(()=>{ openReviewPrompt(); }, 900);
+  }
+  let reviewPromptTimer = null;
+
+  const reviewPromptModal = document.getElementById("reviewPromptModal");
+  function openReviewPrompt(){
+    if(!reviewPromptModal || reviewPromptModal.classList.contains("open")) return;
+    reviewPromptModal.classList.add("open");
+    document.documentElement.classList.add("no-scroll");
+  }
+  function closeReviewPrompt(){
+    if(!reviewPromptModal) return;
+    reviewPromptModal.classList.remove("open");
+    document.documentElement.classList.remove("no-scroll");
+  }
+  document.getElementById("reviewPromptClose")?.addEventListener("click", closeReviewPrompt);
+  reviewPromptModal?.addEventListener("click", (e)=>{ if(e.target === reviewPromptModal) closeReviewPrompt(); });
+
+  document.getElementById("reviewPromptYesBtn")?.addEventListener("click", ()=>{
+    closeReviewPrompt();
+    const reviewsSection = document.getElementById("reviews");
+    if(reviewsSection){
+      reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(()=>{ document.getElementById("reviewName")?.focus(); }, 500);
+    }
+  });
+
+  document.getElementById("reviewPromptNoBtn")?.addEventListener("click", ()=>{
+    closeReviewPrompt();
+    showToast("info", "Thank you for your time — we respect your choice. Whenever you're ready, we'd love to hear from you.");
+  });
 
   /* ---------- Real "Sensitivities Copied" tracking ----------
      Logs one genuine copy event (anonymous visitor id) to whichever
@@ -11678,6 +11742,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       label.textContent = ok ? "Copied!" : prevText;
       showToast(ok ? "success" : "info", ok ? "HUD code copied to clipboard" : "Could not copy — please copy manually.");
       if(window.JX_Analytics) JX_Analytics.hudView(code);
+      if(ok) maybeShowReviewPrompt();
       setTimeout(()=>{ btn.classList.remove("copied"); label.textContent = "Copy Code"; }, 1600);
     };
     if(navigator.clipboard && navigator.clipboard.writeText){
@@ -12576,6 +12641,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
   document.addEventListener("keydown", (e)=>{
     if(e.key === "Escape"){
       closeShareModal();
+      if(typeof closeReviewPrompt === "function") closeReviewPrompt();
     }
   });
 
@@ -13736,7 +13802,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       const idText = guildIdLabel(currentGuildDetailsId);
       if(navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(idText).then(
-          ()=> showToast("success", `Guild ID ${idText} copied!`),
+          ()=> { showToast("success", `Guild ID ${idText} copied!`); maybeShowReviewPrompt(); },
           ()=> showToast("info", `Guild ID: ${idText}`)
         );
       } else {
@@ -13990,7 +14056,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       const ign = btn.dataset.tfIgn;
       if(navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(contact).then(
-          ()=> showToast("success", `Copied ${ign}'s contact — reach out and squad up!`),
+          ()=> { showToast("success", `Copied ${ign}'s contact — reach out and squad up!`); maybeShowReviewPrompt(); },
           ()=> showToast("info", `${ign}'s contact: ${contact}`)
         );
       } else {
