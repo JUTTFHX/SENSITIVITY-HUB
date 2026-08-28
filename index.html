@@ -7824,7 +7824,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
 <div class="modal-overlay" id="reviewPromptModal" role="dialog" aria-modal="true" aria-labelledby="reviewPromptTitle">
   <div class="modal-box" style="max-width:420px;">
     <div class="modal-head">
-      <h3 id="reviewPromptTitle">Copied!</h3>
+      <h3 id="reviewPromptTitle">Awesome!</h3>
       <button class="btn-icon" id="reviewPromptClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="modal-body">
@@ -11184,6 +11184,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     link.href = canvas.toDataURL("image/png");
     link.click();
     showToast("success", "Settings card exported as PNG");
+    maybeShowReviewPrompt();
   }
 
   /* ============================================================
@@ -13462,6 +13463,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       const text = encodeURIComponent(`🎯 JUTTFHX Free Fire Sensitivity — ${deviceName}\n\nDPI: ${sens.dpi} | General: ${sens.general} | Red Dot: ${sens.red} | 2x: ${sens.scope2} | 4x: ${sens.scope4} | Sniper: ${sens.sniper} | Free Look: ${sens.free} | Fire Btn: ${sens.fireBtnSize ?? 56}%\n\n🔥 Get yours free: https://juttfhx.app`);
       window.open(`https://wa.me/?text=${text}`, "_blank", "noopener");
       if(window.JX_Analytics) JX_Analytics.shareClick("whatsapp");
+      maybeShowReviewPrompt();
     }
   });
 
