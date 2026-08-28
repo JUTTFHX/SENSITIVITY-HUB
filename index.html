@@ -6507,6 +6507,21 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         </div>
       </div>
     </div>
+
+    <div class="glass req-shell" id="hudGalTrackShell" style="margin-top:24px;">
+      <h3 class="section-title" style="font-size:18px; margin-bottom:6px; text-align:center;">Track Your Layout</h3>
+      <p class="section-sub" style="margin-bottom:18px; text-align:center; margin-inline:auto;" id="hudGalTrackIntro">Sign in to see the status of your submitted HUD layouts.</p>
+
+      <div id="hudGalTrackSigninGate" style="text-align:center;">
+        <button class="btn btn-gold" id="hudGalTrackSigninBtn" type="button" style="width:100%;">Sign In / Create Account</button>
+      </div>
+
+      <div id="hudGalTrackResult" style="display:none; margin-top:10px;">
+        <div id="hudGalTrackList"></div>
+        <button class="btn btn-ghost btn-sm" id="hudGalTrackRefreshBtn" type="button" style="display:block; margin:16px auto 0;">Refresh Status</button>
+      </div>
+      <p class="section-sub" id="hudGalTrackEmpty" style="display:none; text-align:center; margin-top:10px; margin-inline:auto;">You haven't submitted a HUD layout yet.</p>
+    </div>
   </div>
 </section>
 
@@ -6791,6 +6806,21 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="glass req-shell" id="comboTrackShell" style="margin-top:24px;">
+      <h3 class="section-title" style="font-size:18px; margin-bottom:6px; text-align:center;">Track Your Combo</h3>
+      <p class="section-sub" style="margin-bottom:18px; text-align:center; margin-inline:auto;" id="comboTrackIntro">Sign in to see the status of your submitted combos.</p>
+
+      <div id="comboTrackSigninGate" style="text-align:center;">
+        <button class="btn btn-gold" id="comboTrackSigninBtn" type="button" style="width:100%;">Sign In / Create Account</button>
+      </div>
+
+      <div id="comboTrackResult" style="display:none; margin-top:10px;">
+        <div id="comboTrackList"></div>
+        <button class="btn btn-ghost btn-sm" id="comboTrackRefreshBtn" type="button" style="display:block; margin:16px auto 0;">Refresh Status</button>
+      </div>
+      <p class="section-sub" id="comboTrackEmpty" style="display:none; text-align:center; margin-top:10px; margin-inline:auto;">You haven't submitted a combo yet.</p>
     </div>
   </div>
 </section>
@@ -7226,6 +7256,12 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     }));
     if(!chars.length){ showToast("info", "Please list at least one character."); return; }
 
+    // submitterUid ties this combo back to the signed-in account so the
+    // "Track Your Combo" panel below (and the Player Command Center's
+    // "My Requests" tab) can find it later — same idea as the uid stored
+    // on tournament/guildJoin requests, just on the combo doc itself
+    // since combos live in their own collection rather than "requests".
+    const acctUser = window.JX_Account.getCurrentUser();
     const fields = {
       name, filter, badge: filter,
       tier: "B",   // admin can adjust the tier when reviewing the request
@@ -7233,6 +7269,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       desc, chars, tips: [],
       submitterIgn: ign,
       submitterContact: contact,
+      submitterUid: acctUser ? acctUser.uid : "",
       approved: false // pending — an admin must accept before this combo is visible in the gallery
     };
 
@@ -7467,6 +7504,21 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="glass req-shell" id="guildTrackShell" style="margin-top:24px;">
+      <h3 class="section-title" style="font-size:18px; margin-bottom:6px; text-align:center;">Track Your Requests</h3>
+      <p class="section-sub" style="margin-bottom:18px; text-align:center; margin-inline:auto;" id="guildTrackIntro">Sign in to see the status of your guild creation and join requests.</p>
+
+      <div id="guildTrackSigninGate" style="text-align:center;">
+        <button class="btn btn-gold" id="guildTrackSigninBtn" type="button" style="width:100%;">Sign In / Create Account</button>
+      </div>
+
+      <div id="guildTrackResult" style="display:none; margin-top:10px;">
+        <div id="guildTrackList"></div>
+        <button class="btn btn-ghost btn-sm" id="guildTrackRefreshBtn" type="button" style="display:block; margin:16px auto 0;">Refresh Status</button>
+      </div>
+      <p class="section-sub" id="guildTrackEmpty" style="display:none; text-align:center; margin-top:10px; margin-inline:auto;">You haven't created a guild or requested to join one yet.</p>
     </div>
   </div>
 </section>
@@ -7707,6 +7759,21 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="glass req-shell" id="tfTrackShell" style="margin-top:24px;">
+      <h3 class="section-title" style="font-size:18px; margin-bottom:6px; text-align:center;">Track Your Listing</h3>
+      <p class="section-sub" style="margin-bottom:18px; text-align:center; margin-inline:auto;" id="tfTrackIntro">Sign in to see the status of your Find a Team listing.</p>
+
+      <div id="tfTrackSigninGate" style="text-align:center;">
+        <button class="btn btn-gold" id="tfTrackSigninBtn" type="button" style="width:100%;">Sign In / Create Account</button>
+      </div>
+
+      <div id="tfTrackResult" style="display:none; margin-top:10px;">
+        <div id="tfTrackList"></div>
+        <button class="btn btn-ghost btn-sm" id="tfTrackRefreshBtn" type="button" style="display:block; margin:16px auto 0;">Refresh Status</button>
+      </div>
+      <p class="section-sub" id="tfTrackEmpty" style="display:none; text-align:center; margin-top:10px; margin-inline:auto;">You haven't listed yourself on Find a Team yet.</p>
     </div>
   </div>
 </section>
@@ -11838,11 +11905,16 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     if(!contact){ showToast("info", "Please add a way for the admin to contact you."); return; }
     if(!desc){ showToast("info", "Please describe how this layout works."); return; }
 
+    // submitterUid ties this layout back to the signed-in account so the
+    // "Track Your Layout" panel below (and the Player Command Center's
+    // "My Requests" tab) can find it later.
+    const acctUser = window.JX_Account.getCurrentUser();
     const fields = {
       name, category: fingers, fingers, hudCode, desc,
       imageUrl: pendingHudGalThumb,
       submitterIgn: ign,
       submitterContact: contact,
+      submitterUid: acctUser ? acctUser.uid : "",
       approved: false // pending — an admin must accept before this layout is visible in the gallery
     };
 
@@ -13987,9 +14059,14 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
         return;
       }
 
+      // submitterUid ties this guild back to the signed-in account so the
+      // "Track Your Requests" panel below (and the Player Command Center's
+      // "My Requests" tab) can find it later.
+      const acctUser = window.JX_Account.getCurrentUser();
       const fields = {
         name, tag, guildId, leaderIgn, leaderContact, rank, region, status,
         members: 1, maxMembers, requirements,
+        submitterUid: acctUser ? acctUser.uid : "",
         approved: false // pending — an admin must accept before this guild is visible in the hub
       };
 
@@ -14241,7 +14318,11 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       const dup = TEAMFINDER.find(p => (p.ign||"").toLowerCase() === ign.toLowerCase());
       if(dup && !confirm(`⚠️ "${ign}" is already listed. List again as a duplicate?`)) return;
 
-      const fields = { ign, role, rank, region, contact, bio, approved: false }; // pending — admin must accept before this listing is visible
+      // submitterUid ties this listing back to the signed-in account so the
+      // "Track Your Listing" panel below (and the Player Command Center's
+      // "My Requests" tab) can find it later.
+      const acctUser = window.JX_Account.getCurrentUser();
+      const fields = { ign, role, rank, region, contact, bio, submitterUid: acctUser ? acctUser.uid : "", approved: false }; // pending — admin must accept before this listing is visible
       const submitBtn = document.getElementById("tfCreateSubmitBtn");
       submitBtn.disabled = true;
       try{
@@ -21224,13 +21305,18 @@ window.JX_logAudit = function(field, oldVal, newVal){
 
   /* ---------------- MY REQUESTS PANEL ----------------
      Shows every request type this account has submitted — device
-     requests, tournament registrations, guild join requests — in one
-     place with a live status pill, instead of the visitor needing to
-     hunt down the single-purpose "Track My Device Request" section
-     elsewhere on the site. */
+     requests, tournament registrations, guild join requests, guild
+     creations, Find a Team listings, Character Combo submissions, and
+     HUD Layout submissions — in one place with a live status pill,
+     instead of the visitor needing to hunt down each single-purpose
+     "Track Your..." section elsewhere on the site. */
   function requestTypeLabel(r){
     if(r.type === "tournament") return `Tournament: ${r.tournamentName || "—"}`;
     if(r.type === "guildJoin") return `Guild Join: ${r.guildName || "—"}`;
+    if(r.type === "guildCreate") return `Guild Created: ${r.name || "—"}`;
+    if(r.type === "teamListing") return `Find a Team: ${r.name || "—"}`;
+    if(r.type === "comboSubmission") return `Character Combo: ${r.name || "—"}`;
+    if(r.type === "hudSubmission") return `HUD Layout: ${r.name || "—"}`;
     return [r.brand, r.name].filter(Boolean).join(" ") || "Device Request";
   }
   function requestStatusLabel(status){
@@ -21238,6 +21324,20 @@ window.JX_logAudit = function(field, oldVal, newVal){
     if(status === "added") return "Added";
     if(status === "rejected") return "Rejected";
     return "Pending";
+  }
+  // Normalizes a Firestore serverTimestamp() (Timestamp object), an ISO
+  // string (demo/local/Sheets backends), a number, or nothing, into an
+  // ISO string — so entity-collection submissions (guilds/combos/
+  // hudLayouts/teamFinder, which store createdAt as a Timestamp) sort
+  // and format correctly alongside "requests" docs (which already store
+  // date as an ISO string).
+  function acctTimestampToIso(v){
+    if(!v) return new Date(0).toISOString();
+    if(typeof v === "string") return v;
+    if(typeof v === "number") return new Date(v).toISOString();
+    if(typeof v.seconds === "number") return new Date(v.seconds * 1000).toISOString();
+    if(typeof v.toDate === "function"){ try{ return v.toDate().toISOString(); }catch(e){ /* fall through */ } }
+    return new Date(0).toISOString();
   }
   // In-flight guard: openAccountDrawer() can call renderAccountDrawer() a
   // second time once currentUser.reload() resolves for an unverified
@@ -21259,11 +21359,53 @@ window.JX_logAudit = function(field, oldVal, newVal){
         if(!acctRequestsFetchPromise){
           acctRequestsFetchPromise = (async ()=>{
             const backend = await window.getBackend();
+            let baseRequests;
             if(typeof backend.getMyRequests === "function"){
-              return await backend.getMyRequests(currentUser.uid).catch(()=> []);
+              baseRequests = await backend.getMyRequests(currentUser.uid).catch(()=> []);
+            } else {
+              const all = await backend.getRequests().catch(()=> []);
+              baseRequests = all.filter(r => r.uid === currentUser.uid);
             }
-            const all = await backend.getRequests().catch(()=> []);
-            return all.filter(r => r.uid === currentUser.uid);
+
+            // Guild creations, Find a Team listings, Character Combo
+            // submissions, and HUD Layout submissions don't live in
+            // "requests" — they're stored on their own collections with a
+            // submitterUid field instead (see "Track Your..." panels on
+            // each of those sections). Pull each in and normalize to the
+            // same {type, status, date, ...} shape as a "requests" doc so
+            // they can be sorted and rendered together below.
+            const uid = currentUser.uid;
+            const [combos, huds, guilds, listings] = await Promise.all([
+              typeof backend.getCombos === "function" ? backend.getCombos().catch(()=> []) : Promise.resolve([]),
+              typeof backend.getHudLayouts === "function" ? backend.getHudLayouts().catch(()=> []) : Promise.resolve([]),
+              typeof backend.getGuilds === "function" ? backend.getGuilds().catch(()=> []) : Promise.resolve([]),
+              typeof backend.getTeamFinder === "function" ? backend.getTeamFinder().catch(()=> []) : Promise.resolve([])
+            ]);
+
+            const entitySubmissions = [
+              ...combos.filter(c => c.submitterUid === uid).map(c => ({
+                type: "comboSubmission", name: c.name,
+                status: c.approved ? "approved" : "pending",
+                date: acctTimestampToIso(c.createdAt)
+              })),
+              ...huds.filter(h => h.submitterUid === uid).map(h => ({
+                type: "hudSubmission", name: h.name,
+                status: h.approved ? "approved" : "pending",
+                date: acctTimestampToIso(h.createdAt)
+              })),
+              ...guilds.filter(g => g.submitterUid === uid).map(g => ({
+                type: "guildCreate", name: g.name,
+                status: g.approved ? "approved" : "pending",
+                date: acctTimestampToIso(g.createdAt)
+              })),
+              ...listings.filter(l => l.submitterUid === uid).map(l => ({
+                type: "teamListing", name: l.ign,
+                status: l.approved ? "approved" : "pending",
+                date: acctTimestampToIso(l.createdAt)
+              }))
+            ];
+
+            return baseRequests.concat(entitySubmissions);
           })().finally(()=>{ acctRequestsFetchPromise = null; });
         }
         myRequests = await acctRequestsFetchPromise;
@@ -21274,7 +21416,7 @@ window.JX_logAudit = function(field, oldVal, newVal){
     }
     if(statReqEl) statReqEl.textContent = String(myRequests.length);
     if(!myRequests.length){
-      panel.innerHTML = `<div class="drawer-empty">No requests submitted yet. Device requests, tournament sign-ups, and guild join requests you submit will show up here.</div>`;
+      panel.innerHTML = `<div class="drawer-empty">No requests submitted yet. Device requests, tournament sign-ups, guild join/create requests, Find a Team listings, Character Combo and HUD Layout submissions you make will show up here.</div>`;
       return;
     }
     myRequests.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
@@ -22414,6 +22556,276 @@ html.jx-scroll-active *::after{
 
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('touchmove', onScroll, { passive: true });
+})();
+</script>
+
+<!-- ============ SECTION-LEVEL REQUEST TRACKERS ============
+     "Track Your Listing / Combo / Layout / Requests" panels for Find a
+     Team, Character Combos, HUD Layout Gallery, and Guild Recruitment
+     Hub — the same self-service pattern already used by "Track Your
+     Registration" (Tournaments) and "Track Your Request" (Device
+     Request) above. Those two read from the shared "requests" backend
+     collection; these four instead read straight from each feature's
+     own collection (combos / hudLayouts / guilds / teamFinder) filtered
+     by the submitterUid stamped onto the entry at submit time, since
+     those collections don't route through "requests". Entirely
+     additive and self-contained — doesn't touch any existing script. -->
+<script>
+(function(){
+  'use strict';
+
+  function escapeHtml(str){
+    return String(str == null ? "" : str)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
+  // Normalizes a Firestore serverTimestamp() (Timestamp object), an ISO
+  // string (demo/local/Sheets backends), a number, or nothing, into
+  // milliseconds since epoch — purely for sorting "newest submission
+  // first" across backends that store createdAt differently.
+  function toMillis(v){
+    if(!v) return 0;
+    if(typeof v === "string"){ const t = new Date(v).getTime(); return isNaN(t) ? 0 : t; }
+    if(typeof v === "number") return v;
+    if(typeof v.seconds === "number") return v.seconds * 1000;
+    if(typeof v.toDate === "function"){ try{ return v.toDate().getTime(); }catch(e){ return 0; } }
+    return 0;
+  }
+
+  function statusPillHtml(approved){
+    return approved
+      ? '<span class="status-pill status-approved">Live</span>'
+      : '<span class="status-pill status-pending">Pending Review</span>';
+  }
+
+  // One card per submission, styled like the existing
+  // ".tourney-track-item" cards used by "Track Your Registration".
+  function trackItemHtml(title, meta, pillHtml, reasonHtml){
+    return `<div class="tourney-track-item">
+      <div class="tourney-track-item-head">
+        <span class="tourney-track-item-name">${escapeHtml(title)}</span>
+        ${pillHtml}
+      </div>
+      ${meta ? `<div class="tourney-track-item-meta">${escapeHtml(meta)}</div>` : ""}
+      ${reasonHtml || ""}
+    </div>`;
+  }
+
+  async function getBackendSafe(){
+    if(typeof window.getBackend !== "function") return null;
+    try{ return await window.getBackend(); }catch(e){ return null; }
+  }
+
+  /* ---- Generic wiring shared by all four trackers ----
+     cfg = { shellId prefix pieces already resolved to element ids,
+     fetchItems(uid) -> Promise<Array<{title, meta, approved, reasonHtml}>>,
+     signedInIntro, signedOutIntro, signinPromptMessage } */
+  function wireTracker(cfg){
+    const signinGate = document.getElementById(cfg.signinGateId);
+    const signinBtn = document.getElementById(cfg.signinBtnId);
+    const intro = document.getElementById(cfg.introId);
+    const result = document.getElementById(cfg.resultId);
+    const list = document.getElementById(cfg.listId);
+    const empty = document.getElementById(cfg.emptyId);
+    const refreshBtn = document.getElementById(cfg.refreshBtnId);
+    if(!signinGate && !list) return; // this section's markup isn't on the page — nothing to wire
+
+    let lastKnownUid = null;
+
+    function render(items){
+      if(!list) return;
+      if(!items.length){
+        if(result) result.style.display = "none";
+        if(empty) empty.style.display = "block";
+        return;
+      }
+      if(empty) empty.style.display = "none";
+      if(result) result.style.display = "block";
+      // Most trackers only ever have two states (pending/live), covered
+      // by statusPillHtml(). Guild join requests have a third (rejected)
+      // and supply their own pre-built pill via __pillOverride instead.
+      list.innerHTML = items.map(it => trackItemHtml(it.title, it.meta, it.__pillOverride || statusPillHtml(it.approved), it.reasonHtml)).join("");
+    }
+
+    async function checkStatus(uid){
+      lastKnownUid = uid;
+      if(refreshBtn){ refreshBtn.disabled = true; refreshBtn.textContent = "Checking…"; }
+      try{
+        const items = await cfg.fetchItems(uid);
+        render(items);
+      }catch(err){
+        if(window.showToast) window.showToast("info", "Could not check status: " + err.message);
+      }finally{
+        if(refreshBtn){ refreshBtn.disabled = false; refreshBtn.textContent = "Refresh Status"; }
+      }
+    }
+
+    if(refreshBtn) refreshBtn.addEventListener("click", ()=>{ if(lastKnownUid) checkStatus(lastKnownUid); });
+    if(signinBtn) signinBtn.addEventListener("click", ()=>{
+      if(window.JX_Account) window.JX_Account.promptLogin(cfg.signinPromptMessage);
+    });
+
+    function applyGate(user){
+      if(user){
+        if(signinGate) signinGate.style.display = "none";
+        if(intro) intro.textContent = cfg.signedInIntro;
+        checkStatus(user.uid);
+      } else {
+        if(signinGate) signinGate.style.display = "block";
+        if(intro) intro.textContent = cfg.signedOutIntro;
+        if(result) result.style.display = "none";
+        if(empty) empty.style.display = "none";
+      }
+    }
+
+    function wireAccountGate(){
+      if(window.JX_Account && typeof window.JX_Account.onAuthChange === "function"){
+        window.JX_Account.onAuthChange(applyGate);
+      } else {
+        setTimeout(wireAccountGate, 200);
+      }
+    }
+    if(document.readyState === "loading"){
+      document.addEventListener("DOMContentLoaded", wireAccountGate);
+    } else {
+      wireAccountGate();
+    }
+  }
+
+  /* ---- Find a Team: Track Your Listing ---- */
+  wireTracker({
+    signinGateId: "tfTrackSigninGate", signinBtnId: "tfTrackSigninBtn", introId: "tfTrackIntro",
+    resultId: "tfTrackResult", listId: "tfTrackList", emptyId: "tfTrackEmpty", refreshBtnId: "tfTrackRefreshBtn",
+    signedInIntro: "Here's the status of your Find a Team listing.",
+    signedOutIntro: "Sign in to see the status of your Find a Team listing.",
+    signinPromptMessage: "Sign in to track your Find a Team listing.",
+    async fetchItems(uid){
+      const backend = await getBackendSafe();
+      if(!backend || typeof backend.getTeamFinder !== "function") return [];
+      const all = await backend.getTeamFinder().catch(()=> []);
+      return all.filter(p => p.submitterUid === uid)
+        .sort((a,b)=> toMillis(b.createdAt) - toMillis(a.createdAt))
+        .map(p => ({
+          title: p.ign || "Your Listing",
+          meta: [p.role, p.region, p.rank].filter(Boolean).join(" · "),
+          approved: !!p.approved
+        }));
+    }
+  });
+
+  /* ---- Character Combos: Track Your Combo ---- */
+  wireTracker({
+    signinGateId: "comboTrackSigninGate", signinBtnId: "comboTrackSigninBtn", introId: "comboTrackIntro",
+    resultId: "comboTrackResult", listId: "comboTrackList", emptyId: "comboTrackEmpty", refreshBtnId: "comboTrackRefreshBtn",
+    signedInIntro: "Here's the status of your submitted combos.",
+    signedOutIntro: "Sign in to see the status of your submitted combos.",
+    signinPromptMessage: "Sign in to track your submitted combo.",
+    async fetchItems(uid){
+      const backend = await getBackendSafe();
+      if(!backend || typeof backend.getCombos !== "function") return [];
+      const all = await backend.getCombos().catch(()=> []);
+      return all.filter(c => c.submitterUid === uid)
+        .sort((a,b)=> toMillis(b.createdAt) - toMillis(a.createdAt))
+        .map(c => ({
+          title: c.name || "Your Combo",
+          meta: c.filter || "",
+          approved: !!c.approved
+        }));
+    }
+  });
+
+  /* ---- HUD Layout Gallery: Track Your Layout ---- */
+  wireTracker({
+    signinGateId: "hudGalTrackSigninGate", signinBtnId: "hudGalTrackSigninBtn", introId: "hudGalTrackIntro",
+    resultId: "hudGalTrackResult", listId: "hudGalTrackList", emptyId: "hudGalTrackEmpty", refreshBtnId: "hudGalTrackRefreshBtn",
+    signedInIntro: "Here's the status of your submitted HUD layouts.",
+    signedOutIntro: "Sign in to see the status of your submitted HUD layouts.",
+    signinPromptMessage: "Sign in to track your submitted HUD layout.",
+    async fetchItems(uid){
+      const backend = await getBackendSafe();
+      if(!backend || typeof backend.getHudLayouts !== "function") return [];
+      const all = await backend.getHudLayouts().catch(()=> []);
+      return all.filter(h => h.submitterUid === uid)
+        .sort((a,b)=> toMillis(b.createdAt) - toMillis(a.createdAt))
+        .map(h => ({
+          title: h.name || "Your Layout",
+          meta: [h.fingers, h.hudCode].filter(Boolean).join(" · "),
+          approved: !!h.approved
+        }));
+    }
+  });
+
+  /* ---- Guild Recruitment Hub: Track Your Requests ----
+     Merges two different sources into one list: guilds this account
+     created (own "guilds" collection, submitterUid) and guilds this
+     account requested to join (shared "requests" collection,
+     type:"guildJoin", uid — which already has its own pending/approved/
+     rejected status and reject reason, unlike the other three). */
+  wireTracker({
+    signinGateId: "guildTrackSigninGate", signinBtnId: "guildTrackSigninBtn", introId: "guildTrackIntro",
+    resultId: "guildTrackResult", listId: "guildTrackList", emptyId: "guildTrackEmpty", refreshBtnId: "guildTrackRefreshBtn",
+    signedInIntro: "Here's the status of your guild creation and join requests.",
+    signedOutIntro: "Sign in to see the status of your guild creation and join requests.",
+    signinPromptMessage: "Sign in to track your guild requests.",
+    async fetchItems(uid){
+      const backend = await getBackendSafe();
+      if(!backend) return [];
+
+      const guildsPromise = typeof backend.getGuilds === "function" ? backend.getGuilds().catch(()=> []) : Promise.resolve([]);
+      let joinRequestsPromise;
+      if(typeof backend.getMyRequests === "function"){
+        joinRequestsPromise = backend.getMyRequests(uid).catch(()=> []);
+      } else if(typeof backend.getRequests === "function"){
+        joinRequestsPromise = backend.getRequests().catch(()=> []).then(all => all.filter(r => r.uid === uid));
+      } else {
+        joinRequestsPromise = Promise.resolve([]);
+      }
+
+      const [guilds, requests] = await Promise.all([guildsPromise, joinRequestsPromise]);
+
+      const created = guilds.filter(g => g.submitterUid === uid).map(g => ({
+        title: "Guild Created: " + (g.name || "—"),
+        meta: g.tag ? "Tag " + g.tag : "",
+        approved: !!g.approved,
+        sortMs: toMillis(g.createdAt)
+      }));
+
+      const joins = requests.filter(r => r.type === "guildJoin").map(r => {
+        const isRejected = r.status === "rejected";
+        const isApproved = r.status === "approved" || r.status === "added";
+        const pillHtml = isRejected
+          ? '<span class="status-pill status-rejected">Rejected</span>'
+          : isApproved
+            ? '<span class="status-pill status-approved">Approved</span>'
+            : '<span class="status-pill status-pending">Pending</span>';
+        const reasonHtml = isRejected
+          ? `<div class="tourney-track-item-reason">${r.rejectReason ? '<span style="color:var(--red); font-weight:600;">Reason:</span> ' + escapeHtml(r.rejectReason) : 'No reason was given. Contact support if you think this was a mistake.'}</div>`
+          : "";
+        return {
+          title: "Join Request: " + (r.guildName || "—"),
+          meta: "",
+          approved: isApproved,
+          __customPillHtml: pillHtml,
+          __customReasonHtml: reasonHtml,
+          sortMs: toMillis(r.date)
+        };
+      });
+
+      // Join requests carry their own three-state pill/reason (pending/
+      // approved/rejected) instead of the plain two-state approved
+      // boolean the other trackers use, so render them directly here
+      // rather than going through the shared statusPillHtml() helper.
+      const merged = [...created, ...joins].sort((a,b)=> b.sortMs - a.sortMs);
+      return merged.map(it => ({
+        title: it.title,
+        meta: it.meta,
+        approved: it.approved,
+        reasonHtml: it.__customReasonHtml,
+        __pillOverride: it.__customPillHtml
+      }));
+    }
+  });
 })();
 </script>
 </body>
