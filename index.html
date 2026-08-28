@@ -5967,6 +5967,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       <div class="hero-stats">
         <div class="hero-stat"><b data-count="0">0</b><span>Devices Available</span></div>
         <div class="hero-stat"><b data-count="0">0</b><span>Users Online</span></div>
+        <div class="hero-stat"><b data-count="0">0</b><span>Sensitivities Copied</span></div>
       </div>
 
     </div>
@@ -10962,9 +10963,26 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     const text = sensToText(data);
     navigator.clipboard?.writeText(text).then(()=>{
       showToast("success", "Sensitivity copied to clipboard");
+      trackRealCopy();
     }).catch(()=>{
       showToast("info", "Could not copy automatically — please copy manually.");
     });
+  }
+
+  /* ---------- Real "Sensitivities Copied" tracking ----------
+     Logs one genuine copy event (anonymous visitor id) to whichever
+     backend is active, every time a visitor actually copies a
+     generated sensitivity profile. Same best-effort contract as
+     trackRealSearch above: never blocks the UI, silently no-ops if
+     no backend is configured yet. Powers the "Sensitivities Copied"
+     hero stat. */
+  function trackRealCopy(){
+    if(typeof window.getBackend !== "function") return;
+    window.getBackend().then(backend=>{
+      if(backend && typeof backend.trackCopy === "function"){
+        backend.trackCopy(VISITOR_ID).catch(()=>{ /* best-effort */ });
+      }
+    }).catch(()=>{ /* best-effort */ });
   }
 
   /* ============================================================
@@ -12963,6 +12981,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
         const totalUsers = stats && typeof stats.totalUsers === "number" ? stats.totalUsers : null;
         const totalSearches = stats && typeof stats.totalSearches === "number" ? stats.totalSearches : null;
         const onlineNow = stats && typeof stats.onlineNow === "number" ? stats.onlineNow : null;
+        const totalCopies = stats && typeof stats.totalCopies === "number" ? stats.totalCopies : null;
 
         // Avg. Match Score = average headshot % across every device currently
         // tracked (real per-device data, either backend-synced or seeded
@@ -12982,10 +13001,11 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
           if(typeof totalRequests === "number") communityNums[3].dataset.count = totalRequests;
         }
 
-        // Hero Stats: [0] Devices Available, [1] Users Online
+        // Hero Stats: [0] Devices Available, [1] Users Online, [2] Sensitivities Copied
         if(heroNums.length >= 1){
           heroNums[0].dataset.count = totalDevices;
           if(heroNums.length >= 2 && onlineNow !== null) heroNums[1].dataset.count = onlineNow;
+          if(heroNums.length >= 3 && totalCopies !== null) heroNums[2].dataset.count = totalCopies;
         }
 
         // Re-trigger the count-up animation for any stat already on screen
@@ -13104,7 +13124,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
   /* ---------- Live stat refresh ----------
      Re-pulls real getStats() on an interval so the counters reflect
      other visitors' activity happening right now, not just this
-     session's. Lightweight — only touches the four counters, not a
+     session's. Lightweight — only touches the counters, not a
      full device/review re-sync. Pauses while the tab is hidden. */
   const LIVE_STATS_INTERVAL_MS = 120000; // was 30s — 30s per open tab is what drove reads sky-high under real traffic
   async function refreshLiveStats(){
@@ -13136,6 +13156,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       if(heroNums.length >= 1){
         apply(heroNums[0], stats.totalDevices);
         if(heroNums.length >= 2) apply(heroNums[1], stats.onlineNow);
+        if(heroNums.length >= 3) apply(heroNums[2], stats.totalCopies);
       }
     }catch(e){ /* best-effort, never disrupt the page */ }
   }
@@ -14927,6 +14948,16 @@ async function trackSearch(searchQuery, visitorId){
     createdAt: serverTimestamp()
   });
 }
+// One doc per real "Copy" click on a generated sensitivity profile —
+// same shape/contract as trackSearch above, just its own collection so
+// "Sensitivities Copied" (hero stat) reflects genuine copy events, not
+// searches or visits.
+async function trackCopy(visitorId){
+  await addDoc(collection(db, "copies"), {
+    visitorId,
+    createdAt: serverTimestamp()
+  });
+}
 // Bumps a single device's own searchCount by 1 (atomic, no read needed)
 // every time a real visitor actually opens that device's settings —
 // this is what powers the live "Searches" number on each device card.
@@ -14968,19 +14999,22 @@ async function getStats(){
   // working: a single rejected count in Promise.all() failed the whole
   // call, and only totalDevices/avgMatchScore had a local fallback to
   // hide it.
-  const [visitsRes, searchesRes, devicesRes, requestsRes] = await Promise.allSettled([
+  const [visitsRes, searchesRes, devicesRes, requestsRes, copiesRes] = await Promise.allSettled([
     getCountFromServer(collection(db, "visits")),
     getCountFromServer(collection(db, "searches")),
     getCountFromServer(collection(db, "devices")),
-    getCountFromServer(collection(db, "requests"))
+    getCountFromServer(collection(db, "requests")),
+    getCountFromServer(collection(db, "copies"))
   ]);
   const countOf = (res)=> res.status === "fulfilled" ? res.value.data().count : null;
   const visitsCount = { data: ()=>({ count: countOf(visitsRes) }) };
   const searchesCount = { data: ()=>({ count: countOf(searchesRes) }) };
   const devicesCount = { data: ()=>({ count: countOf(devicesRes) }) };
   const requestsCount = { data: ()=>({ count: countOf(requestsRes) }) };
+  const copiesCount = { data: ()=>({ count: countOf(copiesRes) }) };
   if(searchesRes.status === "rejected") console.warn("[JUTTFHX] Total Searches count failed — check that Firestore rules allow public read on 'searches':", searchesRes.reason && searchesRes.reason.message);
   if(visitsRes.status === "rejected") console.warn("[JUTTFHX] Total Users count failed — check that Firestore rules allow public read on 'visits':", visitsRes.reason && visitsRes.reason.message);
+  if(copiesRes.status === "rejected") console.warn("[JUTTFHX] Sensitivities Copied count failed — check that Firestore rules allow public read on 'copies':", copiesRes.reason && copiesRes.reason.message);
   // Best-effort, separate try/catch: an "online" query failing (e.g.
   // rules not deployed yet for /presence) must not take down the other
   // four counts the way a single Promise.all() rejection used to.
@@ -14992,6 +15026,7 @@ async function getStats(){
     totalSearches: searchesCount.data().count,
     totalDevices: devicesCount.data().count,
     totalRequests: requestsCount.data().count,
+    totalCopies: copiesCount.data().count,
     onlineNow
   };
 }
@@ -15066,7 +15101,7 @@ window.FirebaseService = {
   getRequests, getMyRequests, submitRequest, deleteRequest, updateRequestStatus,
   getGuilds, addGuild, updateGuild, deleteGuild,
   getTeamFinder, addTeamFinderListing, updateTeamFinderListing, deleteTeamFinderListing,
-  getStats, trackVisit, trackSearch, sendPresenceHeartbeat
+  getStats, trackVisit, trackSearch, trackCopy, sendPresenceHeartbeat
 };
 
 </script>
@@ -15425,6 +15460,12 @@ async function deleteRequest(id){
        created_at timestamptz default now()
      );
 
+     create table copies (
+       id uuid primary key default gen_random_uuid(),
+       visitor_id text,
+       created_at timestamptz default now()
+     );
+
    "Users Online" does NOT need a table — it uses Supabase's built-in
    Realtime Presence feature instead (a websocket channel, not a DB
    write), which is why Supabase gets true live presence for free
@@ -15437,6 +15478,13 @@ async function trackVisit(visitorId){
 }
 async function trackSearch(searchQuery, visitorId){
   const { error } = await supabase.from("searches").insert([{ query: (searchQuery || "").slice(0, 120), visitor_id: visitorId }]);
+  if(error) throw error;
+}
+// One row per real "Copy" click on a generated sensitivity profile —
+// mirrors trackSearch above, own table so "Sensitivities Copied" reflects
+// genuine copy events.
+async function trackCopy(visitorId){
+  const { error } = await supabase.from("copies").insert([{ visitor_id: visitorId }]);
   if(error) throw error;
 }
 // Bumps a single device's own searchCount by 1 every time a real visitor
@@ -15480,11 +15528,12 @@ function getOnlineCount(){
   catch(e){ return null; }
 }
 async function getStats(){
-  const [visitsRes, searchesRes, devicesRes, requestsRes] = await Promise.all([
+  const [visitsRes, searchesRes, devicesRes, requestsRes, copiesRes] = await Promise.all([
     supabase.from("visits").select("visitor_id"),
     supabase.from("searches").select("id", { count:"exact", head:true }),
     supabase.from("devices").select("id", { count:"exact", head:true }),
-    supabase.from("requests").select("id", { count:"exact", head:true })
+    supabase.from("requests").select("id", { count:"exact", head:true }),
+    supabase.from("copies").select("id", { count:"exact", head:true })
   ]);
   const uniqueVisitors = new Set((visitsRes.data || []).map(r => r.visitor_id).filter(Boolean));
   return {
@@ -15492,6 +15541,7 @@ async function getStats(){
     totalSearches: searchesRes.count || 0,
     totalDevices: devicesRes.count || 0,
     totalRequests: requestsRes.count || 0,
+    totalCopies: copiesRes.count || 0,
     onlineNow: getOnlineCount()
   };
 }
@@ -15572,7 +15622,7 @@ window.SupabaseService = {
   getTournaments, addTournament, updateTournament, deleteTournament, incrementTournamentSlot,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
-  trackVisit, trackSearch, incrementDeviceSearch, getStats, sendPresenceHeartbeat,
+  trackVisit, trackSearch, trackCopy, incrementDeviceSearch, getStats, sendPresenceHeartbeat,
   getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods
 };
 
@@ -15732,15 +15782,18 @@ async function updateRequestStatus(id, status, reason){ return callSheets("updat
 async function deleteRequest(id){ return callSheets("deleteRequest", { id }); }
 
 /* ---------------- REAL-TIME ANALYTICS ----------------
-   Add two more tabs to the Sheet, "visits" and "searches"
-   (headers: id, visitorId, createdAt and id, query, visitorId,
-   createdAt respectively), and the matching cases in the Apps
-   Script doPost handler below. trackVisit logs one row per
-   unique browser (deduped client-side via a persisted visitorId)
-   so Total Users reflects real distinct visitors; trackSearch
-   logs one row per real device search. */
+   Add three more tabs to the Sheet, "visits", "searches", and
+   "copies" (headers: id, visitorId, createdAt; id, query,
+   visitorId, createdAt; and id, visitorId, createdAt respectively),
+   and the matching cases in the Apps Script doPost handler below.
+   trackVisit logs one row per unique browser (deduped client-side
+   via a persisted visitorId) so Total Users reflects real distinct
+   visitors; trackSearch logs one row per real device search;
+   trackCopy logs one row per real "Copy" click on a generated
+   sensitivity profile, powering "Sensitivities Copied". */
 async function trackVisit(visitorId){ return callSheets("trackVisit", { visitorId }); }
 async function trackSearch(searchQuery, visitorId){ return callSheets("trackSearch", { query: (searchQuery || "").slice(0, 120), visitorId }); }
+async function trackCopy(visitorId){ return callSheets("trackCopy", { visitorId }); }
 // Bumps a single device row's searchCount by 1 every time a real visitor
 // actually opens that device's settings — powers the live "Searches"
 // number on each device card. Needs the matching Apps Script case below.
@@ -15810,7 +15863,7 @@ window.SheetsService = {
   getTournaments, addTournament, updateTournament, deleteTournament, incrementTournamentSlot,
   getReviews, addReview, deleteReview, approveReview,
   getRequests, getMyRequests, submitRequest, updateRequestStatus, deleteRequest,
-  trackVisit, trackSearch, incrementDeviceSearch, getStats, sendPresenceHeartbeat,
+  trackVisit, trackSearch, trackCopy, incrementDeviceSearch, getStats, sendPresenceHeartbeat,
   getSiteSettings, saveSiteSettings, watchSiteSettings, getPaymentMethods, savePaymentMethods, watchPaymentMethods
 };
 
@@ -15868,6 +15921,7 @@ function handleAction(action, payload) {
     case "incrementTournamentSlot": return incrementTournamentSlotCount(ss.getSheetByName("tournaments"), payload.id);
     case "trackVisit": return appendRow(ss.getSheetByName("visits"), { visitorId: payload.visitorId });
     case "trackSearch": return appendRow(ss.getSheetByName("searches"), { query: payload.query, visitorId: payload.visitorId });
+    case "trackCopy": return appendRow(ss.getSheetByName("copies"), { visitorId: payload.visitorId });
     case "incrementDeviceSearch": return incrementDeviceSearchCount(ss.getSheetByName("devices"), payload.id);
     case "getStats": return computeStats(ss);
     default: throw new Error("Unknown action: " + action);
@@ -15882,6 +15936,7 @@ function computeStats(ss) {
     totalSearches: readSheet(ss.getSheetByName("searches")).length,
     totalDevices: readSheet(ss.getSheetByName("devices")).length,
     totalRequests: readSheet(ss.getSheetByName("requests")).length,
+    totalCopies: readSheet(ss.getSheetByName("copies")).length,
     // Static, honestly-labeled fallback — Apps Script Web Apps can't
     // afford a real per-visitor presence heartbeat (see the client-side
     // sendPresenceHeartbeat() comment above for why). Always 1 rather
@@ -16456,6 +16511,14 @@ window.DemoService = {
     d.searches.push({ query: (searchQuery || "").slice(0, 120), visitorId, createdAt: new Date().toISOString() });
     demoSave(d);
   },
+  // One entry per real "Copy" click on a generated sensitivity profile —
+  // same contract as trackSearch above, powers "Sensitivities Copied".
+  async trackCopy(visitorId){
+    const d = demoLoad();
+    if(!d.copies) d.copies = [];
+    d.copies.push({ visitorId, createdAt: new Date().toISOString() });
+    demoSave(d);
+  },
   // Bumps a single device's own searchCount by 1 every time a real visitor
   // actually opens that device's settings — powers the live "Searches"
   // number on each device card, persisted locally same as everything else
@@ -16480,6 +16543,7 @@ window.DemoService = {
       totalSearches: (d.searches || []).length,
       totalDevices: d.devices.length,
       totalRequests: d.requests.length,
+      totalCopies: (d.copies || []).length,
       onlineNow: 1
     };
   },
