@@ -11056,7 +11056,9 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     if(typeof window.getBackend !== "function") return;
     window.getBackend().then(backend=>{
       if(backend && typeof backend.trackCopy === "function"){
-        backend.trackCopy(VISITOR_ID).catch(()=>{ /* best-effort */ });
+        backend.trackCopy(VISITOR_ID).catch((err)=>{
+          console.warn("[JUTTFHX] Failed to log a copy event — check that Firestore rules allow public write on 'copies':", err && err.message);
+        });
       }
     }).catch(()=>{ /* best-effort */ });
   }
