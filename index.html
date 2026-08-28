@@ -6989,8 +6989,28 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   // array; exposed via window.JX_mergeCustomCombos so that closure can
   // call in.
   function mergeCustomCombos(customCombos){
-    if(!customCombos || !customCombos.length) return false;
+    // Array.isArray, not a length check: an empty array is a real "no
+    // combos on the backend" answer and must still run the prune step
+    // below. Callers pass null (not []) when the fetch itself failed,
+    // so that case is the only one we skip entirely.
+    if(!Array.isArray(customCombos)) return false;
     let changed = false;
+
+    // Remove local copies of anything no longer on the backend — either
+    // deleted through Admin → Character Combos, or deleted directly in
+    // the Firestore console. Previously this function only ever added,
+    // so a removed combo stayed cached in every visitor's browser
+    // (localStorage) forever, showing up on the public page with no
+    // trace of it in Firebase or the admin panel.
+    const backendIds = new Set(customCombos.map(cc => cc.id));
+    for(let i = COMBOS.length - 1; i >= 0; i--){
+      const c = COMBOS[i];
+      if(c.__backendId != null && !backendIds.has(c.__backendId)){
+        COMBOS.splice(i, 1);
+        changed = true;
+      }
+    }
+
     customCombos.forEach(cc=>{
       const exists = COMBOS.some(c => c.__backendId === cc.id);
       if(exists) return;
@@ -12805,8 +12825,23 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
   }
 
   function mergeCustomHuds(customHuds){
-    if(!customHuds || !customHuds.length) return false;
+    // Array.isArray, not a length check — see mergeCustomCombos above for
+    // why an empty array must still run the prune step.
+    if(!Array.isArray(customHuds)) return false;
     let changed = false;
+
+    // Remove local copies of legacy quick-upload HUD images deleted from
+    // the backend — same stale-cache bug as mergeCustomCombos, since
+    // HUD_LAYOUTS is persisted to localStorage too.
+    const backendKeys = new Set(customHuds.map(h => h.path || h.id));
+    for(let i = HUD_LAYOUTS.length - 1; i >= 0; i--){
+      const h = HUD_LAYOUTS[i];
+      if(h.__backendKey != null && !backendKeys.has(h.__backendKey)){
+        HUD_LAYOUTS.splice(i, 1);
+        changed = true;
+      }
+    }
+
     customHuds.forEach(hud=>{
       // Demo store saves uploaded images with an `id` field; real backend
       // adapters (Firebase/Supabase/Sheets) return a `path` field instead.
@@ -12825,6 +12860,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       });
       changed = true;
     });
+    if(changed) persistHudLayouts(HUD_LAYOUTS);
     return changed;
   }
 
@@ -12834,8 +12870,23 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     // mergeCustomHuds() above, which only merges the legacy quick-upload
     // "HUD Images" — this is what makes admin-added HUD codes visible to
     // every visitor instead of only the browser that added them.
-    if(!customLayouts || !customLayouts.length) return false;
+    //
+    // Array.isArray, not a length check — see mergeCustomCombos for why
+    // an empty array must still run the prune step below.
+    if(!Array.isArray(customLayouts)) return false;
     let changed = false;
+
+    // Remove local copies of layouts deleted from the backend — same
+    // stale-cache bug as mergeCustomCombos/mergeCustomHuds.
+    const backendIds = new Set(customLayouts.map(cl => cl.id));
+    for(let i = HUD_LAYOUTS.length - 1; i >= 0; i--){
+      const h = HUD_LAYOUTS[i];
+      if(h.__backendId != null && !backendIds.has(h.__backendId)){
+        HUD_LAYOUTS.splice(i, 1);
+        changed = true;
+      }
+    }
+
     customLayouts.forEach(cl=>{
       const exists = HUD_LAYOUTS.some(h => h.__backendId === cl.id);
       if(exists) return;
@@ -12854,6 +12905,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       });
       changed = true;
     });
+    if(changed) persistHudLayouts(HUD_LAYOUTS);
     return changed;
   }
 
@@ -12937,7 +12989,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       try{
         if(typeof backend.getHuds === "function"){
           const remoteHuds = await backend.getHuds().catch(()=> null);
-          if(remoteHuds && remoteHuds.length){
+          if(remoteHuds){
             hudsChanged = mergeCustomHuds(remoteHuds);
           }
         } else if(backend.name === "demo"){
@@ -12954,7 +13006,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       let hudLayoutsChanged = false;
       try{
         if(typeof backend.getHudLayouts === "function"){
-          const remoteHudLayouts = await backend.getHudLayouts().catch(()=> []);
+          const remoteHudLayouts = await backend.getHudLayouts().catch(()=> null);
           hudLayoutsChanged = mergeCustomHudLayouts(remoteHudLayouts);
         }
       }catch(e){ /* best-effort */ }
@@ -12970,7 +13022,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
       let combosChanged = false;
       try{
         if(typeof backend.getCombos === "function" && typeof window.JX_mergeCustomCombos === "function"){
-          const remoteCombos = await backend.getCombos().catch(()=> []);
+          const remoteCombos = await backend.getCombos().catch(()=> null);
           combosChanged = window.JX_mergeCustomCombos(remoteCombos);
         }
       }catch(e){ /* best-effort */ }
@@ -13201,6 +13253,40 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     })();
   }
   subscribeDevicesRealtime();
+
+  /* ---------- Realtime "Users Online" ----------
+     Same reasoning as subscribeDevicesRealtime above: on top of the
+     2-min refreshLiveStats poll (which still runs as a fallback for
+     backends without live support), subscribe to backend.watchOnlineCount
+     if the active backend implements it (currently: Firebase, via
+     onSnapshot). Updates the hero stat the instant someone's presence
+     heartbeat lands, in any open tab, instead of waiting for the next
+     poll tick. Backends without watchOnlineCount just keep relying on
+     the poll — graceful no-op, same as devices. */
+  let unsubscribeOnlineCountRealtime = null;
+  function subscribeOnlineCountRealtime(timeoutMs = 4000){
+    const start = Date.now();
+    (function poll(){
+      if(typeof window.getBackend !== "function"){
+        if(Date.now() - start < timeoutMs) setTimeout(poll, 50);
+        return;
+      }
+      window.getBackend().then(backend=>{
+        if(typeof backend.watchOnlineCount !== "function") return; // graceful no-op for non-Firebase backends
+        if(unsubscribeOnlineCountRealtime) unsubscribeOnlineCountRealtime();
+        unsubscribeOnlineCountRealtime = backend.watchOnlineCount(count=>{
+          const heroNums = document.querySelectorAll(".hero-stats [data-count]");
+          if(heroNums.length < 2) return;
+          const el = heroNums[1]; // Hero Stats: [0] Devices Available, [1] Users Online, [2] Sensitivities Copied
+          const current = parseInt(el.dataset.count, 10) || 0;
+          if(count === current) return;
+          el.dataset.count = count;
+          animateCount(el);
+        });
+      }).catch(err=> console.error("[JUTTFHX] Failed to start realtime online-count sync:", err));
+    })();
+  }
+  subscribeOnlineCountRealtime();
 
   /* ---------- Live stat refresh ----------
      Re-pulls real getStats() on an interval so the counters reflect
@@ -14997,6 +15083,19 @@ async function submitRequest(request){
     status: "pending",
     createdAt: serverTimestamp()
   });
+  // "requests" docs carry personal contact info (Gmail/WhatsApp) and stay
+  // admin/owner-only for read — see getRequests() comment above. That
+  // means a public "Total Requests" stat can't count that collection
+  // directly. requestEvents is a data-free companion doc (createdAt
+  // only), same public create/read / admin-only update-delete shape as
+  // "copies", written purely so getStats() has something safe to count.
+  // Best-effort: a failure here must never block the real request from
+  // going through.
+  try{
+    await addDoc(collection(db, "requestEvents"), { createdAt: serverTimestamp() });
+  }catch(e){
+    console.warn("[JUTTFHX] requestEvents write failed (request itself still submitted):", e.message);
+  }
 }
 async function updateRequestStatus(id, status, reason){
   const updates = { status };
@@ -15063,6 +15162,35 @@ async function getOnlineCount(){
   const snap = await getCountFromServer(query(collection(db, "presence"), where("lastSeen", ">", cutoff)));
   return snap.data().count;
 }
+// Realtime "Users Online": same 10-min presence window as getOnlineCount()
+// above, but pushed live via onSnapshot instead of polled — fires
+// immediately with the current count and again the instant any visitor's
+// heartbeat doc is created or updated, in any open tab, same pattern as
+// watchDevices(). A fixed cutoff alone would never let someone "age out"
+// on their own (onSnapshot only fires on doc changes, not on the passage
+// of time), so this also re-subscribes with a fresh cutoff once a minute
+// to catch idle visitors dropping off. Returns a single unsubscribe
+// function that tears down both the live listener and the refresh timer.
+function watchOnlineCount(callback){
+  const ONLINE_WINDOW_MS = 10 * 60 * 1000; // 10 min, matches getOnlineCount()
+  const REFRESH_MS = 60 * 1000; // re-cut the window every 1 min
+  let unsubSnapshot = null;
+  function resubscribe(){
+    if(unsubSnapshot) unsubSnapshot();
+    const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS);
+    unsubSnapshot = onSnapshot(
+      query(collection(db, "presence"), where("lastSeen", ">", cutoff)),
+      snap => callback(snap.size),
+      err => console.error("[JUTTFHX] watchOnlineCount realtime listener failed (Users Online will stop updating live):", err)
+    );
+  }
+  resubscribe();
+  const refreshTimer = setInterval(resubscribe, REFRESH_MS);
+  return () => {
+    if(unsubSnapshot) unsubSnapshot();
+    clearInterval(refreshTimer);
+  };
+}
 async function getStats(){
   // Uses getCountFromServer() (aggregation query) instead of getDocs() —
   // this counts documents server-side without downloading them, so the
@@ -15081,11 +15209,17 @@ async function getStats(){
   // working: a single rejected count in Promise.all() failed the whole
   // call, and only totalDevices/avgMatchScore had a local fallback to
   // hide it.
+  // "requests" itself is intentionally NOT counted here — those docs
+  // carry personal contact info and stay admin/owner-only for read (see
+  // getRequests() comment above), so a public aggregation query against
+  // it always gets denied. "requestEvents" is the data-free, public-
+  // readable companion collection written by submitRequest() purely for
+  // this count.
   const [visitsRes, searchesRes, devicesRes, requestsRes, copiesRes] = await Promise.allSettled([
     getCountFromServer(collection(db, "visits")),
     getCountFromServer(collection(db, "searches")),
     getCountFromServer(collection(db, "devices")),
-    getCountFromServer(collection(db, "requests")),
+    getCountFromServer(collection(db, "requestEvents")),
     getCountFromServer(collection(db, "copies"))
   ]);
   const countOf = (res)=> res.status === "fulfilled" ? res.value.data().count : null;
@@ -15097,6 +15231,7 @@ async function getStats(){
   if(searchesRes.status === "rejected") console.warn("[JUTTFHX] Total Searches count failed — check that Firestore rules allow public read on 'searches':", searchesRes.reason && searchesRes.reason.message);
   if(visitsRes.status === "rejected") console.warn("[JUTTFHX] Total Users count failed — check that Firestore rules allow public read on 'visits':", visitsRes.reason && visitsRes.reason.message);
   if(copiesRes.status === "rejected") console.warn("[JUTTFHX] Sensitivities Copied count failed — check that Firestore rules allow public read on 'copies':", copiesRes.reason && copiesRes.reason.message);
+  if(requestsRes.status === "rejected") console.warn("[JUTTFHX] Total Requests count failed — check that Firestore rules allow public read on 'requestEvents':", requestsRes.reason && requestsRes.reason.message);
   // Best-effort, separate try/catch: an "online" query failing (e.g.
   // rules not deployed yet for /presence) must not take down the other
   // four counts the way a single Promise.all() rejection used to.
@@ -15183,7 +15318,7 @@ window.FirebaseService = {
   getRequests, getMyRequests, submitRequest, deleteRequest, updateRequestStatus,
   getGuilds, addGuild, updateGuild, deleteGuild,
   getTeamFinder, addTeamFinderListing, updateTeamFinderListing, deleteTeamFinderListing,
-  getStats, trackVisit, trackSearch, trackCopy, sendPresenceHeartbeat
+  getStats, trackVisit, trackSearch, trackCopy, sendPresenceHeartbeat, watchOnlineCount
 };
 
 </script>
