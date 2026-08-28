@@ -11024,10 +11024,14 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
     // Whatever card/modal the copy/download/share action came from
     // (sensitivity share card, guild details, team-finder details, etc.)
     // needs to close too — otherwise it sits open on top of the page
-    // even after we scroll to Reviews below it.
+    // even after we scroll to Reviews below it. Close generically AND
+    // call the specific close functions directly as a safety net.
     document.querySelectorAll(".modal-overlay.open").forEach(overlay=>{
       overlay.classList.remove("open");
     });
+    if(typeof closeShareModal === "function") closeShareModal();
+    if(typeof closeGuildDetailsModal === "function") closeGuildDetailsModal();
+    if(typeof closeTfDetailsModal === "function") closeTfDetailsModal();
     document.documentElement.classList.remove("no-scroll");
     const reviewsSection = document.getElementById("reviews");
     if(reviewsSection){
