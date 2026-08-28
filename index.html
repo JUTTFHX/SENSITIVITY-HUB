@@ -11021,6 +11021,14 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
 
   document.getElementById("reviewPromptYesBtn")?.addEventListener("click", ()=>{
     closeReviewPrompt();
+    // Whatever card/modal the copy/download/share action came from
+    // (sensitivity share card, guild details, team-finder details, etc.)
+    // needs to close too — otherwise it sits open on top of the page
+    // even after we scroll to Reviews below it.
+    document.querySelectorAll(".modal-overlay.open").forEach(overlay=>{
+      overlay.classList.remove("open");
+    });
+    document.documentElement.classList.remove("no-scroll");
     const reviewsSection = document.getElementById("reviews");
     if(reviewsSection){
       reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
