@@ -1033,7 +1033,7 @@ body.light .nav{
 }
 .brand-name{ font-size:18px; font-weight:700; letter-spacing:.04em; color:var(--ink); }
 .brand-name span{ color:var(--gold); }
-.brand-tag{ font-family:var(--f-mono); font-size:9.5px; letter-spacing:.18em; color:var(--ink-faint); text-transform:uppercase; display:block; margin-top:-2px; }
+.brand-tag{ font-family:var(--f-mono); font-size:9px; letter-spacing:.16em; color:var(--ink-faint); text-transform:uppercase; display:block; line-height:1.35; margin-top:1px; }
 
 .nav-links{ display:flex; align-items:center; gap:28px; }
 .nav-links a{
@@ -1062,16 +1062,13 @@ body.light .nav{
 
 /* ============ Hero ============ */
 .hero{ position:relative; padding: clamp(48px,9vw,96px) 0 clamp(56px,8vw,88px); overflow:hidden; }
-.hero-grid{ display:grid; grid-template-columns: 1.1fr .9fr; gap: clamp(32px,5vw,64px); align-items:center; }
-@media (max-width: 980px){ .hero-grid{ grid-template-columns:1fr; } }
+.hero-grid{ display:grid; grid-template-columns: 1.05fr .85fr .95fr; gap: clamp(20px,3vw,36px); align-items:center; }
+@media (max-width: 1180px){ .hero-grid{ grid-template-columns: 1fr .8fr; } .hero-live-panel{ grid-column: 1 / -1; } }
+@media (max-width: 980px){ .hero-grid{ grid-template-columns:1fr; } .hero-live-panel{ grid-column: auto; } }
 
 .hero-eyebrow{
-  font-family: var(--f-mono); font-size:12px; letter-spacing:.2em; text-transform:uppercase;
-  color: var(--gold); display:flex; align-items:center; gap:10px; margin-bottom:20px;
-}
-.hero-eyebrow .pulse-dot{
-  width:8px; height:8px; border-radius:50%; background:var(--gold);
-  box-shadow:0 0 0 0 rgba(244,196,48,.6); animation: pulse 2s infinite;
+  font-family: var(--f-mono); font-size:12px; letter-spacing:.28em; text-transform:uppercase;
+  color: var(--gold); display:flex; align-items:center; gap:10px; margin-bottom:14px;
 }
 @keyframes pulse{
   0%{ box-shadow:0 0 0 0 rgba(244,196,48,.55); }
@@ -1080,13 +1077,17 @@ body.light .nav{
 }
 .hero-title{
   font-family: var(--f-display); font-weight:var(--jx-heading-weight, 700); text-transform:uppercase;
-  font-size: clamp(34px, 5.6vw, 64px); line-height:1.02; letter-spacing:var(--jx-heading-ls, 0); color: var(--ink);
+  font-size: clamp(38px, 6.4vw, 72px); line-height:1.0; letter-spacing:var(--jx-heading-ls, 0); color: var(--ink);
 }
 .hero-title .accent{
   background: linear-gradient(95deg, var(--gold-bright), var(--gold) 40%, var(--ember) 110%);
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
 }
-.hero-desc{ margin-top:18px; font-size:16.5px; color: var(--ink-dim); max-width:520px; line-height:1.65; }
+.hero-tagline{
+  margin-top:10px; font-family:var(--f-mono); font-size:12.5px; font-weight:600; letter-spacing:.14em;
+  text-transform:uppercase; color: var(--ink-dim);
+}
+.hero-desc{ margin-top:16px; font-size:16px; color: var(--ink-dim); max-width:460px; line-height:1.6; }
 .hero-ctas{ display:flex; flex-wrap:wrap; gap:14px; margin-top:32px; }
 
 .hero-stats{ display:flex; gap:28px; margin-top:40px; flex-wrap:wrap; }
@@ -1167,6 +1168,74 @@ body.light .nav{
   background: rgba(21,19,15,.9); border:1px solid var(--hairline-strong); color: var(--gold); white-space:nowrap; z-index:3;
 }
 @media (max-width: 980px){ .hero-orbit-ring{ display:none; } .hero-visual{ min-height:300px; } .hero-device{ width:190px; height:380px; } }
+
+/* ============ Feature Hub (Phase 2: premium quick-nav cards) ============ */
+/* Reuses the existing .glass-card depth/shadow/hover system (see the
+   "Premium Card Depth System" block below) — only layout + accent-color
+   rules are defined here. No new JS, no changed selectors. */
+.feature-hub{ padding-top: clamp(8px,2vw,20px); }
+.feature-grid{ display:grid; grid-template-columns: repeat(6, 1fr); gap:18px; }
+.feature-grid + .feature-grid{ margin-top:18px; }
+.feature-grid-compact{ grid-template-columns: repeat(4,1fr); }
+
+.feature-card{
+  display:flex; flex-direction:column; gap:14px;
+  padding:24px 22px; text-decoration:none; grid-column: span 1;
+  --fc-accent: var(--gold);
+}
+.fc-featured{ grid-column: span 2; }
+
+.fc-bar{
+  position:absolute; top:0; left:16px; right:16px; height:2px; border-radius:2px;
+  background: linear-gradient(90deg, transparent, var(--fc-accent), transparent);
+  opacity:.85; z-index:2;
+}
+
+.fc-icon{
+  width:44px; height:44px; border-radius:12px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background: color-mix(in srgb, var(--fc-accent) 14%, transparent);
+  border:1px solid color-mix(in srgb, var(--fc-accent) 32%, transparent);
+  color: var(--fc-accent);
+}
+.fc-icon svg{ width:22px; height:22px; }
+
+.fc-title{ font-family:var(--f-display); font-size:16px; font-weight:600; color:var(--ink); letter-spacing:.01em; }
+.fc-featured .fc-title{ font-size:19px; }
+.fc-desc{ margin-top:4px; font-size:13px; color:var(--ink-dim); line-height:1.5; }
+
+.fc-cta{
+  margin-top:auto; display:inline-flex; align-items:center; gap:7px;
+  font-family:var(--f-mono); font-size:11.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color: var(--fc-accent); transition: gap .25s var(--ease-out);
+}
+.fc-cta svg{ transition: transform .25s var(--ease-out); }
+.feature-card:hover .fc-cta svg{ transform: translateX(3px); }
+
+/* Accent identities — kept restrained so the site still reads black + gold */
+.fc-gold{ --fc-accent: var(--gold); }
+.fc-green{ --fc-accent: var(--green); }
+.fc-amber{ --fc-accent: var(--ember); }
+.fc-purple{ --fc-accent: #9b86e0; }
+.fc-ember{ --fc-accent: #e0574a; }
+.fc-muted{ --fc-accent: var(--ink-dim); }
+
+/* Compact secondary row (community links) */
+.feature-card-sm{ flex-direction:row; align-items:center; gap:14px; padding:18px; }
+.fc-icon-sm{ width:38px; height:38px; border-radius:10px; }
+.fc-icon-sm svg{ width:19px; height:19px; }
+.fc-title-sm{ font-family:var(--f-display); font-size:14px; font-weight:600; color:var(--ink); }
+.fc-desc-sm{ margin-top:2px; font-size:12px; color:var(--ink-faint); }
+
+@media (max-width: 980px){
+  .feature-grid{ grid-template-columns: repeat(2,1fr); }
+  .fc-featured{ grid-column: span 2; }
+  .feature-grid-compact{ grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 620px){
+  .feature-grid, .feature-grid-compact{ grid-template-columns: 1fr; }
+  .fc-featured{ grid-column: span 1; }
+}
 
 /* ============ Generic grid / cards ============ */
 .grid{ display:grid; gap:20px; }
@@ -5800,6 +5869,2095 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   contain-intrinsic-size: 0 280px;
 }
 
+/* ============================================================
+   PHASE 1 — PREMIUM NAVBAR + HERO (visual-only additions)
+   Scope: everything below is scoped under .site-header or the
+   unique .hero-* classes so nothing outside the navbar/hero is
+   affected. No JS, IDs, data-jx attributes, or backend/storage
+   logic are touched by any rule in this block.
+   ============================================================ */
+
+/* ---------- Navbar: ambient glow + glass/metal refinement ---------- */
+.site-header .nav{
+  position: relative;
+  background: rgba(8,7,6,.80);
+  border-color: rgba(212,175,90,.30);
+}
+.site-header .nav::before{
+  content:''; position:absolute; inset:-22px; z-index:-1; pointer-events:none;
+  background: radial-gradient(60% 140% at 50% 50%, rgba(244,196,48,.14), transparent 72%);
+  filter: blur(6px);
+  opacity: .8;
+}
+body.light .site-header .nav::before{ background: radial-gradient(60% 140% at 50% 50%, rgba(184,134,11,.10), transparent 72%); }
+
+/* thin top glass highlight, like a metal edge catching light */
+.site-header .nav::after{
+  content:''; position:absolute; top:1px; left:14px; right:14px; height:1px; z-index:1; pointer-events:none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.10) 30%, rgba(255,255,255,.16) 50%, rgba(255,255,255,.10) 70%, transparent);
+}
+
+.site-header .brand-mark{
+  position: relative;
+}
+.site-header .brand-name{ letter-spacing:.05em; }
+.site-header .brand-tag{ color: var(--gold-deep); }
+body.light .site-header .brand-tag{ color: var(--amber); }
+
+/* Nav links: gold-gradient underline + slightly refined weight on hover */
+.site-header .nav-links a{
+  font-weight: 500;
+  transition: color .25s, font-weight .25s;
+}
+.site-header .nav-links a::after{
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright));
+}
+.site-header .nav-links a:hover{ color: var(--gold-bright); }
+
+/* Slightly de-crowd the 9-item nav on narrower desktop widths before the
+   mobile breakpoint kicks in — spacing/hierarchy only, no items removed */
+@media (max-width: 1180px) and (min-width: 881px){
+  .site-header .nav-links{ gap: 18px; }
+  .site-header .nav-links a{ font-size: 12.5px; }
+}
+
+/* Utility buttons (theme / account / admin) — subtle glass depth, controlled glow */
+.site-header .btn-icon,
+.site-header .account-btn{
+  background: rgba(244,196,48,.05);
+  border-color: rgba(212,175,90,.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+.site-header .admin-access-btn{
+  box-shadow: 0 0 0 1px rgba(212,175,90,.22) inset, 0 0 16px rgba(244,196,48,.10);
+}
+
+/* Mobile nav overlay: keep existing structure/behavior, refine tone only */
+@media (max-width: 880px){
+  .site-header .nav-links{ background: var(--void); }
+  .site-header .nav-links a{ border-bottom-color: var(--hairline); }
+}
+
+/* ---------- Hero: CTAs ---------- */
+.hero-cta-row .btn{ min-width: 190px; }
+.hero-cta-row .hero-cta-primary{
+  box-shadow: 0 4px 28px rgba(244,196,48,.30), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.hero-cta-row .hero-cta-secondary{
+  border-color: var(--hairline-strong);
+}
+
+/* ---------- Hero: live activity panel (wraps the untouched .hero-stats) ---------- */
+.hero-live-panel{
+  display: flex; flex-direction: column; gap: 18px;
+  padding: 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent), var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-m);
+  box-shadow: 0 12px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+}
+.hero-live-head{ display:flex; align-items:center; gap:10px; }
+.hero-live-badge{
+  flex-shrink:0; padding:3px 9px; border-radius:5px; background: var(--ember);
+  color:#fff; font-family:var(--f-mono); font-size:10px; font-weight:700; letter-spacing:.08em;
+}
+.hero-live-head-text{ display:flex; flex-direction:column; gap:2px; }
+.hero-live-tag{
+  font-family: var(--f-display); font-size:14px; font-weight:600; color: var(--ink);
+}
+.hero-live-sub{
+  font-family: var(--f-mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color: var(--ink-faint);
+}
+.hero-live-panel .hero-stats{ margin-top: 0; gap: 10px; flex-direction:column; }
+.hero-live-panel .hero-stat{
+  display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+  padding:10px 14px; border-radius:var(--radius-s); background: rgba(255,255,255,.02); border:1px solid var(--hairline);
+}
+.hero-live-panel .hero-stat b{ font-size:19px; }
+.hero-live-panel .hero-stat span{ text-align:right; }
+.hero-live-panel .hero-stat:not(:last-child)::after{ content:none; }
+@media (max-width:520px){
+  .hero-live-panel{ padding:16px 18px; }
+}
+
+/* ---------- Hero: cinematic panel treatment (no external artwork available/used) ---------- */
+.hero{
+  --hero-art-image: none; /* hook: set to url(...) later to drop in a licensed hero image */
+}
+.hero-visual{
+  --edge: 22px;
+}
+.hero-visual::before{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:
+    var(--hero-art-image),
+    radial-gradient(50% 50% at 50% 42%, rgba(244,196,48,.16), transparent 68%);
+  background-size: cover; background-position: center;
+  border-radius: var(--radius-l);
+  opacity: .9;
+}
+.hero-device{
+  box-shadow:
+    0 40px 90px rgba(0,0,0,.65),
+    inset 0 0 0 8px #0a0907,
+    inset 0 0 50px rgba(244,196,48,.06),
+    0 0 60px rgba(244,196,48,.08);
+}
+/* Restrained HUD corner brackets around the artwork panel */
+.hero-visual::after{
+  content:''; position:absolute; z-index:2; pointer-events:none;
+  top: var(--edge); left: var(--edge); right: var(--edge); bottom: var(--edge);
+  border: 1px solid transparent;
+  background-image:
+    linear-gradient(var(--hairline-strong), var(--hairline-strong)), linear-gradient(var(--hairline-strong), var(--hairline-strong)),
+    linear-gradient(var(--hairline-strong), var(--hairline-strong)), linear-gradient(var(--hairline-strong), var(--hairline-strong));
+  background-repeat: no-repeat;
+  background-size: 26px 2px, 2px 26px, 26px 2px, 2px 26px;
+  background-position: top left, top left, bottom right, bottom right;
+}
+@media (prefers-reduced-motion: reduce){
+  .hero-device{ animation: none !important; }
+  .hero-orbit-ring{ animation: none !important; }
+}
+
+/* ============================================================
+   PHASE 9.1 — ADMIN SHELL (Command Center)
+   Scoped exclusively under #adminRoute. Shell/chrome only —
+   individual admin panel bodies (tables, forms, stat cards,
+   theme/settings controls, etc.) are untouched in this phase.
+   No HTML/JS changed. Purely additive — does not remove or
+   override the base admin rules defined earlier in this block.
+   ============================================================ */
+
+/* Ambient backdrop for the full-screen admin route */
+#adminRoute.active{
+  background:
+    radial-gradient(60% 50% at 12% 0%, rgba(244,196,48,.055), transparent 60%),
+    radial-gradient(45% 40% at 100% 100%, rgba(244,196,48,.035), transparent 65%),
+    var(--void);
+}
+
+/* ---- Sidebar: glass depth + technical framing ---- */
+#adminRoute .admin-sidebar{
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.008) 40%, rgba(255,255,255,.008));
+  border-right: 1px solid var(--hairline-strong);
+  box-shadow: inset -1px 0 0 rgba(244,196,48,.04), 8px 0 40px rgba(0,0,0,.35);
+}
+#adminRoute .admin-sidebar .brand-mark{
+  box-shadow: 0 0 0 1px rgba(244,196,48,.25), 0 0 18px rgba(244,196,48,.16);
+}
+
+/* ---- Nav buttons: clearer active state, restrained glow ---- */
+#adminRoute .admin-nav-btn{
+  position: relative;
+}
+#adminRoute .admin-nav-btn::before{
+  content:''; position:absolute; left:-16px; top:50%; transform:translateY(-50%);
+  width:3px; height:0; border-radius:0 3px 3px 0;
+  background: linear-gradient(var(--gold-bright), var(--gold));
+  box-shadow: 0 0 10px rgba(244,196,48,.55);
+  transition: height .2s var(--ease-out);
+}
+#adminRoute .admin-nav-btn.active::before{ height:22px; }
+#adminRoute .admin-nav-btn.active{
+  background: linear-gradient(90deg, rgba(244,196,48,.14), rgba(244,196,48,.03));
+  box-shadow: inset 0 0 0 1px rgba(244,196,48,.16);
+}
+#adminRoute .admin-nav-btn:hover{
+  box-shadow: inset 0 0 0 1px rgba(244,196,48,.08);
+}
+#adminRoute .admin-nav-btn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: -2px;
+  border-radius: var(--radius-s);
+}
+
+/* ---- Nav badges: polished counters ---- */
+#adminRoute .admin-nav-badge{
+  box-shadow: 0 0 0 1px rgba(244,196,48,.2), 0 0 8px rgba(244,196,48,.22);
+  font-weight: 700;
+}
+
+/* ---- Sidebar footer: console readout ---- */
+#adminRoute .admin-sidebar-foot{
+  border-top: 1px solid var(--hairline-strong);
+}
+#adminRoute .admin-backend-pill{
+  background: rgba(255,255,255,.02);
+}
+#adminRoute .admin-backend-pill .dot{
+  box-shadow: 0 0 6px currentColor;
+}
+#adminRoute .admin-role-pill{
+  box-shadow: 0 0 12px rgba(244,196,48,.12);
+}
+#adminRoute #adminLogoutBtn:focus-visible,
+#adminRoute #adminBackToSiteBtn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+
+/* ---- Mobile topbar: frosted glass ---- */
+#adminRoute .admin-mobile-bar{
+  background: rgba(10,10,12,.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--hairline-strong);
+  box-shadow: 0 8px 30px rgba(0,0,0,.35);
+}
+#adminRoute #adminMobileMenuBtn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+#adminRoute .admin-overlay.show{
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* ---- Content shell: topbar / panel-head framing (shared chrome only) ---- */
+#adminRoute .admin-topbar{
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 18px;
+}
+#adminRoute .admin-page-title{
+  position: relative;
+  padding-left: 14px;
+}
+#adminRoute .admin-page-title::before{
+  content:''; position:absolute; left:0; top:2px; bottom:2px; width:3px; border-radius:2px;
+  background: linear-gradient(var(--gold-bright), var(--gold));
+  box-shadow: 0 0 8px rgba(244,196,48,.45);
+}
+#adminRoute .admin-panel-head{
+  border-bottom: 1px solid var(--hairline);
+}
+
+/* ---- Responsive: shell refinement only, existing 900px breakpoint preserved ---- */
+@media (max-width:900px){
+  #adminRoute .admin-sidebar{
+    background: rgba(15,14,18,.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+}
+@media (max-width:480px){
+  #adminRoute .admin-sidebar{ width: 84vw; max-width:300px; }
+}
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-nav-btn::before{ transition: none !important; }
+}
+
+/* ============================================================
+   PHASE 9.2 — ADMIN OVERVIEW PANEL
+   Scoped exclusively to #adminRoute [data-section="overview"]
+   and that panel's unique-ID children (#ovDeviceCount,
+   #ovReviewCount, #ovRequestCount, #ovHudCount,
+   #ovRecentRequests, #ovRecentActivity). Does not touch the
+   Phase 9.1 shell rules, any other admin panel, the homepage,
+   or the Account Drawer. Purely additive.
+   ============================================================ */
+
+/* ---- Stat cards: elegant gold numbers + subtle HUD framing ---- */
+#adminRoute .admin-panel-section[data-section="overview"] .admin-stat-row{
+  gap: 18px;
+}
+#adminRoute .admin-panel-section[data-section="overview"] .admin-stat-card{
+  position: relative;
+  padding: 22px 20px;
+  background: linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  overflow: hidden;
+  transition: border-color .25s, box-shadow .25s, transform .25s var(--ease-out);
+}
+#adminRoute .admin-panel-section[data-section="overview"] .admin-stat-card::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent 70%);
+  opacity:.55;
+}
+#adminRoute .admin-panel-section[data-section="overview"] .admin-stat-card:hover{
+  border-color: var(--hairline-strong);
+  box-shadow: 0 14px 34px rgba(0,0,0,.35), 0 0 0 1px rgba(244,196,48,.1);
+  transform: translateY(-2px);
+}
+#adminRoute .admin-panel-section[data-section="overview"] .admin-stat-num{
+  font-size: 34px;
+  letter-spacing: .01em;
+  text-shadow: 0 0 18px rgba(244,196,48,.25);
+}
+#adminRoute .admin-panel-section[data-section="overview"] .admin-stat-label{
+  margin-top: 6px;
+}
+
+/* ---- Recent Requests / Recent Activity panel frames ---- */
+#adminRoute .admin-panel-section[data-section="overview"] .admin-panel-head{
+  padding: 16px 20px;
+}
+#adminRoute .admin-panel-section[data-section="overview"] .admin-panel{
+  background: linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+}
+
+/* Recent Requests table — subtle status glow + refined empty state */
+#ovRecentRequests .status-pill{
+  box-shadow: 0 0 0 1px currentColor inset;
+  opacity: .95;
+}
+#ovRecentRequests .admin-empty-row td,
+#ovRecentActivity .admin-pane-note{
+  padding: 42px 20px;
+  font-size: 13px;
+  letter-spacing: .02em;
+}
+
+/* Recent Activity — compact audit rows */
+#ovRecentActivity .audit-row{
+  padding: 12px 20px;
+  transition: background .2s;
+}
+#ovRecentActivity .audit-row:hover{
+  background: rgba(244,196,48,.03);
+}
+#ovRecentActivity .audit-dot{
+  box-shadow: 0 0 6px rgba(244,196,48,.6);
+}
+
+/* "View All" control — focus-visible */
+#adminRoute .admin-panel-section[data-section="overview"] [data-goto-panel="activity"]:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+
+/* ---- Responsive: existing 900px stat-row breakpoint behavior preserved ---- */
+@media (max-width:900px){
+  #adminRoute .admin-panel-section[data-section="overview"] .admin-stat-row{ gap:14px; }
+}
+@media (max-width:480px){
+  #adminRoute .admin-panel-section[data-section="overview"] .admin-stat-card{ padding:18px 16px; }
+  #adminRoute .admin-panel-section[data-section="overview"] .admin-stat-num{ font-size:28px; }
+}
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-panel-section[data-section="overview"] .admin-stat-card{ transition:none !important; }
+  #ovRecentActivity .audit-row{ transition:none !important; }
+}
+
+/* ============================================================
+   PHASE 9.3 — ADMIN DATA MANAGEMENT PANELS
+   Scoped exclusively to #adminRoute [data-section="devices"],
+   [data-section="huds"], [data-section="tournaments"],
+   [data-section="combos"], [data-section="guilds"],
+   [data-section="teamfinder"] and each panel's unique-ID
+   children/modals (#deviceModal, #hudLayoutModal excluding
+   #hudLayoutPreviewCard, #tourneyEditModal, #comboEditModal,
+   #adminGuildModal, #adminTfModal). Does not touch Phase 9.1
+   shell rules, Phase 9.2 Overview, any other admin panel, the
+   homepage (#device-search, #live-ranking, #tournaments,
+   #hud-gallery, #reviews, .combo-card), or the Account Drawer.
+   #hudLayoutPreviewCard and all of its descendants are
+   deliberately left unselected anywhere in this block.
+   Purely additive.
+   ============================================================ */
+
+/* ---- Shared premium panel treatment across all six panels ---- */
+#adminRoute .admin-panel-section[data-section="devices"] .admin-panel,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-panel,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-panel,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-panel,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-panel,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-panel{
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+  transition: border-color .25s, box-shadow .25s;
+}
+#adminRoute .admin-panel-section[data-section="devices"] .admin-panel::before,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-panel::before,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-panel::before,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-panel::before,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-panel::before,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-panel::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent 75%);
+  opacity:.5; pointer-events:none;
+}
+#adminRoute .admin-panel-section[data-section="devices"] .admin-panel-head,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-panel-head,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-panel-head,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-panel-head,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-panel-head,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-panel-head{
+  padding: 16px 20px;
+}
+#adminRoute .admin-panel-section[data-section="devices"] .admin-panel-head h3,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-panel-head h3,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-panel-head h3,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-panel-head h3,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-panel-head h3,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-panel-head h3{
+  letter-spacing:.04em;
+  text-shadow: 0 0 16px rgba(244,196,48,.14);
+}
+
+/* ---- Search inputs ---- */
+#adminRoute .admin-panel-section[data-section="devices"] .admin-search-mini,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-search-mini,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-search-mini{
+  transition: border-color .2s, background .2s;
+}
+#adminRoute .admin-panel-section[data-section="devices"] .admin-search-mini:focus-within,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-search-mini:focus-within,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-search-mini:focus-within{
+  border-color: var(--gold);
+  background: rgba(244,196,48,.04);
+}
+
+/* ---- Bulk action bars ---- */
+#adminRoute .admin-panel-section[data-section="devices"] .admin-bulkbar,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-bulkbar,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-bulkbar,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-bulkbar,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-bulkbar,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-bulkbar{
+  background: linear-gradient(160deg, rgba(244,196,48,.07), rgba(244,196,48,.015));
+  border-color: var(--hairline-strong);
+}
+
+/* ---- Tables: refined row hover + subtle header underline glow ---- */
+#adminRoute .admin-panel-section[data-section="devices"] .admin-table th,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-table th,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-table th,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-table th,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-table th,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-table th{
+  border-bottom-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="devices"] .admin-table tr:hover td,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-table tr:hover td,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-table tr:hover td,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-table tr:hover td,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-table tr:hover td,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-table tr:hover td{
+  background: rgba(244,196,48,.035);
+  transition: background .2s;
+}
+#adminRoute .admin-panel-section[data-section="devices"] .admin-table .cell-name,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-table .cell-name,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-table .cell-name,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-table .cell-name,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-table .cell-name,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-table .cell-name{
+  text-shadow: 0 0 12px rgba(244,196,48,.08);
+}
+
+/* ---- Stat cards (Guild Hub + Team Finder) ---- */
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-stat-card,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-stat-card{
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  overflow: hidden;
+  transition: border-color .25s, box-shadow .25s, transform .25s var(--ease-out);
+}
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-stat-card::before,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-stat-card::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent 70%);
+  opacity:.55;
+}
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-stat-card:hover,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-stat-card:hover{
+  border-color: var(--hairline-strong);
+  box-shadow: 0 14px 34px rgba(0,0,0,.35), 0 0 0 1px rgba(244,196,48,.1);
+  transform: translateY(-2px);
+}
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-stat-num,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-stat-num{
+  text-shadow: 0 0 18px rgba(244,196,48,.25);
+}
+
+/* ---- Devices: brand filter tabs ---- */
+#adminRoute .admin-panel-section[data-section="devices"] #adminDeviceBrandTabs .tab-btn.active{
+  box-shadow: 0 0 0 1px rgba(244,196,48,.25) inset;
+}
+
+/* ---- HUD Layouts: dropzone + uploaded-images grid (public #hud-gallery / #hudLayoutPreviewCard untouched) ---- */
+#adminRoute .admin-panel-section[data-section="huds"] .admin-dropzone{
+  transition: border-color .25s, background .25s;
+}
+#adminRoute .admin-panel-section[data-section="huds"] .admin-dropzone:hover{
+  box-shadow: 0 0 0 1px rgba(244,196,48,.12) inset;
+}
+#adminRoute .admin-panel-section[data-section="huds"] .admin-hud-grid{
+  gap: 16px;
+}
+
+/* ---- Tournaments: daily-limit + payment-methods panels ---- */
+#adminRoute .admin-panel-section[data-section="tournaments"] #tourneyDailyLimitInput:focus,
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .field-input:focus{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+}
+
+/* ---- Character Combos: dynamic character/tip lists ---- */
+#adminRoute .admin-panel-section[data-section="combos"] .jx-fieldset{
+  background: linear-gradient(160deg, rgba(255,255,255,.02), transparent);
+}
+#adminRoute .admin-panel-section[data-section="combos"] .jx-dyn-add{
+  transition: color .2s, border-color .2s;
+}
+
+/* ---- Buttons inside these six panels: subtle lift on primary action ---- */
+#adminRoute .admin-panel-section[data-section="devices"] .btn-gold,
+#adminRoute .admin-panel-section[data-section="huds"] .btn-gold,
+#adminRoute .admin-panel-section[data-section="tournaments"] .btn-gold,
+#adminRoute .admin-panel-section[data-section="combos"] .btn-gold,
+#adminRoute .admin-panel-section[data-section="guilds"] .btn-gold,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .btn-gold{
+  box-shadow: 0 4px 14px rgba(244,196,48,.14);
+}
+
+/* ============================================================
+   Add / Edit modals for the six Phase 9.3 panels.
+   Each scoped strictly to its own unique modal id.
+   #hudLayoutModal rules below never select #hudLayoutPreviewCard
+   or any of its descendants (.hud-card/.hud-preview/.hud-body/
+   .hud-name/.hud-desc/.hud-copy-btn/.hud-code-box/.hud-finger-badge).
+   ============================================================ */
+#deviceModal .modal-box,
+#hudLayoutModal .modal-box,
+#tourneyEditModal .modal-box,
+#comboEditModal .modal-box,
+#adminGuildModal .modal-box,
+#adminTfModal .modal-box{
+  background: linear-gradient(165deg, rgba(27,24,18,.98), rgba(21,19,15,.98));
+}
+#deviceModal .modal-head,
+#hudLayoutModal .modal-head,
+#tourneyEditModal .modal-head,
+#comboEditModal .modal-head,
+#adminGuildModal .modal-head,
+#adminTfModal .modal-head{
+  background: linear-gradient(90deg, rgba(244,196,48,.05), transparent 60%);
+}
+#deviceModal .field-input:focus,
+#hudLayoutModal .field-input:focus,
+#tourneyEditModal .field-input:focus,
+#comboEditModal .field-input:focus,
+#adminGuildModal .field-input:focus,
+#adminTfModal .field-input:focus{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+}
+#hudLayoutModal #hudLayoutThumbPicker{
+  transition: border-color .25s, background .25s;
+}
+#hudLayoutModal #hudLayoutThumbPicker:hover{
+  box-shadow: 0 0 0 1px rgba(244,196,48,.12) inset;
+}
+
+/* ---- Responsive: existing breakpoint behavior preserved ---- */
+@media (max-width:900px){
+  #adminRoute .admin-panel-section[data-section="guilds"] .admin-stat-row,
+  #adminRoute .admin-panel-section[data-section="teamfinder"] .admin-stat-row{
+    gap:14px;
+  }
+}
+@media (max-width:480px){
+  #adminRoute .admin-panel-section[data-section="guilds"] .admin-stat-card,
+  #adminRoute .admin-panel-section[data-section="teamfinder"] .admin-stat-card{
+    padding:18px 16px;
+  }
+  #adminRoute .admin-panel-section[data-section="guilds"] .admin-stat-num,
+  #adminRoute .admin-panel-section[data-section="teamfinder"] .admin-stat-num{
+    font-size:28px;
+  }
+}
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-panel-section[data-section="devices"] .admin-panel,
+  #adminRoute .admin-panel-section[data-section="huds"] .admin-panel,
+  #adminRoute .admin-panel-section[data-section="tournaments"] .admin-panel,
+  #adminRoute .admin-panel-section[data-section="combos"] .admin-panel,
+  #adminRoute .admin-panel-section[data-section="guilds"] .admin-panel,
+  #adminRoute .admin-panel-section[data-section="teamfinder"] .admin-panel{
+    transition:none !important;
+  }
+  #adminRoute .admin-panel-section[data-section="guilds"] .admin-stat-card,
+  #adminRoute .admin-panel-section[data-section="teamfinder"] .admin-stat-card{
+    transition:none !important;
+  }
+}
+
+/* ============================================================
+   PHASE 9.4 — ADMIN REQUESTS PANEL
+   Scoped exclusively to #adminRoute [data-section="requests"]
+   and that panel's unique-ID children/modal (#adminRequestTable,
+   #reqBulkBar, #reqBulkCount, #requestDetailsModal and its
+   #reqDetail* fields). Does not touch Phase 9.1 shell rules,
+   Phase 9.2 Overview, Phase 9.3 panels (Devices/HUDs/Tournaments/
+   Combos/Guilds/Team Finder), any other admin panel, the public
+   #request section or #reqContactModal, the homepage, the
+   Account Drawer, #hudLayoutPreviewCard, or public #hud-gallery.
+   All shared classes (.status-pill/.admin-icon-btn/.admin-empty-row/
+   .admin-clickable-row/.status-approved/.status-pending/
+   .status-rejected/.status-added) are reached only through the
+   #adminRequestTable or #requestDetailsModal unique-ID prefix —
+   never as bare/global selectors. Purely additive.
+   ============================================================ */
+
+/* ---- Panel shell: premium glass surface + gold accent ---- */
+#adminRoute .admin-panel-section[data-section="requests"] .admin-panel{
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+}
+#adminRoute .admin-panel-section[data-section="requests"] .admin-panel::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent 75%);
+  opacity:.5; pointer-events:none;
+}
+#adminRoute .admin-panel-section[data-section="requests"] .admin-panel-head{
+  padding: 16px 20px;
+}
+#adminRoute .admin-panel-section[data-section="requests"] .admin-panel-head h3{
+  letter-spacing:.04em;
+  text-shadow: 0 0 16px rgba(244,196,48,.14);
+}
+
+/* ---- Bulk approval queue bar ---- */
+#adminRoute .admin-panel-section[data-section="requests"] .admin-bulkbar{
+  background: linear-gradient(160deg, rgba(244,196,48,.07), rgba(244,196,48,.015));
+  border-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="requests"] #reqBulkCount{
+  color: var(--ink-dim);
+  letter-spacing:.02em;
+}
+
+/* ---- Requests table: rows, hover, clickable-row affordance ---- */
+#adminRoute .admin-panel-section[data-section="requests"] .admin-table th{
+  border-bottom-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="requests"] .admin-clickable-row{
+  transition: background .2s;
+}
+#adminRoute .admin-panel-section[data-section="requests"] .admin-clickable-row:hover td{
+  background: rgba(244,196,48,.045);
+}
+#adminRoute .admin-panel-section[data-section="requests"] .admin-table .cell-name{
+  text-shadow: 0 0 12px rgba(244,196,48,.08);
+}
+
+/* ---- Status pills, scoped strictly to this table (shared classes untouched elsewhere) ---- */
+#adminRequestTable .status-pill{
+  box-shadow: 0 0 0 1px currentColor inset;
+  opacity:.95;
+}
+
+/* ---- Action buttons: approve / reject / delete ---- */
+#adminRoute .admin-panel-section[data-section="requests"] .admin-icon-btn{
+  transition: border-color .2s, color .2s, box-shadow .2s;
+}
+#adminRoute .admin-panel-section[data-section="requests"] .admin-icon-btn:hover{
+  box-shadow: 0 0 0 1px rgba(244,196,48,.14) inset;
+}
+#adminRoute .admin-panel-section[data-section="requests"] .admin-icon-btn.danger:hover{
+  box-shadow: 0 0 0 1px rgba(255,92,92,.18) inset;
+}
+#adminRoute .admin-panel-section[data-section="requests"] #reqBulkApproveBtn{
+  box-shadow: 0 4px 14px rgba(244,196,48,.14);
+}
+
+/* ---- Empty / loading state ---- */
+#adminRequestTable .admin-empty-row td{
+  padding: 42px 20px;
+  font-size: 13px;
+  letter-spacing: .02em;
+  color: var(--ink-faint);
+}
+#adminRequestTable .admin-empty-row .spin{
+  color: var(--gold);
+  display:inline-block;
+  margin-right:6px;
+}
+
+/* ---- Responsive table: preserve existing horizontal-scroll behavior, refine scrollbar edge ---- */
+#adminRoute .admin-panel-section[data-section="requests"] .admin-table-wrap{
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+
+/* ============================================================
+   Request Details Modal — directly part of the approval workflow
+   ============================================================ */
+#requestDetailsModal .modal-box{
+  background: linear-gradient(165deg, rgba(27,24,18,.98), rgba(21,19,15,.98));
+}
+#requestDetailsModal .modal-head{
+  background: linear-gradient(90deg, rgba(244,196,48,.05), transparent 60%);
+}
+#requestDetailsModal .status-pill{
+  box-shadow: 0 0 0 1px currentColor inset;
+}
+#requestDetailsModal .field-input{
+  transition: border-color .2s, background .2s;
+}
+#requestDetailsModal #reqDetailScreenshot{
+  transition: border-color .2s;
+}
+#requestDetailsModal #reqDetailApproveBtn{
+  box-shadow: 0 4px 14px rgba(244,196,48,.14);
+}
+#requestDetailsModal #reqDetailRejectBtn:hover,
+#requestDetailsModal #reqDetailDeleteBtn:hover{
+  box-shadow: 0 0 0 1px rgba(255,92,92,.18) inset;
+}
+
+/* ---- Responsive: match existing global 900px/480px table + modal breakpoints (no new breakpoints needed; nothing here changes layout/columns) ---- */
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-panel-section[data-section="requests"] .admin-clickable-row,
+  #adminRoute .admin-panel-section[data-section="requests"] .admin-icon-btn{
+    transition:none !important;
+  }
+  #requestDetailsModal .field-input,
+  #requestDetailsModal #reqDetailScreenshot{
+    transition:none !important;
+  }
+}
+
+/* ============================================================
+   PHASE 9.6 — ADMIN ACTIVITY PANEL
+   Scoped exclusively to #adminRoute [data-section="activity"].
+   Shared classes (.audit-row, .audit-dot, .audit-body,
+   .audit-field, .audit-diff, .audit-meta, .admin-pane-note,
+   .admin-panel, .admin-panel-head, .glass, .btn, .btn-ghost,
+   .btn-sm) are reused elsewhere (Overview widget, other admin
+   panels, global button system) and are scoped here so nothing
+   outside this panel is affected. Does not touch #ovRecentActivity,
+   any base/global rule, or any other phase's CSS. Purely additive.
+   ============================================================ */
+
+/* ---- Panel frame: dark glass depth + restrained accent ---- */
+#adminRoute .admin-panel-section[data-section="activity"] .admin-panel{
+  background: linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+  position: relative;
+}
+#adminRoute .admin-panel-section[data-section="activity"] .admin-panel::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent 70%);
+  opacity:.5; pointer-events:none;
+}
+
+/* ---- Panel head: "Edit History" hierarchy ---- */
+#adminRoute .admin-panel-section[data-section="activity"] .admin-panel-head{
+  padding: 16px 20px;
+}
+#adminRoute .admin-panel-section[data-section="activity"] .admin-panel-head h3{
+  letter-spacing: .04em;
+  text-shadow: 0 0 14px rgba(244,196,48,.16);
+}
+
+/* ---- Clear Log button: scoped hover/focus polish ---- */
+#adminRoute .admin-panel-section[data-section="activity"] #clearAuditLogBtn{
+  transition: transform .25s var(--ease-spring), box-shadow .3s, background .3s, border-color .3s;
+}
+#adminRoute .admin-panel-section[data-section="activity"] #clearAuditLogBtn:hover{
+  background: rgba(244,196,48,.14);
+  border-color: var(--gold);
+  box-shadow: 0 4px 18px rgba(244,196,48,.16);
+  transform: translateY(-2px);
+}
+#adminRoute .admin-panel-section[data-section="activity"] #clearAuditLogBtn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+
+/* ---- Audit rows: refined rhythm + soft gold hover feedback (non-interactive, visual only) ---- */
+#adminRoute .admin-panel-section[data-section="activity"] .audit-row{
+  padding: 15px 22px;
+  gap: 16px;
+  transition: background .2s;
+}
+#adminRoute .admin-panel-section[data-section="activity"] .audit-row:hover{
+  background: rgba(244,196,48,.035);
+}
+#adminRoute .admin-panel-section[data-section="activity"] .audit-row:last-child{
+  border-bottom: none;
+}
+
+/* ---- Audit dot: refined gold marker with subtle ring ---- */
+#adminRoute .admin-panel-section[data-section="activity"] .audit-dot{
+  margin-top: 7px;
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08), 0 0 6px rgba(244,196,48,.5);
+}
+
+/* ---- Typography hierarchy: field / diff / arrow / meta ---- */
+#adminRoute .admin-panel-section[data-section="activity"] .audit-field{
+  letter-spacing: .01em;
+}
+#adminRoute .admin-panel-section[data-section="activity"] .audit-diff{
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-s);
+  display: inline-block;
+}
+#adminRoute .admin-panel-section[data-section="activity"] .audit-diff .arrow{
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(244,196,48,.35);
+}
+#adminRoute .admin-panel-section[data-section="activity"] .audit-meta{
+  margin-top: 6px;
+  letter-spacing: .02em;
+  opacity: .85;
+}
+
+/* ---- Empty state: centered, breathable, on-brand ---- */
+#adminRoute .admin-panel-section[data-section="activity"] .admin-pane-note{
+  text-align: center;
+  padding: 46px 22px !important;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* ---- Responsive: existing breakpoints only, graceful padding reduction ---- */
+@media (max-width:900px){
+  #adminRoute .admin-panel-section[data-section="activity"] .audit-row{
+    padding: 13px 18px;
+  }
+}
+@media (max-width:480px){
+  #adminRoute .admin-panel-section[data-section="activity"] .audit-row{
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  #adminRoute .admin-panel-section[data-section="activity"] .admin-panel-head{
+    padding: 14px 16px;
+  }
+  #adminRoute .admin-panel-section[data-section="activity"] .audit-diff{
+    padding: 5px 8px;
+  }
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-panel-section[data-section="activity"] #clearAuditLogBtn,
+  #adminRoute .admin-panel-section[data-section="activity"] .audit-row{
+    transition:none !important;
+  }
+}
+
+/* ============================================================
+   PHASE 9.7 — AUTH MODALS
+   Scoped exclusively to #adminLoginModal and #userAuthModal.
+   Both sit outside #adminRoute in the DOM (siblings, not
+   descendants), so every selector below is a bare modal-ID
+   selector — matching the established sibling-modal pattern
+   used for #deviceModal/#adminGuildModal/#adminTfModal etc.
+   Shared classes (.modal-overlay, .modal-box, .modal-head,
+   .modal-body, .btn, .btn-gold, .btn-icon, .field, .field-input,
+   .brand*, .admin-error, .admin-login-sub, .admin-demo-note) are
+   reused by many other modals/areas and are scoped here so
+   nothing outside these two modals is affected. #authTabIndicator
+   sizing/positioning is untouched — no dimension, padding, or
+   font-metric changes to .auth-tabs/.auth-tab. Purely additive.
+   ============================================================ */
+
+/* ---------------------------------------------------------- */
+/* A. #adminLoginModal                                          */
+/* ---------------------------------------------------------- */
+
+#adminLoginModal .modal-box{
+  background: linear-gradient(165deg, rgba(27,24,18,.98), rgba(21,19,15,.98));
+  border-color: var(--hairline-strong);
+  box-shadow: 0 24px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(244,196,48,.06);
+}
+#adminLoginModal .modal-head{
+  background: linear-gradient(90deg, rgba(244,196,48,.06), transparent 65%);
+}
+#adminLoginModal .modal-head h3{
+  letter-spacing: .04em;
+}
+#adminLoginModal .admin-login-sub{
+  letter-spacing: .01em;
+}
+#adminLoginModal .admin-error{
+  background: linear-gradient(160deg, rgba(255,92,92,.1), rgba(255,92,92,.04));
+  box-shadow: inset 0 0 0 1px rgba(255,92,92,.12);
+}
+#adminLoginModal .field-input:focus{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+}
+#adminLoginModal #adminLoginBtn{
+  transition: transform .25s var(--ease-spring), box-shadow .3s;
+}
+#adminLoginModal #adminLoginBtn:hover:not([disabled]){
+  box-shadow: 0 6px 28px rgba(244,196,48,.4), inset 0 1px 0 rgba(255,255,255,.45);
+  transform: translateY(-2px);
+}
+#adminLoginModal #adminLoginBtn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+#adminLoginModal .admin-demo-note{
+  letter-spacing: .01em;
+}
+
+/* ---------------------------------------------------------- */
+/* B. #userAuthModal — refinement of existing system only       */
+/* ---------------------------------------------------------- */
+
+#userAuthModal .auth-fs-visual{
+  box-shadow: inset -1px 0 0 rgba(244,196,48,.05);
+}
+#userAuthModal .auth-tab:not(.active):hover{
+  color: var(--ink);
+}
+#userAuthModal .auth-tab.active{
+  text-shadow: 0 0 10px rgba(255,255,255,.15);
+}
+#userAuthModal .auth-provider-btn{
+  transition: border-color .2s, background .2s, transform .2s, box-shadow .2s;
+}
+#userAuthModal .auth-provider-btn:hover{
+  box-shadow: 0 4px 18px rgba(244,196,48,.12);
+}
+#userAuthModal .auth-provider-btn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+#userAuthModal #userAuthPassword:focus{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+}
+#userAuthModal .password-toggle-btn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+#userAuthModal .field-input:focus{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+}
+#userAuthModal #userAuthSubmitBtn{
+  transition: transform .25s var(--ease-spring), box-shadow .3s;
+}
+#userAuthModal #userAuthSubmitBtn:hover:not([disabled]){
+  box-shadow: 0 6px 28px rgba(244,196,48,.4), inset 0 1px 0 rgba(255,255,255,.45);
+  transform: translateY(-2px);
+}
+#userAuthModal #userAuthSubmitBtn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+#userAuthModal .auth-info-note{
+  box-shadow: inset 0 0 0 1px rgba(95,215,138,.1);
+}
+#userAuthModal .auth-setup-warning{
+  box-shadow: inset 0 0 0 1px rgba(244,196,48,.1);
+}
+#userAuthModal #userAuthError{
+  background: linear-gradient(160deg, rgba(255,92,92,.1), rgba(255,92,92,.04));
+  box-shadow: inset 0 0 0 1px rgba(255,92,92,.12);
+}
+#userAuthModal .auth-switch{
+  letter-spacing: .01em;
+}
+#userAuthModal .auth-forgot-link:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* C. Close buttons — consistent gold focus-visible             */
+/* ---------------------------------------------------------- */
+
+#adminLoginModal #closeAdminLoginModal:focus-visible,
+#userAuthModal #closeUserAuthModal:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* D. Reduced motion — only the transitions introduced above    */
+/* ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce){
+  #adminLoginModal #adminLoginBtn,
+  #userAuthModal .auth-provider-btn,
+  #userAuthModal #userAuthSubmitBtn{
+    transition:none !important;
+  }
+}
+
+/* ============================================================
+   PHASE 10 — REVIEWS & SECTION MANAGER PANELS
+   Scoped exclusively to #adminRoute [data-section="reviews"]
+   and #adminRoute [data-section="sections"], plus their
+   unique-ID children (#adminReviewTable, #reviewBulkBar,
+   #reviewBulkCount, #secmgrList, #secmgrSaveBtn). Does not
+   touch Phase 9.1–9.7 CSS, any other admin panel, the public
+   #reviews section, #hud-gallery, #request/#reqContactModal,
+   #userAuthModal/#adminLoginModal, the Account Drawer, or
+   #hudLayoutPreviewCard. All shared classes (.admin-panel,
+   .admin-panel-head, .admin-table, .admin-table-wrap,
+   .admin-bulkbar, .status-pill, .status-approved,
+   .status-pending, .status-rejected, .admin-icon-btn,
+   .admin-empty-row, .field-input, .select-wrap, .btn-gold,
+   .btn-ghost) are reached only through the
+   [data-section="reviews"]/[data-section="sections"] prefix or
+   the #adminReviewTable/#secmgrList unique-ID prefix — never as
+   bare/global selectors. .secmgr-* classes are unique to the
+   Sections panel already, but are still ID-prefixed here for
+   consistency and defense-in-depth. No position/display/
+   visibility/opacity/transform changes to any JS-controlled
+   state (.secmgr-expand-btn.open rotation, .secmgr-body.open
+   display, bulk-bar show/hide) — purely additive cosmetic CSS.
+   ============================================================ */
+
+/* ---------------------------------------------------------- */
+/* Shared panel-frame treatment: premium glass + gold top edge  */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-panel,
+#adminRoute .admin-panel-section[data-section="sections"] .admin-panel{
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+}
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-panel::before,
+#adminRoute .admin-panel-section[data-section="sections"] .admin-panel::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent 75%);
+  opacity:.5; pointer-events:none;
+}
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-panel-head,
+#adminRoute .admin-panel-section[data-section="sections"] .admin-panel-head{
+  padding: 16px 20px;
+}
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-panel-head h3,
+#adminRoute .admin-panel-section[data-section="sections"] .admin-panel-head h3{
+  letter-spacing:.04em;
+  text-shadow: 0 0 16px rgba(244,196,48,.14);
+}
+
+/* ---------------------------------------------------------- */
+/* A. Reviews panel                                              */
+/* ---------------------------------------------------------- */
+
+/* ---- Bulk bar ---- */
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-bulkbar{
+  background: linear-gradient(160deg, rgba(244,196,48,.07), rgba(244,196,48,.015));
+  border-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="reviews"] #reviewBulkCount{
+  color: var(--ink-dim);
+  letter-spacing:.02em;
+}
+
+/* ---- Table: header, hover, name hierarchy, review text readability ---- */
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-table th{
+  border-bottom-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-table tr{
+  transition: background .2s;
+}
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-table .cell-name{
+  text-shadow: 0 0 12px rgba(244,196,48,.08);
+}
+#adminReviewTable td:nth-child(5){
+  line-height:1.5;
+  letter-spacing:.005em;
+}
+
+/* ---- Status pills: scoped strictly to this table ---- */
+#adminReviewTable .status-pill{
+  box-shadow: 0 0 0 1px currentColor inset;
+  opacity:.95;
+}
+#adminReviewTable .status-approved{
+  background: rgba(95,215,138,.1);
+}
+#adminReviewTable .status-pending{
+  background: rgba(244,196,48,.1);
+}
+#adminReviewTable .status-rejected{
+  background: rgba(255,92,92,.1);
+}
+
+/* ---- Action buttons (toggle-visibility / delete) ---- */
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-icon-btn{
+  transition: border-color .2s, color .2s, box-shadow .2s;
+}
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-icon-btn:hover{
+  box-shadow: 0 0 0 1px rgba(244,196,48,.14) inset;
+}
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-icon-btn.danger:hover{
+  box-shadow: 0 0 0 1px rgba(255,92,92,.18) inset;
+}
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-icon-btn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---- Empty / loading state (shared component, reused for both) ---- */
+#adminReviewTable .admin-empty-row td{
+  padding: 42px 20px;
+  font-size: 13px;
+  letter-spacing: .02em;
+  color: var(--ink-faint);
+}
+#adminReviewTable .admin-empty-row .spin{
+  color: var(--gold);
+  display:inline-block;
+  margin-right:6px;
+}
+
+/* ---- Table-wrap: preserve existing horizontal-scroll behavior, refine scrollbar edge ---- */
+#adminRoute .admin-panel-section[data-section="reviews"] .admin-table-wrap{
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+
+/* ---------------------------------------------------------- */
+/* B. Section Manager panel                                      */
+/* ---------------------------------------------------------- */
+
+/* ---- Row separation + hover highlight (cosmetic only; existing */
+/*      border-bottom rule on .secmgr-row is untouched)           */
+#secmgrList .secmgr-row:hover{
+  background: rgba(244,196,48,.025);
+}
+#secmgrList .secmgr-row{
+  transition: background .2s;
+}
+
+/* ---- Name hierarchy ---- */
+#secmgrList .secmgr-name b{
+  letter-spacing:.005em;
+}
+#secmgrList .secmgr-name span{
+  letter-spacing:.01em;
+}
+
+/* ---- Order buttons: gold interaction cue on hover/focus ---- */
+#secmgrList .secmgr-order button{
+  transition: border-color .2s, color .2s;
+}
+#secmgrList .secmgr-order button:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 1px;
+}
+
+/* ---- Expand/collapse: polish only, existing .open rotation/display untouched ---- */
+#secmgrList .secmgr-expand-btn:hover{
+  border-color: var(--gold);
+  color: var(--gold);
+}
+#secmgrList .secmgr-expand-btn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+#secmgrList .secmgr-body.open{
+  background: rgba(255,255,255,.012);
+  border-top: 1px solid var(--hairline);
+}
+
+/* ---- Status select: focus glow, refined border/background ---- */
+#secmgrList .secmgr-status .select-wrap{
+  transition: border-color .2s, background .2s;
+}
+#secmgrList .secmgr-status .select-wrap:focus-within{
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+}
+
+/* ---- Field inputs inside expanded row body ---- */
+#secmgrList .secmgr-body .field-input:focus{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+}
+
+/* ---- Save button ---- */
+#secmgrSaveBtn{
+  transition: transform .25s var(--ease-spring), box-shadow .3s;
+}
+#secmgrSaveBtn:hover{
+  box-shadow: 0 6px 28px rgba(244,196,48,.32), inset 0 1px 0 rgba(255,255,255,.4);
+  transform: translateY(-2px);
+}
+
+/* ---------------------------------------------------------- */
+/* Reduced motion — covers every transition introduced above     */
+/* ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-panel-section[data-section="reviews"] .admin-table tr,
+  #adminRoute .admin-panel-section[data-section="reviews"] .admin-icon-btn,
+  #secmgrList .secmgr-row,
+  #secmgrList .secmgr-order button,
+  #secmgrList .secmgr-status .select-wrap,
+  #secmgrSaveBtn{
+    transition:none !important;
+  }
+}
+
+/* ============================================================
+   PHASE 11 — SITE SETTINGS PANEL
+   Scoped exclusively to
+   #adminRoute [data-section="settings"], plus its unique-ID
+   children (#exportDataBtn, #resetDemoDataBtn, #saveSettingsBtn,
+   #saveSeoBtn, #seoFaqAddBtn, #seoFaqList). Does not touch
+   Phase 9.1–10 CSS, any other admin panel, the public homepage,
+   #reviews, #hud-gallery, #request/#reqContactModal,
+   #userAuthModal/#adminLoginModal, the Account Drawer, or
+   #hudLayoutPreviewCard. All shared classes (.admin-panel,
+   .admin-panel-head, .admin-settings-grid,
+   .admin-toggle-list-scroll, .admin-toggle-row,
+   .admin-toggle-info, .admin-switch, .admin-switch-track,
+   .admin-form-grid, .admin-form-actions, .jx-fieldset,
+   .jx-dyn-list, .jx-dyn-row, .jx-dyn-add, .jx-dyn-remove,
+   .admin-danger-zone, .field, .field-input, .select-wrap,
+   .admin-pane-note, .admin-settings-actions, .btn-gold,
+   .btn-ghost) are reached only through the
+   [data-section="settings"] prefix — never as bare/global
+   selectors. No position/display/visibility/opacity/transform
+   changes to any JS-controlled state (.admin-switch checked
+   thumb-slide, .jx-dyn-list/.jx-dyn-row structure, toggle
+   checkbox semantics) — purely additive cosmetic CSS. No new
+   breakpoints introduced; existing 1000px (.admin-settings-grid)
+   and 680px (.admin-form-grid) breakpoints are untouched.
+   ============================================================ */
+
+/* ---------------------------------------------------------- */
+/* A. Panel frame: premium glass + gold top edge, every card     */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="settings"] .admin-panel{
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+  box-shadow: 0 10px 30px rgba(0,0,0,.18);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-panel::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent 75%);
+  opacity:.5; pointer-events:none;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-panel-head{
+  padding: 16px 20px;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-panel-head h3{
+  letter-spacing:.04em;
+  text-shadow: 0 0 16px rgba(244,196,48,.14);
+}
+
+/* ---------------------------------------------------------- */
+/* B. Settings grid — cosmetic only, columns/gaps untouched      */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="settings"] .admin-settings-grid{
+  align-items: start;
+}
+
+/* ---------------------------------------------------------- */
+/* C. Hero / Defaults / SEO cards — field hierarchy + focus glow */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="settings"] .field label{
+  letter-spacing:.01em;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .field-input{
+  transition: border-color .2s, background .2s;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .field-input:hover{
+  border-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .field-input:focus{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .select-wrap:focus-within{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.08);
+  border-radius: var(--radius-s);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-pane-note{
+  letter-spacing:.01em;
+}
+
+/* ---------------------------------------------------------- */
+/* D. Toggle list (maintenance switches)                         */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="settings"] .admin-toggle-row{
+  transition: background .2s;
+  border-radius: var(--radius-s);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-toggle-row:hover{
+  background: rgba(244,196,48,.025);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-switch-track{
+  transition: background .25s;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-switch-track::before{
+  transition: transform .25s var(--ease-spring), background .25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-switch input:focus-visible + .admin-switch-track{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.12);
+}
+
+/* ---------------------------------------------------------- */
+/* E. SEO FAQ / dynamic fieldset                                 */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="settings"] .jx-fieldset{
+  background: linear-gradient(160deg, rgba(255,255,255,.02), transparent);
+  transition: border-color .2s;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .jx-fieldset:focus-within{
+  border-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .jx-fieldset > .fieldset-label{
+  text-shadow: 0 0 10px rgba(244,196,48,.18);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-row{
+  transition: border-color .2s;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-row:focus-within{
+  border-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-add{
+  transition: color .2s, border-color .2s, background .2s;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-add:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-remove{
+  transition: background .2s, border-color .2s;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-remove:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* F. Settings actions (save / export / import / reset)          */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="settings"] .admin-settings-actions .btn,
+#adminRoute .admin-panel-section[data-section="settings"] .admin-form-actions .btn{
+  transition: transform .25s var(--ease-spring), box-shadow .3s;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-settings-actions .btn:hover,
+#adminRoute .admin-panel-section[data-section="settings"] .admin-form-actions .btn:hover{
+  transform: translateY(-2px);
+}
+#adminRoute .admin-panel-section[data-section="settings"] #saveSettingsBtn:hover,
+#adminRoute .admin-panel-section[data-section="settings"] #saveSeoBtn:hover{
+  box-shadow: 0 6px 28px rgba(244,196,48,.32), inset 0 1px 0 rgba(255,255,255,.4);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-settings-actions .btn:focus-visible,
+#adminRoute .admin-panel-section[data-section="settings"] .admin-form-actions .btn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* G. Danger Zone — restrained red identity                      */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="settings"] .admin-danger-zone{
+  background: linear-gradient(160deg, rgba(255,92,92,.05), rgba(255,255,255,.008));
+  box-shadow: 0 10px 30px rgba(0,0,0,.18), 0 0 0 1px rgba(255,92,92,.08);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-danger-zone::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, var(--red), transparent 75%);
+  opacity:.55; pointer-events:none;
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-danger-zone .field-input:focus{
+  box-shadow: 0 0 0 3px rgba(255,92,92,.1);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-danger-zone #resetDemoDataBtn:hover,
+#adminRoute .admin-panel-section[data-section="settings"] .admin-danger-zone #exportDataBtn:hover{
+  transform: translateY(-2px);
+}
+#adminRoute .admin-panel-section[data-section="settings"] .admin-danger-zone #resetDemoDataBtn:focus-visible{
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* Reduced motion — covers every transition introduced above     */
+/* ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-panel-section[data-section="settings"] .field-input,
+  #adminRoute .admin-panel-section[data-section="settings"] .admin-toggle-row,
+  #adminRoute .admin-panel-section[data-section="settings"] .admin-switch-track,
+  #adminRoute .admin-panel-section[data-section="settings"] .admin-switch-track::before,
+  #adminRoute .admin-panel-section[data-section="settings"] .jx-fieldset,
+  #adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-row,
+  #adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-add,
+  #adminRoute .admin-panel-section[data-section="settings"] .jx-dyn-remove,
+  #adminRoute .admin-panel-section[data-section="settings"] .admin-settings-actions .btn,
+  #adminRoute .admin-panel-section[data-section="settings"] .admin-form-actions .btn,
+  #adminRoute .admin-panel-section[data-section="settings"] .admin-danger-zone #resetDemoDataBtn,
+  #adminRoute .admin-panel-section[data-section="settings"] .admin-danger-zone #exportDataBtn{
+    transition:none !important;
+  }
+}
+
+/* ============================================================
+   PHASE 12 — THEME & ANIMATION ENGINE
+   Scoped exclusively to
+   #adminRoute .admin-panel-section[data-section="theme"], plus its
+   unique-ID children (#themeTabs, #themeColorGrid, #themePresetRow,
+   #themeResetBtn, #themeSaveBtn, #themeSavePresetBtn, #themePresetNameInput,
+   #themeFontDisplay, #themeFontMono, #themeFontScale, #themeHeadingWeight,
+   #themeHeadingLS, #themeRadiusS/M/L, #themeMaxWidth, #themeDensity,
+   #themeAnimEnabled, #themeAnimSpeed, #themeFx*, #themeBgMode*,
+   #themeBgColor*, #themeBgGrad*, #themeBgImage*, #themeBgOpacity*,
+   #themeBgBlur*). Does not touch Phase 9.1–11 CSS, any other admin
+   panel, the public homepage, #reviews, #hud-gallery,
+   #request/#reqContactModal, #userAuthModal/#adminLoginModal, the
+   Account Drawer, or #hudLayoutPreviewCard. All shared classes
+   (.glass, .glass-card, .admin-panel, .admin-panel-head,
+   .admin-topbar, .theme-tabs, .theme-tab, .theme-tab-panel,
+   .theme-token-grid, .theme-swatch, .theme-preset-row,
+   .theme-slider-row, .admin-slider, .theme-subhead,
+   .theme-bg-mode-grid, .admin-toggle-row, .admin-toggle-info,
+   .admin-switch, .admin-switch-track, .admin-form-grid,
+   .admin-modal-form, .jx-fieldset, .jx-dyn-row, .field, .field-input,
+   .select-wrap, .admin-dropzone, .admin-settings-actions, .btn,
+   .btn-gold, .btn-ghost) are reached only through the
+   [data-section="theme"] prefix — never as bare/global selectors.
+   initThemeSubTabs() only toggles .active / .hidden — no
+   offsetWidth/offsetLeft/getBoundingClientRect measurement of tabs —
+   so box-model properties (padding, font-size, font-weight,
+   line-height, width, height) on .theme-tab are left untouched;
+   only color/background/box-shadow/text-shadow/border-color/
+   transition are used. Background-mode fields
+   ([data-bgfield-dark]/[data-bgfield-light]) are shown/hidden via
+   inline el.style.display set by JS — no display/visibility rule
+   targets those attribute selectors here. No position/display/
+   visibility/opacity/transform/z-index/pointer-events/overflow
+   changes to any JS-controlled state (.theme-tab active swap,
+   .admin-switch checked thumb-slide, color-input/select behavior) —
+   purely additive cosmetic CSS. No new breakpoints introduced.
+   ============================================================ */
+
+/* ---------------------------------------------------------- */
+/* A. Panel frame: premium glass + gold top edge, every card    */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .admin-panel{
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,.03), rgba(255,255,255,.008));
+  box-shadow: 0 10px 30px rgba(0,0,0,.18);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-panel::before{
+  content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+  background: linear-gradient(90deg, transparent, var(--gold, #F4C430) 20%, var(--gold-bright, #FFD75E) 50%, var(--gold, #F4C430) 80%, transparent);
+  opacity:.55;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-panel-head h3{
+  letter-spacing:.02em;
+  text-shadow: 0 0 14px rgba(244,196,48,.14);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-topbar .admin-page-title{
+  letter-spacing:.01em;
+  text-shadow: 0 0 16px rgba(244,196,48,.16);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-topbar .admin-page-sub{
+  color: var(--ink-dim, #B8AF9B);
+}
+
+/* ---------------------------------------------------------- */
+/* B. Theme tabs                                                */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .theme-tabs{
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--hairline, rgba(212,175,90,.16));
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-tab{
+  color: var(--ink-dim, #B8AF9B);
+  border-color: transparent;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-tab:hover{
+  color: var(--ink, #ECE6D6);
+  background: rgba(244,196,48,.06);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-tab.active{
+  color: var(--gold-bright, #FFD75E);
+  background: rgba(244,196,48,.1);
+  border-color: var(--hairline-strong, rgba(212,175,90,.32));
+  box-shadow: 0 0 0 1px rgba(244,196,48,.14) inset, 0 0 18px rgba(244,196,48,.12);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-tab:focus-visible{
+  outline: 2px solid var(--gold, #F4C430);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* C. Color tokens                                              */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .theme-token-grid{
+  padding: 22px;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-swatch{
+  border: 1px solid var(--hairline, rgba(212,175,90,.16));
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-swatch:hover{
+  border-color: var(--hairline-strong, rgba(212,175,90,.32));
+  box-shadow: 0 0 0 3px rgba(244,196,48,.1), 0 4px 12px rgba(0,0,0,.22);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-swatch:focus-visible{
+  outline: 2px solid var(--gold, #F4C430);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* D. Presets                                                   */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .theme-preset-row{
+  padding: 22px;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-preset-row > *{
+  transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-preset-row > *:hover{
+  border-color: var(--hairline-strong, rgba(212,175,90,.32));
+  box-shadow: 0 0 14px rgba(244,196,48,.14);
+  transform: translateY(-1px);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-preset-row > *:focus-visible{
+  outline: 2px solid var(--gold, #F4C430);
+  outline-offset: 2px;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-preset-row > *.active,
+#adminRoute .admin-panel-section[data-section="theme"] .theme-preset-row > *[aria-selected="true"]{
+  border-color: var(--gold, #F4C430);
+  box-shadow: 0 0 0 1px rgba(244,196,48,.2) inset, 0 0 16px rgba(244,196,48,.18);
+}
+
+/* ---------------------------------------------------------- */
+/* E. Typography / Layout fields                                */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .field label{
+  color: var(--ink-dim, #B8AF9B);
+  letter-spacing:.02em;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .field-input{
+  background: rgba(255,255,255,.02);
+  border-color: var(--hairline, rgba(212,175,90,.16));
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .field-input:hover{
+  border-color: var(--hairline-strong, rgba(212,175,90,.32));
+}
+#adminRoute .admin-panel-section[data-section="theme"] .field-input:focus{
+  border-color: var(--gold, #F4C430);
+  box-shadow: 0 0 0 3px rgba(244,196,48,.1);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .select-wrap:focus-within{
+  box-shadow: 0 0 0 3px rgba(244,196,48,.1);
+  border-radius: 8px;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-subhead{
+  color: var(--gold, #F4C430);
+  letter-spacing:.04em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(244,196,48,.1);
+}
+
+/* ---------------------------------------------------------- */
+/* F. Animation toggles                                         */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .admin-toggle-row{
+  border-radius: 10px;
+  transition: background .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-toggle-row:hover{
+  background: rgba(244,196,48,.04);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-toggle-info b{
+  color: var(--ink, #ECE6D6);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-toggle-info span{
+  color: var(--ink-faint, #6f6a5c);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-switch-track{
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.3);
+  transition: background .18s ease, box-shadow .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-switch input:checked + .admin-switch-track{
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.2), 0 0 10px rgba(244,196,48,.28);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-switch input:focus-visible + .admin-switch-track{
+  outline: 2px solid var(--gold, #F4C430);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* G. Sliders                                                   */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .theme-slider-row{
+  border-radius: 10px;
+  transition: background .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-slider-row:hover{
+  background: rgba(244,196,48,.03);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-slider{
+  accent-color: var(--gold, #F4C430);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-slider::-webkit-slider-thumb{
+  box-shadow: 0 0 8px rgba(244,196,48,.4);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-slider::-moz-range-thumb{
+  box-shadow: 0 0 8px rgba(244,196,48,.4);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-slider:focus-visible{
+  outline: 2px solid var(--gold, #F4C430);
+  outline-offset: 3px;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-slider-row output{
+  color: var(--gold-bright, #FFD75E);
+  font-family: var(--f-mono, monospace);
+  letter-spacing:.02em;
+}
+
+/* ---------------------------------------------------------- */
+/* H. Background mode fieldsets / dropzone                      */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .theme-bg-mode-grid .jx-fieldset{
+  border-color: var(--hairline, rgba(212,175,90,.16));
+  background: rgba(255,255,255,.015);
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-bg-mode-grid .jx-fieldset:focus-within{
+  border-color: var(--hairline-strong, rgba(212,175,90,.32));
+  box-shadow: 0 0 14px rgba(244,196,48,.1);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .theme-bg-mode-grid .fieldset-label{
+  color: var(--gold, #F4C430);
+  letter-spacing:.03em;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-dropzone{
+  border: 1px dashed var(--hairline-strong, rgba(212,175,90,.32));
+  background: rgba(255,255,255,.015);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-dropzone:hover{
+  border-color: var(--gold, #F4C430);
+  background: rgba(244,196,48,.04);
+  box-shadow: 0 0 16px rgba(244,196,48,.12) inset;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-dropzone:focus-visible{
+  outline: 2px solid var(--gold, #F4C430);
+  outline-offset: 2px;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-dropzone p{
+  color: var(--ink-faint, #6f6a5c);
+}
+
+/* ---------------------------------------------------------- */
+/* I. Action buttons                                             */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .admin-settings-actions .btn,
+#adminRoute .admin-panel-section[data-section="theme"] .admin-modal-form .btn{
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-settings-actions .btn:hover,
+#adminRoute .admin-panel-section[data-section="theme"] .admin-modal-form .btn:hover{
+  transform: translateY(-1px);
+}
+#adminRoute .admin-panel-section[data-section="theme"] #themeSaveBtn:hover,
+#adminRoute .admin-panel-section[data-section="theme"] #themeSavePresetBtn:hover{
+  box-shadow: 0 0 18px rgba(244,196,48,.3);
+}
+#adminRoute .admin-panel-section[data-section="theme"] #themeResetBtn:hover{
+  border-color: var(--hairline-strong, rgba(212,175,90,.32));
+  box-shadow: 0 0 12px rgba(244,196,48,.14);
+}
+#adminRoute .admin-panel-section[data-section="theme"] .admin-settings-actions .btn:focus-visible,
+#adminRoute .admin-panel-section[data-section="theme"] .admin-modal-form .btn:focus-visible,
+#adminRoute .admin-panel-section[data-section="theme"] #themeResetBtn:focus-visible{
+  outline: 2px solid var(--gold, #F4C430);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* Reduced motion — covers every transition introduced above    */
+/* ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-panel-section[data-section="theme"] .theme-tab,
+  #adminRoute .admin-panel-section[data-section="theme"] .theme-swatch,
+  #adminRoute .admin-panel-section[data-section="theme"] .theme-preset-row > *,
+  #adminRoute .admin-panel-section[data-section="theme"] .field-input,
+  #adminRoute .admin-panel-section[data-section="theme"] .admin-toggle-row,
+  #adminRoute .admin-panel-section[data-section="theme"] .admin-switch-track,
+  #adminRoute .admin-panel-section[data-section="theme"] .theme-slider-row,
+  #adminRoute .admin-panel-section[data-section="theme"] .theme-bg-mode-grid .jx-fieldset,
+  #adminRoute .admin-panel-section[data-section="theme"] .admin-dropzone,
+  #adminRoute .admin-panel-section[data-section="theme"] .admin-settings-actions .btn,
+  #adminRoute .admin-panel-section[data-section="theme"] .admin-modal-form .btn{
+    transition:none !important;
+  }
+}
+
+/* ============================================================
+   PHASE 13 — CROSS-CUTTING ADMIN COMPONENTS
+   Closes five genuine gaps identified by the Phase 13 read-only
+   audit, scoped exclusively to: #adminRoute .admin-panel-section
+   [data-section="devices"|"tournaments"|"combos"|"huds"|"guilds"|
+   "teamfinder"|"theme"], #adminRoute [data-section="tournaments"]
+   #paymentMethodsEditor, and the six Phase 9.3 admin table IDs
+   (#adminDeviceTable, #adminHudLayoutTable, #adminTourneyTable,
+   #adminComboTable, #adminGuildTable, #adminTfTable — all <tbody>
+   elements, mirroring the existing #adminRequestTable/
+   #adminReviewTable idiom). Does not touch Phase 9.1–12 CSS, any
+   modal (.modal-overlay, #tourneyEditModal, #comboEditModal,
+   #hudLayoutModal), the public homepage, #reviews, #hud-gallery,
+   #request/#reqContactModal, #userAuthModal/#adminLoginModal, the
+   Account Drawer, or #hudLayoutPreviewCard. Bare/global shared
+   classes (.status-pill, .status-approved, .status-pending,
+   .status-rejected, .field-input, .select-wrap, .field, .btn,
+   .btn-gold, .btn-ghost, .btn-icon, .admin-icon-btn, .jx-fieldset,
+   .jx-dyn-list, .jx-dyn-row, .jx-dyn-add, .jx-dyn-remove,
+   .admin-switch, .admin-switch-track, .admin-toggle-row,
+   .admin-empty-row, .admin-table-wrap) are never declared bare —
+   every status-pill selector below is table-ID-rooted (never
+   .status-pill{...} alone), and every other selector is rooted
+   under its [data-section] or #paymentMethodsEditor. No JS was
+   inspected as measuring dimensions on any audited class; the only
+   JS-owned inline state near these components is Theme's
+   [data-bgfield-dark]/[data-bgfield-light] display toggling (left
+   untouched — no display/visibility rules added here) and the
+   global ripple/liquid-press system on .btn/.btn-gold/.btn-icon
+   (left untouched — no overflow or competing active-transform
+   added). Purely additive cosmetic CSS: border-color, background,
+   box-shadow, outline, opacity, transition. No new breakpoints.
+   Optional empty-row/table-wrap polish (audit item 6) was
+   evaluated and intentionally included below in the same safe
+   scoped pattern, kept subtle.
+   ============================================================ */
+
+/* ---------------------------------------------------------- */
+/* 1. Admin icon-button focus rings — six data-management panels */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="devices"] .admin-icon-btn:focus-visible,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-icon-btn:focus-visible,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-icon-btn:focus-visible,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-icon-btn:focus-visible,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-icon-btn:focus-visible,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-icon-btn:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* 2. Theme preset-name dynamic row                             */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="theme"] .jx-dyn-row{
+  transition: border-color .2s;
+}
+#adminRoute .admin-panel-section[data-section="theme"] .jx-dyn-row:focus-within{
+  border-color: var(--hairline-strong);
+}
+
+/* ---------------------------------------------------------- */
+/* 3. Combos dynamic-form completion                            */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="combos"] .jx-dyn-list{
+  gap: 10px;
+}
+#adminRoute .admin-panel-section[data-section="combos"] .jx-dyn-row{
+  transition: border-color .2s;
+}
+#adminRoute .admin-panel-section[data-section="combos"] .jx-dyn-row:focus-within{
+  border-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="combos"] .jx-dyn-remove:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* 4. Tournaments — Payment Methods editor                      */
+/* ---------------------------------------------------------- */
+
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-fieldset{
+  background: linear-gradient(160deg, rgba(255,255,255,.02), transparent);
+  transition: border-color .2s;
+}
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-fieldset:focus-within{
+  border-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-list{
+  gap: 10px;
+}
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-row{
+  transition: border-color .2s;
+}
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-row:focus-within{
+  border-color: var(--hairline-strong);
+}
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-add{
+  transition: color .2s, border-color .2s, background .2s;
+}
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-add:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-remove{
+  transition: background .2s, border-color .2s;
+}
+#adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-remove:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* 5. Status pills — table-ID-scoped only, six Phase 9.3 tables */
+/*    (mirrors #adminRequestTable / #adminReviewTable idiom)    */
+/* ---------------------------------------------------------- */
+
+#adminDeviceTable .status-pill,
+#adminHudLayoutTable .status-pill,
+#adminTourneyTable .status-pill,
+#adminComboTable .status-pill,
+#adminGuildTable .status-pill,
+#adminTfTable .status-pill{
+  box-shadow: 0 0 0 1px currentColor inset;
+  opacity: .95;
+}
+#adminDeviceTable .status-approved,
+#adminHudLayoutTable .status-approved,
+#adminTourneyTable .status-approved,
+#adminComboTable .status-approved,
+#adminGuildTable .status-approved,
+#adminTfTable .status-approved{
+  background: rgba(95,215,138,.1);
+}
+#adminDeviceTable .status-pending,
+#adminHudLayoutTable .status-pending,
+#adminTourneyTable .status-pending,
+#adminComboTable .status-pending,
+#adminGuildTable .status-pending,
+#adminTfTable .status-pending{
+  background: rgba(244,196,48,.1);
+}
+#adminDeviceTable .status-rejected,
+#adminHudLayoutTable .status-rejected,
+#adminTourneyTable .status-rejected,
+#adminComboTable .status-rejected,
+#adminGuildTable .status-rejected,
+#adminTfTable .status-rejected{
+  background: rgba(255,92,92,.1);
+}
+
+/* ---------------------------------------------------------- */
+/* 6. Optional: empty-row / table-wrap polish — same six tables */
+/* ---------------------------------------------------------- */
+
+#adminDeviceTable .admin-empty-row td,
+#adminHudLayoutTable .admin-empty-row td,
+#adminTourneyTable .admin-empty-row td,
+#adminComboTable .admin-empty-row td,
+#adminGuildTable .admin-empty-row td,
+#adminTfTable .admin-empty-row td{
+  color: var(--ink-faint);
+}
+#adminDeviceTable .admin-empty-row .spin,
+#adminHudLayoutTable .admin-empty-row .spin,
+#adminTourneyTable .admin-empty-row .spin,
+#adminComboTable .admin-empty-row .spin,
+#adminGuildTable .admin-empty-row .spin,
+#adminTfTable .admin-empty-row .spin{
+  color: var(--gold);
+}
+#adminRoute .admin-panel-section[data-section="devices"] .admin-table-wrap,
+#adminRoute .admin-panel-section[data-section="huds"] .admin-table-wrap,
+#adminRoute .admin-panel-section[data-section="tournaments"] .admin-table-wrap,
+#adminRoute .admin-panel-section[data-section="combos"] .admin-table-wrap,
+#adminRoute .admin-panel-section[data-section="guilds"] .admin-table-wrap,
+#adminRoute .admin-panel-section[data-section="teamfinder"] .admin-table-wrap{
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+/* ---------------------------------------------------------- */
+/* Reduced motion — covers every transition introduced above    */
+/* ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce){
+  #adminRoute .admin-panel-section[data-section="theme"] .jx-dyn-row,
+  #adminRoute .admin-panel-section[data-section="combos"] .jx-dyn-row,
+  #adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-fieldset,
+  #adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-row,
+  #adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-add,
+  #adminRoute .admin-panel-section[data-section="tournaments"] #paymentMethodsEditor .jx-dyn-remove{
+    transition:none !important;
+  }
+}
+
+/* =========================================================
+   PHASE 14 — ADMIN EDIT-MODAL CLOSE BUTTONS & COMBO DYNAMIC-FORM POLISH
+   Closes two genuine gaps identified by the Phase 14 read-only
+   audit: (1) .modal-close was entirely unstyled anywhere in the
+   file, and (2) #comboEditModal's .jx-fieldset/.jx-dyn-* dynamic
+   form (Characters/Tips) sits outside the Phase 13
+   [data-section="combos"] scope and never received its
+   dynamic-form treatment. Every selector below is ID-rooted to
+   one of #deviceModal, #hudLayoutModal, #tourneyEditModal,
+   #comboEditModal, #adminGuildModal, #adminTfModal (modal-close
+   block) or #comboEditModal alone (dynamic-form block). No
+   bare/global .modal-close, .modal-box, .modal-head, .modal-body,
+   .jx-fieldset, .jx-dyn-list, .jx-dyn-row, .jx-dyn-add,
+   .jx-dyn-remove, .field-input, .field, .select-wrap, .btn,
+   .btn-gold, .btn-ghost, or .btn-icon rule is declared. Does not
+   touch Phase 9.1–13 CSS, #hudLayoutPreviewCard or descendants,
+   .auth-tabs/.auth-tab/#authTabIndicator, #userAuthModal,
+   #adminLoginModal, #reqContactModal, #requestDetailsModal,
+   #accountDrawer, the public homepage, or Theme's
+   [data-bgfield-dark]/[data-bgfield-light] display toggling. No
+   display/visibility/position/width/height/overflow/transform/
+   z-index/pointer-events properties are introduced anywhere in
+   this block, and the global ripple/liquid-press system on
+   .btn/.btn-gold/.btn-icon is left untouched (these selectors
+   never target that system's classes). Purely additive cosmetic
+   CSS: color, border-color, background, box-shadow, outline,
+   transition. No new breakpoints.
+   ========================================================= */
+
+/* ---------------------------------------------------------- */
+/* 1. Admin edit-modal close buttons — six allowed modals       */
+/* ---------------------------------------------------------- */
+
+#deviceModal .modal-close,
+#hudLayoutModal .modal-close,
+#tourneyEditModal .modal-close,
+#comboEditModal .modal-close,
+#adminGuildModal .modal-close,
+#adminTfModal .modal-close{
+  color: var(--ink-faint);
+  border: 1px solid transparent;
+  transition: color .2s, border-color .2s, background .2s;
+}
+#deviceModal .modal-close:hover,
+#hudLayoutModal .modal-close:hover,
+#tourneyEditModal .modal-close:hover,
+#comboEditModal .modal-close:hover,
+#adminGuildModal .modal-close:hover,
+#adminTfModal .modal-close:hover{
+  color: var(--gold);
+  border-color: var(--gold);
+  background: rgba(244,196,48,.12);
+}
+#deviceModal .modal-close:focus-visible,
+#hudLayoutModal .modal-close:focus-visible,
+#tourneyEditModal .modal-close:focus-visible,
+#comboEditModal .modal-close:focus-visible,
+#adminGuildModal .modal-close:focus-visible,
+#adminTfModal .modal-close:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* 2. Combo edit modal — dynamic form (Characters/Tips)         */
+/* ---------------------------------------------------------- */
+
+#comboEditModal .jx-fieldset{
+  background: linear-gradient(160deg, rgba(255,255,255,.02), transparent);
+  transition: border-color .2s;
+}
+#comboEditModal .jx-fieldset:focus-within{
+  border-color: var(--hairline-strong);
+}
+#comboEditModal .jx-dyn-list{
+  gap: 10px;
+}
+#comboEditModal .jx-dyn-row{
+  transition: border-color .2s;
+}
+#comboEditModal .jx-dyn-row:focus-within{
+  border-color: var(--hairline-strong);
+}
+#comboEditModal .jx-dyn-add{
+  transition: color .2s, border-color .2s, background .2s;
+}
+#comboEditModal .jx-dyn-add:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+#comboEditModal .jx-dyn-remove{
+  transition: background .2s, border-color .2s;
+}
+#comboEditModal .jx-dyn-remove:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------- */
+/* Reduced motion — covers every transition introduced above    */
+/* ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce){
+  #deviceModal .modal-close,
+  #hudLayoutModal .modal-close,
+  #tourneyEditModal .modal-close,
+  #comboEditModal .modal-close,
+  #adminGuildModal .modal-close,
+  #adminTfModal .modal-close,
+  #comboEditModal .jx-fieldset,
+  #comboEditModal .jx-dyn-row,
+  #comboEditModal .jx-dyn-add,
+  #comboEditModal .jx-dyn-remove{
+    transition:none !important;
+  }
+}
+
+/* PHASE 15 — ADMIN MODAL FOOTER POLISH
+   Closes the one genuine gap identified by the Phase 15 read-only
+   audit: .modal-foot was completely unstyled anywhere in the file.
+   It is used exclusively by #hudLayoutModal, #tourneyEditModal, and
+   #comboEditModal, so every selector below is ID-rooted to those
+   three modals only — no bare/global .modal-foot rule is declared.
+   Brings .modal-foot into the same structural language already used
+   by .admin-form-actions (padding:0 22px 22px; display:flex;
+   gap:10px;) plus a right-aligned footer and a subtle top separator.
+   Does not touch .admin-form-actions itself, #deviceModal,
+   #adminGuildModal, #adminTfModal (their action rows are already
+   complete), .modal-box/.modal-head/.modal-body/.modal-close,
+   .field-input, or the .btn/.btn-gold/.btn-ghost/.btn-icon family —
+   the global ripple/liquid-press system is left untouched. No
+   position/width/height/overflow/transform/z-index/pointer-events
+   properties are introduced. No transition/animation is introduced,
+   so no reduced-motion coverage is required. No new breakpoint. */
+
+#hudLayoutModal .modal-foot,
+#tourneyEditModal .modal-foot,
+#comboEditModal .modal-foot{
+  padding: 16px 22px 22px;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 </style>
 </head>
 <body>
@@ -5914,7 +8072,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
       <div class="brand-mark">JX</div>
       <div>
         <span class="brand-name">JUTT<span>FHX</span></span>
-        <span class="brand-tag">Sensitivity Hub</span>
+        <span class="brand-tag">Sensitivity<br>Hub</span>
       </div>
     </a>
 
@@ -5959,19 +8117,26 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     <span class="orbit-chip" style="bottom:-12px; left:50%; transform:translateX(-50%);">120Hz READY</span>
   </div>
   <div class="wrap hero-grid">
-    <div>
-      <div class="hero-eyebrow" data-jx="hero-eyebrow"><span class="pulse-dot"></span> Hardware-based sensitivity &amp; performance analysis for your exact device</div>
-      <h1 class="hero-title" data-jx="hero-title">Free Fire<br><span class="accent">Sensitivity Generator</span></h1>
-      <p class="hero-desc" data-jx="hero-desc">Generate your personalized sensitivity profile, analyze your device, improve gaming performance, reduce lag, and unlock the best Free Fire experience with hardware-based recommendations and verified sensitivity profiles.</p>
+    <div class="hero-content">
+      <div class="hero-eyebrow" data-jx="hero-eyebrow">Welcome to</div>
+      <h1 class="hero-title" data-jx="hero-title">JUTT<span class="accent">FHX</span></h1>
+      <p class="hero-tagline">The Ultimate Free Fire Performance Hub</p>
+      <p class="hero-desc" data-jx="hero-desc">Optimize your device. Dominate the game. Join the most advanced Free Fire community.</p>
 
-      <div class="hero-stats">
-        <div class="hero-stat"><b data-count="0">0</b><span>Devices Available</span></div>
-        <div class="hero-stat"><b data-count="0">0</b><span>Users Online</span></div>
-        <div class="hero-stat"><b data-count="0">0</b><span>Sensitivities Copied</span></div>
+      <!-- Phase 1: hero CTAs — link to existing, already-functional sections only (no new JS/behavior) -->
+      <div class="hero-cta-row">
+        <a href="#device-search" class="btn btn-gold hero-cta-primary">Select Your Device
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#tournaments" class="btn btn-ghost hero-cta-secondary">Explore Hub</a>
       </div>
-
     </div>
 
+    <!-- Phase 1A: existing .hero-visual / .hero-device / .crosshair kept fully intact
+         (no real Free Fire artwork is available in the project, and game artwork is
+         copyrighted, so we don't source or fabricate any), now recomposed into the
+         center visual slot of the reference layout. --hero-art-image is a hook for
+         later swapping in a licensed hero image without touching this markup again. -->
     <div class="hero-visual">
       <div class="hero-device">
         <div class="crosshair">
@@ -5984,9 +8149,144 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
         </div>
       </div>
     </div>
+
+    <!-- Phase 1A: outer card/header wrapper is new (visual only); the .hero-stats block
+         and its data-count elements inside are untouched so existing counter/analytics JS
+         (which selects ".hero-stats [data-count]" and ".hero-stat b") keeps working.
+         Labels reworded to match the reference; still exactly 3 stats, in the same
+         order, because sync JS writes to heroNums[0]/[1]/[2] by fixed index. -->
+    <div class="hero-live-panel">
+      <div class="hero-live-head">
+        <span class="hero-live-badge">Live</span>
+        <div class="hero-live-head-text">
+          <span class="hero-live-tag">Live Activity</span>
+          <span class="hero-live-sub">Real-time stats</span>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><b data-count="0">0</b><span>Devices Tracked</span></div>
+        <div class="hero-stat"><b data-count="0">0</b><span>Players Online</span></div>
+        <div class="hero-stat"><b data-count="0">0</b><span>Sensitivities Generated</span></div>
+      </div>
+    </div>
   </div>
 </section>
 
+<!-- ============ FEATURE HUB (Phase 2: premium quick-nav cards) ============ -->
+<section class="section feature-hub" id="feature-hub" aria-label="Quick navigation">
+  <div class="wrap">
+    <div class="feature-grid">
+      <a href="#device-search" class="feature-card glass-card fc-featured fc-gold">
+        <i class="fc-bar" aria-hidden="true"></i>
+        <div class="fc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 19h4"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title">Select Your Device</h3>
+          <p class="fc-desc">Get your perfect sensitivity profile matched to your exact phone.</p>
+        </div>
+        <span class="fc-cta">Get Started
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a href="#live-ranking" class="feature-card glass-card fc-green">
+        <i class="fc-bar" aria-hidden="true"></i>
+        <div class="fc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title">Live Device Ranking</h3>
+          <p class="fc-desc">See how devices stack up, updated in real time.</p>
+        </div>
+        <span class="fc-cta">View Rankings
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a href="#tournaments" class="feature-card glass-card fc-amber">
+        <i class="fc-bar" aria-hidden="true"></i>
+        <div class="fc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4a3 3 0 0 0 3 5M17 5h3a3 3 0 0 1-3 5"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title">Free Fire Tournaments</h3>
+          <p class="fc-desc">Compete for prizes in community-run tournaments.</p>
+        </div>
+        <span class="fc-cta">Join a Tournament
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a href="#hud-gallery" class="feature-card glass-card fc-purple">
+        <i class="fc-bar" aria-hidden="true"></i>
+        <div class="fc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title">HUD Layout Gallery</h3>
+          <p class="fc-desc">Browse pro-inspired HUD layouts for every playstyle.</p>
+        </div>
+        <span class="fc-cta">Explore Layouts
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <a href="#character-combo" class="feature-card glass-card fc-ember">
+        <i class="fc-bar" aria-hidden="true"></i>
+        <div class="fc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.5 7.5 11 16M15.5 7.5 13 16"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title">Character Combos</h3>
+          <p class="fc-desc">Find the best character and pet combos for your style.</p>
+        </div>
+        <span class="fc-cta">View Combos
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+    </div>
+
+    <div class="feature-grid feature-grid-compact">
+      <a href="#reviews" class="feature-card feature-card-sm glass-card fc-muted">
+        <div class="fc-icon fc-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 16.9 5.8 20.3l1.6-6.8-5.2-4.6 6.9-.6z"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title-sm">User Reviews</h3>
+          <p class="fc-desc-sm">See what players say</p>
+        </div>
+      </a>
+      <a href="#request" class="feature-card feature-card-sm glass-card fc-muted">
+        <div class="fc-icon fc-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title-sm">Device Request Center</h3>
+          <p class="fc-desc-sm">Request your device's sensitivity</p>
+        </div>
+      </a>
+      <a href="#guild-hub" class="feature-card feature-card-sm glass-card fc-muted">
+        <div class="fc-icon fc-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title-sm">Guild Recruitment Hub</h3>
+          <p class="fc-desc-sm">Find or recruit active players</p>
+        </div>
+      </a>
+      <a href="#team-finder" class="feature-card feature-card-sm glass-card fc-muted">
+        <div class="fc-icon fc-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        </div>
+        <div class="fc-body">
+          <h3 class="fc-title-sm">Find a Team</h3>
+          <p class="fc-desc-sm">Find teammates &amp; play together</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
 
 <!-- ============ WELCOME BACK (signed-in users only, hidden until auth resolves) ============ -->
 <section class="section jx-welcome-back" id="welcomeBackSection" style="display:none; padding-top:0; padding-bottom:0;">
@@ -6046,6 +8346,96 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
   </div>
 </section>
+
+<!-- ============ PHASE 3 — DEVICE SEARCH PREMIUM STYLING ============
+     CSS-only. No HTML or JavaScript above was changed for this pass.
+     Every selector below is scoped under #device-search, or targets
+     .device-card (confirmed unique to this section's JS-generated
+     markup), so no other section's shared .chip / .glass-card /
+     .eyebrow / .search-shell / .device-icon instances are touched.
+     Existing effects already covering focus-glow, chip states, and
+     card hover/entry animation (see the earlier "PREMIUM UPGRADE" /
+     "GO ALL OUT" blocks) are left intact — this only adds the
+     command-center atmosphere, section-intro hierarchy, a search
+     "configurator" frame, and a keyboard focus-visible state that
+     didn't exist yet. -->
+<style>
+/* 1. Command-center atmosphere behind the whole section */
+#device-search{ position:relative; overflow:hidden; }
+#device-search::before{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 55% at 15% 0%, rgba(244,196,48,.07), transparent 62%),
+    radial-gradient(ellipse 55% 45% at 100% 100%, rgba(244,196,48,.05), transparent 65%);
+}
+#device-search::after{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.55;
+  background-image:
+    linear-gradient(rgba(244,196,48,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244,196,48,.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 0%, transparent 78%);
+          mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 0%, transparent 78%);
+}
+body.light #device-search::after{ opacity:.25; }
+#device-search > .wrap{ position:relative; z-index:1; }
+
+/* 2. Section intro → technical eyebrow badge + underline title */
+#device-search .section-head{
+  padding-bottom:26px; margin-bottom: clamp(32px,5vw,52px);
+  border-bottom:1px solid var(--hairline);
+}
+#device-search .eyebrow{
+  padding:5px 14px 5px 10px; border:1px solid var(--hairline-strong); border-radius:20px;
+  background: rgba(244,196,48,.05);
+}
+#device-search .eyebrow::before{ box-shadow:0 0 10px var(--gold), 0 0 2px var(--gold); }
+#device-search .section-title{ position:relative; display:inline-block; padding-bottom:14px; }
+#device-search .section-title::after{
+  content:''; position:absolute; left:1px; bottom:0; height:2px; width:64px;
+  background: linear-gradient(90deg, var(--gold-bright), transparent);
+}
+
+/* 3. Search shell → hardware configurator panel with corner brackets */
+#device-search .search-shell{
+  background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(0,0,0,.16));
+  box-shadow: 0 18px 46px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04);
+}
+#device-search .search-shell::before,
+#device-search .search-shell::after{
+  content:''; position:absolute; width:13px; height:13px; pointer-events:none; opacity:.75;
+}
+#device-search .search-shell::before{
+  top:-1px; left:-1px; border-top:1.5px solid var(--gold); border-left:1.5px solid var(--gold);
+  border-top-left-radius:5px;
+}
+#device-search .search-shell::after{
+  bottom:-1px; right:-1px; border-bottom:1.5px solid var(--gold); border-right:1.5px solid var(--gold);
+  border-bottom-right-radius:5px;
+}
+
+/* 4. Brand chip rail framing */
+#device-search .chip-row{ position:relative; z-index:1; }
+
+/* 5. Device cards → keyboard focus / "selected" state (none existed) */
+#device-search .device-card:focus-visible{
+  outline:none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(244,196,48,.3), 0 20px 48px rgba(0,0,0,.45);
+}
+
+/* 6. Load more — same premium button system, technical label rhythm */
+#device-search #loadMoreBtn{ letter-spacing:.06em; }
+
+/* 7. Motion & responsive guardrails */
+@media (prefers-reduced-motion: reduce){
+  #device-search .search-shell::before,
+  #device-search .search-shell::after{ transition:none; }
+}
+@media (max-width: 620px){
+  #device-search .section-head{ padding-bottom:20px; }
+}
+</style>
 
 <!-- ============ LIVE DEVICE RANKING ============ -->
 <section class="section" id="live-ranking">
@@ -6110,6 +8500,95 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
   </div>
 </section>
+
+<!-- ============ PHASE 4 — LIVE DEVICE RANKING PREMIUM STYLING ============
+     CSS-only. No HTML or JavaScript was changed for this pass.
+     Audit found most of this section already carries heavy premium
+     treatment from earlier enhancement passes: gold/silver/bronze rank
+     coloring (.lrank-row:nth-child(1/2/3) .lrank-pos), a left-edge
+     scanline on .lrank-row:hover, a golden shimmer on the #1 row, an
+     animated popularity bar, a live activity feed with a pulsing dot,
+     and a shared .market-live-pill (live-ranking + tournaments) with
+     its own glow/shine. None of that is touched or duplicated here.
+     .section-title is also already animated site-wide by a scroll
+     IntersectionObserver (.jx-title-visible → underline sweep), so it
+     is intentionally left alone rather than re-declared.
+     Everything below is scoped to #live-ranking (or a shared class
+     immediately qualified with #live-ranking, e.g. .market-live-pill
+     stays untouched but its container context does not leak into
+     #tournaments) and only adds what didn't already exist:
+     command-center backdrop, an eyebrow badge matching the Device Lab
+     section, technical framing on the table header/footer rows, top
+     accent bars on the sidebar panels, and keyboard focus-visible
+     states on the row-view and refresh buttons (previously absent). -->
+<style>
+/* 1. Command-center atmosphere behind the whole section */
+#live-ranking{ overflow:hidden; }
+#live-ranking::before{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 55% 50% at 100% 0%, rgba(244,196,48,.06), transparent 62%),
+    radial-gradient(ellipse 50% 45% at 0% 100%, rgba(244,196,48,.05), transparent 65%);
+}
+#live-ranking::after{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.5;
+  background-image:
+    linear-gradient(rgba(244,196,48,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244,196,48,.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 0%, transparent 78%);
+          mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 0%, transparent 78%);
+}
+body.light #live-ranking::after{ opacity:.22; }
+#live-ranking > .wrap{ position:relative; z-index:1; }
+
+/* 2. Eyebrow badge — matches the Select Your Device section intro */
+#live-ranking .eyebrow{
+  padding:5px 14px 5px 10px; border:1px solid var(--hairline-strong); border-radius:20px;
+  background: rgba(244,196,48,.05);
+}
+
+/* 3. Ranking panel — technical framing on header/footer utility rows,
+      targeted structurally (both rows are unclassed inline-styled
+      divs in the existing markup, so no class/id was added). */
+#live-ranking .lrank-shell > .glass > div:first-of-type{
+  background: linear-gradient(180deg, rgba(244,196,48,.05), transparent);
+  position:relative;
+}
+#live-ranking .lrank-shell > .glass > div:first-of-type::after{
+  content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px;
+  background: linear-gradient(90deg, transparent, rgba(244,196,48,.4), transparent);
+}
+#live-ranking .lrank-shell > .glass > div:last-of-type{
+  background: rgba(0,0,0,.14);
+}
+
+/* 4. Sidebar panels — thin top accent bar, echoing the feature-hub cards */
+#live-ranking .lrank-ticker,
+#live-ranking .lrank-stats-mini{
+  position:relative; overflow:hidden;
+}
+#live-ranking .lrank-ticker::before,
+#live-ranking .lrank-stats-mini::before{
+  content:''; position:absolute; top:0; left:16px; right:16px; height:2px; border-radius:2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity:.7;
+}
+
+/* 5. Keyboard focus — previously absent on the interactive controls */
+#live-ranking .lrank-view:focus-visible,
+#live-ranking #lrankRefreshBtn:focus-visible{
+  outline:none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(244,196,48,.3);
+}
+
+/* 6. Responsive guardrail */
+@media (max-width: 620px){
+  #live-ranking .lrank-ticker::before,
+  #live-ranking .lrank-stats-mini::before{ left:12px; right:12px; }
+}
+</style>
 
 <!-- ============ TOURNAMENTS ============ -->
 <section class="section" id="tournaments">
@@ -6407,6 +8886,174 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   </div>
 </div>
 
+<!-- ============ PHASE 5 — TOURNAMENTS PREMIUM STYLING ============
+     CSS-only. No HTML or JavaScript was changed for this pass.
+     Audit found the tournament system already carries substantial
+     dedicated styling from earlier passes: .tourney-card, the
+     .tourney-status live/upcoming/completed states, the prize/slot
+     treatment, .payment-method-chip, the rules toggle/slider, and the
+     shared .status-pill + .market-live-pill (already documented in the
+     Phase 4 block as shared with #live-ranking, with its own glow).
+     None of that is duplicated or overridden here. This pass only adds
+     what was still missing: a command-center backdrop matching
+     #live-ranking/#device-search, an eyebrow badge matching those same
+     sections, a technical rail around the filter tabs, a top accent bar
+     + hover depth on tournament cards, corner-bracket framing on the
+     Track Registration panel and the registration modal (same motif as
+     #device-search .search-shell), CSS-counter section numbering on the
+     13 rules blocks (no markup change), refined payment-chip hover/
+     active states, and keyboard focus-visible states that were
+     previously absent on several interactive controls. Everything below
+     is scoped to #tournaments or #tourneyRegisterModal — a shared class
+     is always qualified by one of these IDs first, so nothing here
+     leaks into #hud-gallery, #reviews, #request, #character-combo,
+     #guild-hub, #team-finder, the footer, or the admin panel. -->
+<style>
+/* 1. Arena atmosphere behind the whole section */
+#tournaments{ overflow:hidden; }
+#tournaments::before{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 55% 45% at 6% 0%, rgba(244,196,48,.06), transparent 60%),
+    radial-gradient(ellipse 50% 50% at 100% 100%, rgba(244,196,48,.05), transparent 65%);
+}
+#tournaments::after{
+  content:''; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.4;
+  background-image: radial-gradient(rgba(244,196,48,.16) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 0%, #000 0%, transparent 75%);
+          mask-image: radial-gradient(ellipse 65% 55% at 50% 0%, #000 0%, transparent 75%);
+}
+body.light #tournaments::after{ opacity:.2; }
+#tournaments > .wrap{ position:relative; z-index:1; }
+
+/* 2. Eyebrow badge — matches the Device Lab / Live Ranking section intros */
+#tournaments .eyebrow{
+  padding:5px 14px 5px 10px; border:1px solid var(--hairline-strong); border-radius:20px;
+  background: rgba(244,196,48,.05);
+}
+
+/* 3. Filter tabs — technical rail framing around the existing tab-btn system */
+#tourneyTabRow{
+  padding:6px; border:1px solid var(--hairline); border-radius:30px;
+  background: rgba(0,0,0,.16);
+}
+#tourneyTabRow .tab-btn:hover:not(.active){
+  box-shadow: 0 0 0 1px rgba(244,196,48,.25) inset;
+}
+#tourneyTabRow .tab-btn.active{
+  box-shadow: 0 4px 18px rgba(244,196,48,.35);
+}
+
+/* 4. Tournament cards — depth, top accent bar, hover lift */
+#tourneyGrid .tourney-card{
+  position:relative; overflow:hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  transition: transform .3s var(--ease-out), box-shadow .3s, border-color .3s;
+}
+#tourneyGrid .tourney-card::before{
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity:.75;
+}
+#tourneyGrid .tourney-card:hover{
+  transform: translateY(-4px);
+  border-color: var(--hairline-strong);
+  box-shadow: 0 20px 44px rgba(0,0,0,.4), 0 0 0 1px rgba(244,196,48,.12);
+}
+#tourneyGrid .tourney-card:hover .tourney-prize-wrap{
+  border-color: var(--hairline-strong);
+  background: rgba(244,196,48,.09);
+}
+#tourneyGrid .tourney-prize-wrap{ transition: border-color .3s, background .3s; }
+#tourneyGrid .tourney-register-btn:focus-visible{
+  outline:none; box-shadow: 0 0 0 3px rgba(244,196,48,.35);
+}
+
+/* 5. Track Your Registration — secondary command-panel framing
+      (.glass already provides position:relative, so only the corner
+      brackets are added here — same motif as #device-search .search-shell) */
+#tourneyTrackShell::before,
+#tourneyTrackShell::after{
+  content:''; position:absolute; width:13px; height:13px; pointer-events:none; opacity:.7;
+}
+#tourneyTrackShell::before{
+  top:-1px; left:-1px; border-top:1.5px solid var(--gold); border-left:1.5px solid var(--gold);
+  border-top-left-radius:5px;
+}
+#tourneyTrackShell::after{
+  bottom:-1px; right:-1px; border-bottom:1.5px solid var(--gold); border-right:1.5px solid var(--gold);
+  border-bottom-right-radius:5px;
+}
+#tourneyTrackList .tourney-track-item{ transition: border-color .25s, transform .25s; }
+#tourneyTrackList .tourney-track-item:hover{ border-color: var(--hairline-strong); transform: translateX(2px); }
+#tourneyTrackSigninBtn:focus-visible,
+#tourneyTrackRefreshBtn:focus-visible{
+  outline:none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(244,196,48,.3);
+}
+
+/* 6. Rules drawer — panel texture + CSS-counter section numbering
+      (generated content only; the 13 policy blocks and their text are
+      untouched in the markup) */
+#tourneyRulesSlider{
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.1));
+}
+#tourneyRulesSlider .tourney-policy-slider-inner{ counter-reset: tny-rule; }
+#tourneyRulesSlider .policy-block h3::before{
+  counter-increment: tny-rule;
+  content: counter(tny-rule, decimal-leading-zero);
+  font-family: var(--f-mono); font-size:11px; color: var(--void); font-weight:700;
+  background: var(--gold); border-radius:4px; padding:2px 6px; letter-spacing:0; flex-shrink:0;
+}
+#tourneyRulesSlider .policy-block + .policy-block{
+  padding-top:24px; border-top:1px solid var(--hairline);
+}
+#tourneyRulesToggleBtn:focus-visible{
+  outline:none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(244,196,48,.3);
+}
+
+/* 7. Registration modal — terminal framing + premium payment chips
+      (.modal-box already handles its own scroll via overflow-y:auto,
+      so overflow is intentionally left alone here — only position is
+      implied by the existing .modal-box rule, which already sets it) */
+#tourneyRegisterModal .modal-box::before,
+#tourneyRegisterModal .modal-box::after{
+  content:''; position:absolute; width:14px; height:14px; pointer-events:none; opacity:.8; z-index:2;
+}
+#tourneyRegisterModal .modal-box::before{
+  top:-1px; left:-1px; border-top:1.5px solid var(--gold); border-left:1.5px solid var(--gold);
+  border-top-left-radius:6px;
+}
+#tourneyRegisterModal .modal-box::after{
+  bottom:-1px; right:-1px; border-bottom:1.5px solid var(--gold); border-right:1.5px solid var(--gold);
+  border-bottom-right-radius:6px;
+}
+#tourneyRegisterModal .modal-head{
+  background: linear-gradient(180deg, rgba(244,196,48,.06), transparent);
+}
+#tourneyPaymentMethods .payment-method-chip{
+  transition: border-color .2s, color .2s, background .2s, transform .2s;
+}
+#tourneyPaymentMethods .payment-method-chip:hover{ transform: translateY(-2px); border-color: var(--hairline-strong); }
+#tourneyPaymentMethods .payment-method-chip.active{
+  box-shadow: 0 4px 16px rgba(244,196,48,.25);
+}
+#tourneyRegisterModal .btn:focus-visible{
+  outline:none; box-shadow: 0 0 0 3px rgba(244,196,48,.35);
+}
+
+/* 8. Motion & responsive guardrails */
+@media (prefers-reduced-motion: reduce){
+  #tourneyGrid .tourney-card,
+  #tourneyTrackList .tourney-track-item,
+  #tourneyPaymentMethods .payment-method-chip{ transition:none; }
+  #tourneyGrid .tourney-card:hover{ transform:none; }
+}
+@media (max-width: 620px){
+  #tourneyTabRow{ padding:4px; }
+}
+</style>
+
 <!-- ============ HUD LAYOUT GALLERY ============ -->
 <section class="section" id="hud-gallery">
   <div class="wrap">
@@ -6417,19 +9064,19 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- Tab navigation -->
-    <div class="guild-hub-tabs">
-      <button class="guild-tab-btn active" data-hudgal-tab="browse">
+    <div class="guild-hub-tabs" role="tablist">
+      <button class="guild-tab-btn active" id="hudGalTabBrowseBtn" data-hudgal-tab="browse" role="tab" aria-selected="true" aria-controls="hudGalPaneBrowse">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         Browse Layouts
       </button>
-      <button class="guild-tab-btn" data-hudgal-tab="submit">
+      <button class="guild-tab-btn" id="hudGalTabSubmitBtn" data-hudgal-tab="submit" role="tab" aria-selected="false" aria-controls="hudGalPaneSubmit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         Submit Your Layout
       </button>
     </div>
 
     <!-- BROWSE PANE -->
-    <div class="guild-pane active" id="hudGalPaneBrowse">
+    <div class="guild-pane active" id="hudGalPaneBrowse" role="tabpanel" aria-labelledby="hudGalTabBrowseBtn">
       <div class="tab-row" id="hudTabRow">
         <button class="tab-btn active" data-hud="all">All Layouts</button>
         <button class="tab-btn" data-hud="2F">2 Finger</button>
@@ -6447,7 +9094,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- SUBMIT PANE -->
-    <div class="guild-pane" id="hudGalPaneSubmit">
+    <div class="guild-pane" id="hudGalPaneSubmit" role="tabpanel" aria-labelledby="hudGalTabSubmitBtn">
       <div class="guild-form-shell glass-premium">
         <div class="guild-create-success" id="hudGalSubmitSuccess">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
@@ -6538,6 +9185,298 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
   </div>
 </div>
 
+<!-- ============ PHASE 6 — HUD GALLERY (CONFIGURATION LAB) REDESIGN ============
+     Scoped presentation-only CSS. No markup restructuring, no JS changes.
+     Every rule below targets #hud-gallery / #hudCompareModal descendants
+     specifically so the shared .hud-card / .hud-preview / .hud-finger-badge /
+     .hud-body / .hud-copy-btn / .hud-code-box classes used by the Admin →
+     HUD Layouts preview widget (#hudLayoutPreviewCard) are left untouched. -->
+<style>
+  /* ---- 1. Section atmosphere: command-center backdrop ---- */
+  #hud-gallery{
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  #hud-gallery::before{
+    content:"";
+    position:absolute; inset:0; z-index:-2;
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 0%, rgba(244,196,48,.07), transparent 65%),
+      radial-gradient(ellipse 50% 40% at 85% 100%, rgba(244,196,48,.04), transparent 70%),
+      linear-gradient(180deg, rgba(10,9,7,0) 0%, rgba(8,7,5,.4) 50%, rgba(10,9,7,0) 100%);
+  }
+  #hud-gallery::after{
+    content:"";
+    position:absolute; inset:0; z-index:-1;
+    background-image:
+      linear-gradient(rgba(244,196,48,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(244,196,48,.035) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 0%, transparent 75%);
+            mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 0%, transparent 75%);
+    opacity:.6;
+  }
+
+  /* ---- 2. Section header ---- */
+  #hud-gallery .section-head{ position:relative; }
+  #hud-gallery .eyebrow[data-jx="hudGallery-eyebrow"]{
+    font-family: var(--f-mono);
+    font-size: 11px; letter-spacing:.16em;
+    padding: 6px 14px 6px 12px;
+    border: 1px solid rgba(244,196,48,.3);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(244,196,48,.09), rgba(244,196,48,.02));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  #hud-gallery .section-title[data-jx="hudGallery-title"]{
+    position: relative;
+    padding-bottom: 16px;
+  }
+  #hud-gallery .section-title[data-jx="hudGallery-title"]::after{
+    content:"";
+    position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+    width:64px; height:3px; border-radius:2px;
+    background: linear-gradient(90deg, transparent, var(--gold-bright), transparent);
+  }
+  #hud-gallery .section-sub[data-jx="hudGallery-subtitle"]{
+    max-width: 560px; margin-inline:auto;
+  }
+
+  /* ---- 3. Browse / Submit segmented tabs (scoped) ---- */
+  #hud-gallery .guild-hub-tabs{
+    background: rgba(12,11,8,.55);
+    border: 1px solid var(--hairline-strong);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 12px 30px rgba(0,0,0,.35);
+    backdrop-filter: blur(10px);
+  }
+  #hud-gallery .guild-hub-tabs .guild-tab-btn{
+    transition: color .2s ease, background .25s ease, box-shadow .25s ease;
+  }
+  #hud-gallery .guild-hub-tabs .guild-tab-btn:hover:not(.active){
+    box-shadow: inset 0 0 0 1px rgba(244,196,48,.25);
+    color: var(--gold);
+  }
+  #hud-gallery .guild-hub-tabs .guild-tab-btn.active{
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+    color: #1a1305;
+    box-shadow: 0 6px 22px rgba(244,196,48,.3), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+
+  /* ---- 4. Finger-count filter row ---- */
+  #hud-gallery #hudTabRow{
+    display:flex; flex-wrap:wrap; gap:10px;
+    justify-content:center;
+    margin-bottom: 28px;
+  }
+  #hud-gallery #hudTabRow .tab-btn{
+    font-family: var(--f-mono);
+    font-size: 11.5px; letter-spacing:.06em; text-transform:uppercase;
+    padding: 9px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline-strong);
+    background: rgba(16,14,10,.5);
+    color: var(--ink-faint);
+    transition: border-color .2s ease, color .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  #hud-gallery #hudTabRow .tab-btn:hover{
+    border-color: rgba(244,196,48,.4);
+    color: var(--gold);
+    box-shadow: 0 0 0 1px rgba(244,196,48,.12);
+  }
+  #hud-gallery #hudTabRow .tab-btn.active{
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+    border-color: transparent;
+    color: #1a1305;
+    box-shadow: 0 6px 18px rgba(244,196,48,.28);
+  }
+
+  /* ---- 5. Gallery grid ---- */
+  #hud-gallery #hudGrid.grid-3{
+    gap: 26px;
+  }
+  @media (max-width: 980px){
+    #hud-gallery #hudGrid.grid-3{ grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 620px){
+    #hud-gallery #hudGrid.grid-3{ grid-template-columns: 1fr; }
+  }
+
+  /* ---- 6. HUD card (scoped — never touches Admin's .hud-card) ---- */
+  #hud-gallery .hud-card{
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--radius-l, 18px);
+    background:
+      linear-gradient(170deg, rgba(28,25,18,.92) 0%, rgba(16,14,10,.97) 60%);
+    box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
+    transition: transform .35s var(--ease-spring,cubic-bezier(.2,.9,.3,1.1)), box-shadow .35s ease, border-color .35s ease;
+  }
+  #hud-gallery .hud-card:hover{
+    transform: translateY(-4px);
+    border-color: rgba(244,196,48,.35);
+    box-shadow: 0 26px 54px rgba(0,0,0,.55), 0 0 0 1px rgba(244,196,48,.08), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+
+  /* ---- 7. HUD preview frame ---- */
+  #hud-gallery .hud-preview{
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(244,196,48,.05), transparent 55%),
+      linear-gradient(155deg, #1b1712, #0a0906);
+    border-bottom: 1px solid var(--hairline-strong);
+    padding: 0;
+  }
+  #hud-gallery .hud-preview::before{
+    content:"";
+    position:absolute; inset:8px;
+    border: 1px solid rgba(244,196,48,.14);
+    border-radius: 10px;
+    pointer-events:none;
+    z-index:1;
+  }
+  /* gold corner accents on the preview frame */
+  #hud-gallery .hud-preview::after{
+    content:"";
+    position:absolute; top:8px; left:8px; width:16px; height:16px;
+    border-top:2px solid rgba(244,196,48,.55);
+    border-left:2px solid rgba(244,196,48,.55);
+    border-radius: 4px 0 0 0;
+    pointer-events:none;
+    z-index:2;
+  }
+  #hud-gallery .hud-card:nth-child(1){ /* no-op guard so specificity stays low */ }
+  #hud-gallery .hud-preview img{
+    transition: transform .5s ease;
+  }
+  #hud-gallery .hud-card:hover .hud-preview img{
+    transform: scale(1.045);
+  }
+  #hud-gallery .hud-finger-badge{
+    z-index:3;
+  }
+
+  /* Mock HUD button previews — intentional/technical, not placeholder-y */
+  #hud-gallery .fb{
+    border-color: rgba(244,196,48,.4);
+    background: rgba(244,196,48,.05);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.4), inset 0 0 12px rgba(244,196,48,.06);
+  }
+  #hud-gallery .fb::after{
+    content:"";
+    position:absolute; inset:5px;
+    border-radius:50%;
+    border:1px dashed rgba(244,196,48,.25);
+  }
+  #hud-gallery .fb-stick{
+    border-color: rgba(244,196,48,.3);
+  }
+
+  /* ---- 8. Card body / info hierarchy ---- */
+  #hud-gallery .hud-body{
+    border-top: 1px solid rgba(244,196,48,.06);
+    gap: 14px;
+  }
+  #hud-gallery .hud-name{
+    letter-spacing:.015em;
+  }
+  #hud-gallery .hud-desc{
+    border-left: 2px solid rgba(244,196,48,.22);
+    padding-left: 10px;
+  }
+
+  /* ---- 9. HUD code — technical terminal look ---- */
+  #hud-gallery .hud-code-box{
+    font-weight:600;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.2)),
+      rgba(244,196,48,.04);
+    border: 1px solid rgba(244,196,48,.22);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.4);
+  }
+
+  /* ---- 10. Copy button ---- */
+  #hud-gallery .hud-copy-btn{
+    letter-spacing:.06em;
+  }
+
+  /* ---- 11. Compare bar — floating tray ---- */
+  #hud-gallery .hud-compare-bar{
+    background: rgba(14,12,9,.85);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(244,196,48,.25);
+    box-shadow: 0 20px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(244,196,48,.06);
+  }
+  #hud-gallery .hud-compare-slot-name{
+    font-weight:600;
+  }
+
+  /* ---- 12. Compare modal (sibling of #hud-gallery — styled independently) ---- */
+  #hudCompareModal .modal-box.hud-compare-modal-body{
+    background: linear-gradient(170deg, rgba(24,21,15,.98), rgba(12,11,8,.99));
+    border: 1px solid rgba(244,196,48,.2);
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  }
+  #hudCompareModal .hcmp-preview{
+    border-color: rgba(244,196,48,.18);
+  }
+  #hudCompareModal .hcmp-name{
+    letter-spacing:.01em;
+  }
+  #hudCompareModal .hcmp-row span:first-child{
+    color: rgba(244,196,48,.75);
+  }
+  @media (max-width: 620px){
+    #hudCompareModal .modal-box.hud-compare-modal-body{ max-width: 94vw; }
+  }
+
+  /* ---- 13. Submit pane — upload bay / form panel ---- */
+  #hud-gallery #hudGalPaneSubmit .guild-form-shell{
+    background: linear-gradient(170deg, rgba(22,20,14,.94), rgba(12,11,8,.98));
+    border: 1px solid var(--hairline-strong);
+    box-shadow: 0 20px 50px rgba(0,0,0,.4);
+  }
+  #hud-gallery .hudmgr-thumb-picker{
+    border: 1px dashed rgba(244,196,48,.3);
+    background: rgba(244,196,48,.03);
+    transition: border-color .2s ease, background .2s ease;
+  }
+  #hud-gallery .hudmgr-thumb-picker:hover{
+    border-color: rgba(244,196,48,.55);
+    background: rgba(244,196,48,.05);
+  }
+  #hud-gallery .guild-create-success{
+    border: 1px solid rgba(244,196,48,.22);
+    background: linear-gradient(170deg, rgba(22,20,14,.94), rgba(12,11,8,.98));
+  }
+
+  /* ---- 14. Track panel — secondary command-center panel ---- */
+  #hud-gallery #hudGalTrackShell{
+    background: linear-gradient(170deg, rgba(20,18,13,.9), rgba(10,9,7,.96));
+    border: 1px solid var(--hairline-strong);
+    position: relative;
+  }
+  #hud-gallery #hudGalTrackShell::before{
+    content:"";
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:40px; height:2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  /* ---- 15. Motion & responsive guardrails ---- */
+  @media (prefers-reduced-motion: reduce){
+    #hud-gallery .hud-card,
+    #hud-gallery .hud-preview img,
+    #hud-gallery #hudTabRow .tab-btn,
+    #hud-gallery .guild-hub-tabs .guild-tab-btn{
+      transition: none !important;
+    }
+    #hud-gallery .hud-card:hover{ transform:none; }
+    #hud-gallery .hud-card:hover .hud-preview img{ transform:none; }
+  }
+  @media (max-width: 480px){
+    #hud-gallery .hud-compare-bar{ max-width: 92vw; }
+  }
+</style>
+
 <!-- ============ USER REVIEWS ============ -->
 <section class="section" id="reviews">
   <div class="wrap">
@@ -6581,6 +9520,222 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
   </div>
 </section>
+
+<!-- ============ PHASE 7 — REVIEWS (COMMUNITY VOICE) REDESIGN ============
+     Scoped presentation-only CSS. No markup restructuring, no JS changes.
+     Every rule below targets #reviews / #reviewPromptModal descendants so
+     shared sitewide classes (.glass, .glass-card, .grid-3, .field-input,
+     .field-row, .empty-state) are left completely untouched. -->
+<style>
+  /* ---- 1. Section atmosphere: command-center backdrop ---- */
+  #reviews{
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  #reviews::before{
+    content:"";
+    position:absolute; inset:0; z-index:-2;
+    background:
+      radial-gradient(ellipse 55% 40% at 50% 0%, rgba(244,196,48,.06), transparent 65%),
+      radial-gradient(ellipse 45% 35% at 15% 100%, rgba(244,196,48,.04), transparent 70%),
+      linear-gradient(180deg, rgba(10,9,7,0) 0%, rgba(8,7,5,.35) 50%, rgba(10,9,7,0) 100%);
+  }
+  #reviews::after{
+    content:"";
+    position:absolute; inset:0; z-index:-1;
+    background-image:
+      linear-gradient(rgba(244,196,48,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(244,196,48,.03) 1px, transparent 1px);
+    background-size: 46px 46px;
+    -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 35%, #000 0%, transparent 75%);
+            mask-image: radial-gradient(ellipse 65% 55% at 50% 35%, #000 0%, transparent 75%);
+    opacity:.55;
+  }
+
+  /* ---- 2. Section header ---- */
+  #reviews .section-head{ position:relative; }
+  #reviews .eyebrow[data-jx="reviews-eyebrow"]{
+    font-family: var(--f-mono);
+    font-size: 11px; letter-spacing:.16em;
+    padding: 6px 14px 6px 12px;
+    border: 1px solid rgba(244,196,48,.3);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(244,196,48,.09), rgba(244,196,48,.02));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  #reviews .section-title[data-jx="reviews-title"]{
+    position: relative;
+    padding-bottom: 16px;
+  }
+  #reviews .section-title[data-jx="reviews-title"]::after{
+    content:"";
+    position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+    width:64px; height:3px; border-radius:2px;
+    background: linear-gradient(90deg, transparent, var(--gold-bright), transparent);
+  }
+  #reviews .section-sub[data-jx="reviews-subtitle"]{
+    max-width: 540px; margin-inline:auto;
+  }
+
+  /* ---- 3. Review cards — premium community testimonials ---- */
+  #reviews #reviewsGrid.grid-3{
+    gap: 24px;
+  }
+  @media (max-width: 980px){
+    #reviews #reviewsGrid.grid-3{ grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 620px){
+    #reviews #reviewsGrid.grid-3{ grid-template-columns: 1fr; }
+  }
+
+  #reviews .review-card{
+    position: relative;
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--radius-l, 18px);
+    background: linear-gradient(170deg, rgba(26,23,17,.92) 0%, rgba(15,13,10,.97) 60%);
+    box-shadow: 0 16px 36px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.04);
+    transition: transform .3s var(--ease-spring,cubic-bezier(.2,.9,.3,1.1)), box-shadow .3s ease, border-color .3s ease;
+  }
+  #reviews .review-card::before{
+    content:"";
+    position:absolute; top:0; left:14px; right:14px; height:2px;
+    background: linear-gradient(90deg, transparent, rgba(244,196,48,.45), transparent);
+    border-radius: 0 0 2px 2px;
+  }
+  #reviews .review-card:hover{
+    transform: translateY(-3px);
+    border-color: rgba(244,196,48,.3);
+    box-shadow: 0 22px 46px rgba(0,0,0,.5), 0 0 0 1px rgba(244,196,48,.06), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+
+  /* Avatar — scoped, only used inside #reviews today */
+  #reviews .avatar{
+    box-shadow: 0 0 0 2px rgba(244,196,48,.18), 0 4px 12px rgba(0,0,0,.35);
+  }
+  #reviews .review-top{ gap: 14px; }
+  #reviews .review-name{ letter-spacing:.01em; }
+  #reviews .review-stars{ font-size:14px; }
+
+  #reviews .review-text{
+    position: relative;
+    padding-left: 14px;
+    border-left: 2px solid rgba(244,196,48,.22);
+    color: var(--ink-dim);
+  }
+
+  #reviews .review-device-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(244,196,48,.22);
+    background: rgba(244,196,48,.05);
+    width: fit-content;
+    letter-spacing:.04em;
+  }
+
+  /* ---- 4. Upvote / reply controls ---- */
+  #reviews .review-actions{
+    border-top-color: rgba(244,196,48,.1);
+  }
+  #reviews .review-upvote-btn,
+  #reviews .review-reply-toggle{
+    border-radius: 999px;
+    padding: 5px 10px;
+    transition: color .18s ease, background .18s ease;
+  }
+  #reviews .review-upvote-btn:hover,
+  #reviews .review-reply-toggle:hover{
+    background: rgba(244,196,48,.08);
+  }
+  #reviews .review-upvote-btn.voted{
+    background: rgba(244,196,48,.1);
+  }
+
+  /* ---- 5. Reply threads — nested technical panels ---- */
+  #reviews .review-reply-body{
+    background: rgba(10,9,7,.5);
+    border-color: rgba(244,196,48,.1);
+  }
+  #reviews .review-reply-name{
+    letter-spacing:.05em;
+  }
+
+  /* Preserve show/hide behavior exactly — visual polish only */
+  #reviews .review-reply-form{
+    border-top: 1px dashed rgba(244,196,48,.14);
+    padding-top: 12px;
+  }
+  #reviews .review-reply-form input{
+    background: rgba(10,9,7,.5);
+  }
+  #reviews .review-reply-form input:focus-visible{
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 1px;
+  }
+  #reviews .review-reply-form button:focus-visible{
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 2px;
+  }
+
+  /* ---- 6. Empty state — intentional, not accidental ---- */
+  #reviews .empty-state{
+    border: 1px dashed rgba(244,196,48,.2);
+    border-radius: var(--radius-l, 18px);
+    background: rgba(244,196,48,.02);
+  }
+
+  /* ---- 7. "Leave Your Review" console panel ---- */
+  #reviews .glass:has(#reviewForm){
+    position: relative;
+    border: 1px solid var(--hairline-strong);
+    background: linear-gradient(170deg, rgba(22,20,14,.94), rgba(12,11,8,.98));
+    box-shadow: 0 20px 50px rgba(0,0,0,.4);
+  }
+  #reviews .glass:has(#reviewForm)::before{
+    content:"";
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:40px; height:2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  /* 5-star input */
+  #reviews .review-star-input .star-btn:focus-visible{
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  #reviews .review-star-input .star-btn.filled{
+    text-shadow: 0 0 12px rgba(244,196,48,.35);
+  }
+
+  /* Form field focus states (scoped — does not touch global .field-input) */
+  #reviews #reviewForm .field-input:focus-visible,
+  #reviews #reviewForm .field-input:focus{
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(244,196,48,.14);
+  }
+  #reviews #reviewSubmitBtn:focus-visible{
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 2px;
+  }
+
+  /* ---- 8. Review Prompt Modal — left alone visually except a light touch ---- */
+  #reviewPromptModal .modal-box{
+    border: 1px solid rgba(244,196,48,.18);
+  }
+
+  /* ---- 9. Motion & responsive guardrails ---- */
+  @media (prefers-reduced-motion: reduce){
+    #reviews .review-card,
+    #reviews .review-upvote-btn,
+    #reviews .review-reply-toggle{
+      transition: none !important;
+    }
+    #reviews .review-card:hover{ transform:none; }
+  }
+</style>
 
 <!-- ---- Device Request Contact Modal (Gmail / WhatsApp picker) ---- -->
 <div class="modal-overlay" id="reqContactModal">
@@ -6721,19 +9876,19 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- Tab navigation -->
-    <div class="guild-hub-tabs">
-      <button class="guild-tab-btn active" data-combo-tab="browse">
+    <div class="guild-hub-tabs" role="tablist">
+      <button class="guild-tab-btn active" id="comboTabBrowseBtn" data-combo-tab="browse" role="tab" aria-selected="true" aria-controls="comboPaneBrowse">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         Browse Combos
       </button>
-      <button class="guild-tab-btn" data-combo-tab="submit">
+      <button class="guild-tab-btn" id="comboTabSubmitBtn" data-combo-tab="submit" role="tab" aria-selected="false" aria-controls="comboPaneSubmit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         Submit Your Combo
       </button>
     </div>
 
     <!-- BROWSE PANE -->
-    <div class="guild-pane active" id="comboPaneBrowse">
+    <div class="guild-pane active" id="comboPaneBrowse" role="tabpanel" aria-labelledby="comboTabBrowseBtn">
       <!-- Filter Chips -->
       <div id="comboChipRow" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:28px;">
         <button class="chip active" data-combo-filter="all">All</button>
@@ -6750,7 +9905,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- SUBMIT PANE -->
-    <div class="guild-pane" id="comboPaneSubmit">
+    <div class="guild-pane" id="comboPaneSubmit" role="tabpanel" aria-labelledby="comboTabSubmitBtn">
       <div class="guild-form-shell glass-premium">
         <div class="guild-create-success" id="comboSubmitSuccess">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
@@ -7221,7 +10376,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
 
   /* ---- Tab switching ---- */
   window.switchComboTab = function(tabName){
-    document.querySelectorAll('[data-combo-tab]').forEach(b => b.classList.toggle("active", b.dataset.comboTab === tabName));
+    document.querySelectorAll('[data-combo-tab]').forEach(b => { b.classList.toggle("active", b.dataset.comboTab === tabName); b.setAttribute("aria-selected", b.dataset.comboTab === tabName ? "true" : "false"); });
     document.getElementById("comboPaneBrowse").classList.toggle("active", tabName === "browse");
     document.getElementById("comboPaneSubmit").classList.toggle("active", tabName === "submit");
   };
@@ -7320,23 +10475,23 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- Tab navigation -->
-    <div class="guild-hub-tabs">
-      <button class="guild-tab-btn active" data-guild-tab="search">
+    <div class="guild-hub-tabs" role="tablist">
+      <button class="guild-tab-btn active" id="guildTabSearchBtn" data-guild-tab="search" role="tab" aria-selected="true" aria-controls="guildPaneSearch">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         Search Guilds
       </button>
-      <button class="guild-tab-btn" data-guild-tab="join">
+      <button class="guild-tab-btn" id="guildTabJoinBtn" data-guild-tab="join" role="tab" aria-selected="false" aria-controls="guildPaneJoin">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
         Join a Guild
       </button>
-      <button class="guild-tab-btn" data-guild-tab="create">
+      <button class="guild-tab-btn" id="guildTabCreateBtn" data-guild-tab="create" role="tab" aria-selected="false" aria-controls="guildPaneCreate">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         Create Guild
       </button>
     </div>
 
     <!-- SEARCH PANE -->
-    <div class="guild-pane active" id="guildPaneSearch">
+    <div class="guild-pane active" id="guildPaneSearch" role="tabpanel" aria-labelledby="guildTabSearchBtn">
       <div class="guild-search-bar">
         <div class="search-shell" style="flex:1; min-width:200px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -7391,7 +10546,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- JOIN PANE -->
-    <div class="guild-pane" id="guildPaneJoin">
+    <div class="guild-pane" id="guildPaneJoin" role="tabpanel" aria-labelledby="guildTabJoinBtn">
       <div style="margin-bottom:24px; padding:18px 20px; border-radius:var(--radius-m); background:rgba(244,196,48,.06); border:1px solid var(--hairline-strong);">
         <p style="font-size:14px; color:var(--ink-dim); line-height:1.7;">Browse open guilds below and hit <strong style="color:var(--gold);">Join Guild</strong> to request membership. Guild leaders will review your request. Make sure your in-game rank meets the guild's requirements before applying.</p>
       </div>
@@ -7403,7 +10558,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- CREATE PANE -->
-    <div class="guild-pane" id="guildPaneCreate">
+    <div class="guild-pane" id="guildPaneCreate" role="tabpanel" aria-labelledby="guildTabCreateBtn">
       <div class="guild-form-shell glass-premium">
         <div class="guild-create-success" id="guildCreateSuccess">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
@@ -7604,19 +10759,19 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- Tab navigation -->
-    <div class="guild-hub-tabs">
-      <button class="guild-tab-btn active" data-tf-tab="browse">
+    <div class="guild-hub-tabs" role="tablist">
+      <button class="guild-tab-btn active" id="tfTabBrowseBtn" data-tf-tab="browse" role="tab" aria-selected="true" aria-controls="tfPaneBrowse">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         Find Players
       </button>
-      <button class="guild-tab-btn" data-tf-tab="list">
+      <button class="guild-tab-btn" id="tfTabListBtn" data-tf-tab="list" role="tab" aria-selected="false" aria-controls="tfPaneList">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         List Yourself
       </button>
     </div>
 
     <!-- BROWSE PANE -->
-    <div class="guild-pane active" id="tfPaneBrowse">
+    <div class="guild-pane active" id="tfPaneBrowse" role="tabpanel" aria-labelledby="tfTabBrowseBtn">
       <div class="guild-search-bar">
         <div class="search-shell" style="flex:1; min-width:200px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -7672,7 +10827,7 @@ body.jx-fx-off-modal .modal-box{ animation:none !important; }
     </div>
 
     <!-- LIST YOURSELF PANE -->
-    <div class="guild-pane" id="tfPaneList">
+    <div class="guild-pane" id="tfPaneList" role="tabpanel" aria-labelledby="tfTabListBtn">
       <div class="guild-form-shell glass-premium">
         <div class="guild-create-success" id="tfCreateSuccess">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
@@ -11860,7 +15015,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
      mandatory, and the submission is saved with approved:false so it
      never appears in the public gallery until an admin accepts it. */
   window.switchHudGalTab = function(tabName){
-    document.querySelectorAll('[data-hudgal-tab]').forEach(b => b.classList.toggle("active", b.dataset.hudgalTab === tabName));
+    document.querySelectorAll('[data-hudgal-tab]').forEach(b => { b.classList.toggle("active", b.dataset.hudgalTab === tabName); b.setAttribute("aria-selected", b.dataset.hudgalTab === tabName ? "true" : "false"); });
     document.getElementById("hudGalPaneBrowse").classList.toggle("active", tabName === "browse");
     document.getElementById("hudGalPaneSubmit").classList.toggle("active", tabName === "submit");
   };
@@ -13673,12 +16828,14 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
 
     /* ---- Tab switching ---- */
     window.switchGuildTab = function(tabName){
-      document.querySelectorAll(".guild-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.guildTab === tabName));
-      document.querySelectorAll(".guild-pane").forEach(p => p.classList.toggle("active", p.id === "guildPane" + tabName.charAt(0).toUpperCase() + tabName.slice(1)));
+      document.querySelectorAll('[data-guild-tab]').forEach(b => { b.classList.toggle("active", b.dataset.guildTab === tabName); b.setAttribute("aria-selected", b.dataset.guildTab === tabName ? "true" : "false"); });
+      document.getElementById("guildPaneSearch").classList.toggle("active", tabName === "search");
+      document.getElementById("guildPaneJoin").classList.toggle("active", tabName === "join");
+      document.getElementById("guildPaneCreate").classList.toggle("active", tabName === "create");
       if(tabName === "search") renderGuildSearch();
       if(tabName === "join")   renderGuildJoin();
     };
-    document.querySelectorAll(".guild-tab-btn").forEach(btn => {
+    document.querySelectorAll('[data-guild-tab]').forEach(btn => {
       btn.addEventListener("click", () => switchGuildTab(btn.dataset.guildTab));
     });
 
@@ -14109,7 +17266,7 @@ Fire Button Size: ${sens.fireBtnSize ?? 56}%`;
   (function initTeamFinder(){
     /* ---- Tab switching ---- */
     window.switchTfTab = function(tabName){
-      document.querySelectorAll('[data-tf-tab]').forEach(b => b.classList.toggle("active", b.dataset.tfTab === tabName));
+      document.querySelectorAll('[data-tf-tab]').forEach(b => { b.classList.toggle("active", b.dataset.tfTab === tabName); b.setAttribute("aria-selected", b.dataset.tfTab === tabName ? "true" : "false"); });
       document.getElementById("tfPaneBrowse").classList.toggle("active", tabName === "browse");
       document.getElementById("tfPaneList").classList.toggle("active", tabName === "list");
       if(tabName === "browse") renderTfBrowse();
